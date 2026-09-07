@@ -1,0 +1,156 @@
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+:root {
+  --el-color-primary: #c41e1e;
+  --el-color-primary-light-3: #d95454;
+  --el-color-primary-light-5: #e27a7a;
+  --el-color-primary-light-7: #eca1a1;
+  --el-color-primary-light-8: #f2b8b8;
+  --el-color-primary-light-9: #fdecec;
+  --el-color-primary-dark-2: #9d1818;
+  --aside: #1d1e1f;
+  --aside-hover: #2b2c2d;
+}
+
+body {
+  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #f5f7fa;
+  color: #303133;
+}
+
+.layout {
+  height: 100%;
+}
+
+.aside {
+  background: var(--aside);
+  overflow: hidden;
+  transition: width 0.2s ease;
+}
+
+.logo {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border-bottom: 1px solid #2a2b2c;
+}
+
+.logo .mark {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  background: var(--el-color-primary);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 14px;
+  border-radius: 4px;
+}
+
+.logo strong {
+  color: #fff;
+  font-size: 16px;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.menu-cap {
+  padding: 14px 20px 6px;
+  font-size: 11px;
+  color: #6b6e73;
+  letter-spacing: 0.08em;
+}
+
+.aside .el-menu {
+  border-right: none;
+}
+
+.aside .el-menu-item:hover {
+  background: var(--aside-hover) !important;
+}
+
+.aside .el-menu-item.is-active {
+  background: var(--el-color-primary) !important;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  background: #fff;
+  border-bottom: 1px solid #e4e7ed;
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+}
+
+.crumb {
+  flex: 1;
+  font-size: 13px;
+  color: #909399;
+}
+
+.crumb b {
+  color: #303133;
+  font-weight: 500;
+}
+
+.search {
+  width: 220px;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #606266;
+  font-size: 13px;
+}
+
+.tags {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  background: #fff;
+  border-bottom: 1px solid #e4e7ed;
+  overflow: auto;
+}
+
+.tags .el-tag {
+  cursor: pointer;
+}
+
+.main {
+  padding: 16px 20px 32px;
+  background: #f5f7fa;
+}
+
+.empty-module {
+  min-height: calc(100vh - 160px);
+  background: #fff;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+  padding: 24px 28px 48px;
+}
+
+.empty-module h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.empty-module .hint {
+  margin: 8px 0 32px;
+  color: #909399;
+  font-size: 13px;
+}
