@@ -3,131 +3,188 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>脚手架 A · 侧栏控制台</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;600&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<title>粤教 · 侧栏控制台（已选定）</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--ink:#14120f;--red:#c41e1e;--paper:#fffdf8;--bg:#f4efe6;--mute:#6f675b;--line:#d8cfbe}
+:root{
+  --el-color-primary:#c41e1e;
+  --el-color-primary-light:#fdecec;
+  --aside:#1d1e1f;
+  --aside-hover:#2b2c2d;
+  --header:#fff;
+  --bg:#f5f7fa;
+  --text:#303133;
+  --text-2:#606266;
+  --text-3:#909399;
+  --border:#e4e7ed;
+  --fill:#f5f7fa;
+  --shadow:0 1px 4px rgba(0,21,41,.08);
+}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
-body{font-family:"Noto Serif SC",Songti SC,serif;background:var(--bg);color:var(--ink)}
+body{font-family:"Noto Sans SC","IBM Plex Sans",sans-serif;background:var(--bg);color:var(--text);font-size:14px}
 a{color:inherit;text-decoration:none}
-.app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
-.side{background:#16130e;color:#efe8db;display:flex;flex-direction:column;padding:18px 14px 16px}
-.brand{display:flex;align-items:center;gap:10px;padding:6px 10px 18px;border-bottom:1px solid #2e2a24}
-.seal{width:32px;height:32px;border:1.5px solid #e24a4a;color:#e24a4a;display:grid;place-items:center;font-family:"ZCOOL XiaoWei",serif;font-size:18px;transform:rotate(-8deg)}
-.brand b{font-family:"ZCOOL XiaoWei",serif;font-size:22px;font-weight:400;letter-spacing:.16em}
-.brand small{display:block;font-family:"IBM Plex Mono",monospace;font-size:10px;color:#8d8476;letter-spacing:.12em}
-.search{margin:16px 8px 8px;background:#1f1b16;border:1px solid #3a342b;padding:8px 10px;color:#8d8476;font-size:12px;font-family:"IBM Plex Mono",monospace}
-.cap{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.22em;color:#8d8476;padding:14px 10px 6px}
-.item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:6px;color:#d9d0c2;font-size:14px}
-.item:hover{background:#241f19}
-.item.on{background:#c41e1e;color:#fff}
-.item i{width:7px;height:7px;background:currentColor;transform:rotate(45deg);opacity:.7;flex:0 0 7px}
-.slot{margin:6px 8px;border:1px dashed #4a4338;color:#8d8476;padding:9px;font-size:12px;text-align:center;border-radius:6px}
-.side-foot{margin-top:auto;padding:12px 10px 4px;border-top:1px solid #2e2a24;font-size:12px;color:#8d8476}
-.main{display:flex;flex-direction:column;min-width:0}
-.top{height:62px;background:var(--paper);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 22px}
-.crumb{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--mute);letter-spacing:.08em;flex:1}
-.find{width:220px;border:1px solid var(--line);background:#fff;padding:7px 10px;font:inherit;font-size:13px;color:var(--mute)}
-.icon{width:34px;height:34px;border:1px solid var(--line);display:grid;place-items:center;background:#fff;font-size:13px;color:var(--mute);position:relative}
-.icon em{position:absolute;top:5px;right:6px;width:7px;height:7px;background:var(--red);border-radius:50%}
-.avatar{width:34px;height:34px;background:#16130e;color:#fff;display:grid;place-items:center;font-family:"ZCOOL XiaoWei",serif}
-.back{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--red);border-bottom:1px solid var(--red)}
-.body{padding:26px 28px 48px}
-.head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:18px}
-h1{font-family:"ZCOOL XiaoWei",serif;font-weight:400;font-size:32px;letter-spacing:.08em}
-.sub{color:var(--mute);margin-top:6px;font-size:14px}
+button,input{font:inherit;color:inherit}
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh;transition:grid-template-columns .2s ease}
+.app.fold{grid-template-columns:64px 1fr}
+.aside{background:var(--aside);color:#cfd3dc;display:flex;flex-direction:column;overflow:hidden}
+.logo{height:56px;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid #2a2b2c;flex:0 0 56px}
+.logo .mark{width:28px;height:28px;background:var(--el-color-primary);color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px;border-radius:4px;flex:0 0 28px}
+.logo strong{white-space:nowrap;letter-spacing:.12em;font-size:16px;color:#fff}
+.fold .logo strong,.fold .menu .txt,.fold .menu .cap,.fold .badge{display:none}
+.menu{flex:1;overflow:auto;padding:8px 0 16px}
+.menu .cap{padding:14px 20px 6px;font-size:11px;color:#6b6e73;letter-spacing:.08em}
+.menu a{display:flex;align-items:center;gap:10px;height:44px;padding:0 20px;color:#cfd3dc;position:relative}
+.menu a:hover{background:var(--aside-hover);color:#fff}
+.menu a.on{background:var(--el-color-primary);color:#fff}
+.menu a .ico{width:18px;text-align:center;flex:0 0 18px;opacity:.9}
+.menu a .badge{margin-left:auto;font-size:10px;background:#3a3b3c;color:#9aa0a6;padding:1px 6px;border-radius:8px}
+.fold .menu a{justify-content:center;padding:0}
+.main{display:flex;flex-direction:column;min-width:0;min-height:100vh}
+.navbar{height:56px;background:var(--header);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:12px;box-shadow:var(--shadow);z-index:2}
+.fold-btn{width:32px;height:32px;border:0;background:transparent;cursor:pointer;font-size:18px;color:var(--text-2)}
+.crumb{display:flex;align-items:center;gap:6px;color:var(--text-3);font-size:13px;flex:1}
+.crumb b{color:var(--text);font-weight:500}
+.search{width:220px;height:32px;border:1px solid var(--border);border-radius:4px;padding:0 10px;background:var(--fill);font-size:13px}
+.search:focus{outline:none;border-color:var(--el-color-primary);background:#fff}
+.nav-ico{width:32px;height:32px;border:0;background:transparent;cursor:pointer;position:relative;color:var(--text-2)}
+.nav-ico em{position:absolute;top:6px;right:6px;width:6px;height:6px;background:var(--el-color-primary);border-radius:50%}
+.user{display:flex;align-items:center;gap:8px;padding:4px 8px;cursor:default}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--el-color-primary);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:600}
+.user span{font-size:13px;color:var(--text-2)}
+.tags{height:40px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:6px;overflow:auto}
+.tag{height:26px;padding:0 10px;border:1px solid var(--border);border-radius:2px;font-size:12px;color:var(--text-2);background:#fff;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.tag.on{color:var(--el-color-primary);border-color:#f0b4b4;background:var(--el-color-primary-light)}
+.tag i{font-style:normal;color:var(--text-3);cursor:default}
+.body{padding:16px 20px 32px;flex:1}
+.page-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:12px}
+.page-head h1{font-size:20px;font-weight:600}
+.page-head p{color:var(--text-3);margin-top:4px;font-size:13px}
 .btns{display:flex;gap:8px}
-.btn{border:1.5px solid var(--ink);background:#fff;padding:8px 14px;font:inherit;cursor:pointer;box-shadow:3px 3px 0 var(--ink)}
-.btn.pri{background:var(--red);color:#fff;border-color:var(--ink)}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
-.stat{background:var(--paper);border:1px solid var(--line);padding:14px 16px}
-.stat .n{font-family:"IBM Plex Mono",monospace;font-size:22px;color:#cfc4ad}
-.stat .l{font-size:12px;color:var(--mute);margin-top:4px}
-.panel{background:var(--paper);border:1px solid var(--line);box-shadow:0 10px 24px rgba(40,30,10,.05)}
-.filters{display:flex;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-.chip{border:1px dashed #b9ae98;color:var(--mute);padding:4px 10px;font-size:12px;background:#fff}
-.chip.on{border-style:solid;border-color:var(--ink);color:var(--ink)}
+.btn{height:32px;padding:0 14px;border:1px solid var(--border);background:#fff;border-radius:4px;cursor:pointer;font-size:13px}
+.btn:hover{border-color:#c0c4cc;color:var(--el-color-primary)}
+.btn.pri{background:var(--el-color-primary);border-color:var(--el-color-primary);color:#fff}
+.btn.pri:hover{filter:brightness(1.05);color:#fff}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--border);border-radius:4px;padding:16px 18px;box-shadow:var(--shadow)}
+.kpi .l{color:var(--text-3);font-size:12px}
+.kpi .n{font-size:24px;font-weight:600;margin:6px 0 8px;color:#c0c4cc;letter-spacing:2px}
+.kpi .f{height:4px;background:var(--fill);border-radius:2px;overflow:hidden}
+.kpi .f b{display:block;height:100%;width:38%;background:var(--el-color-primary);opacity:.35}
+.card{background:#fff;border:1px solid var(--border);border-radius:4px;box-shadow:var(--shadow)}
+.toolbar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:8px;flex-wrap:wrap}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.sel,.inp{height:32px;border:1px solid var(--border);border-radius:4px;padding:0 10px;background:#fff;color:var(--text-3);font-size:13px}
 table{width:100%;border-collapse:collapse}
-th{text-align:left;padding:11px 14px;font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.12em;color:var(--mute);border-bottom:1px solid var(--line);background:#f7f1e6}
-td{padding:13px 14px;border-bottom:1px dashed #e4dccd}
-.sk{height:10px;background:linear-gradient(90deg,#efe8d8,#f7f1e6,#efe8d8);background-size:200% 100%;animation:sh 1.4s ease infinite;border-radius:3px}
-@keyframes sh{0%{background-position:100% 0}100%{background-position:-100% 0}}
-.ops{color:#cfc4ad;font-family:"IBM Plex Mono",monospace;font-size:11px}
-.pager{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;color:var(--mute);font-size:12px}
-.pages{display:flex;gap:6px}
-.pages span{width:28px;height:28px;border:1px solid var(--line);display:grid;place-items:center;background:#fff}
-.pages span.on{background:var(--ink);color:#fff;border-color:var(--ink)}
-@media(max-width:900px){.app{grid-template-columns:1fr}.side{display:none}.stats{grid-template-columns:1fr 1fr}}
+th{text-align:left;padding:10px 16px;font-size:13px;font-weight:500;color:var(--text-2);background:var(--fill);border-bottom:1px solid var(--border)}
+td{padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px}
+tr:hover td{background:#fafafa}
+.sk{height:12px;background:linear-gradient(90deg,#ebeef5,#f5f7fa,#ebeef5);background-size:200% 100%;animation:sh 1.3s ease infinite;border-radius:2px}
+@keyframes sh{to{background-position:-100% 0}}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#c0c4cc;margin-right:6px;vertical-align:middle}
+.link{color:var(--el-color-primary);margin-right:8px;cursor:default}
+.pager{display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:12px 16px;color:var(--text-3);font-size:12px}
+.pager b{min-width:28px;height:28px;border:1px solid var(--border);display:grid;place-items:center;background:#fff;font-weight:400;border-radius:2px}
+.pager b.on{background:var(--el-color-primary);border-color:var(--el-color-primary);color:#fff}
+.tip{margin-top:12px;font-size:12px;color:var(--text-3)}
+.tip a{color:var(--el-color-primary)}
+@media(max-width:960px){
+  .app,.app.fold{grid-template-columns:1fr}
+  .aside{display:none}
+  .kpis{grid-template-columns:1fr 1fr}
+  .search{display:none}
+}
 </style>
 </head>
 <body>
-<div class="app">
-  <aside class="side">
-    <div class="brand">
-      <div class="seal">粤</div>
-      <div><b>粤教</b><small>SHELL A</small></div>
-    </div>
-    <div class="search">搜索菜单…</div>
-    <div class="cap">框架</div>
-    <a class="item on" href="#"><i></i>工作台</a>
-    <a class="item" href="#"><i></i>设置槽</a>
-    <div class="cap">功能槽 · 后加</div>
-    <div class="slot">模块菜单 01</div>
-    <div class="slot">模块菜单 02</div>
-    <div class="slot">模块菜单 03</div>
-    <div class="slot">模块菜单 04</div>
-    <div class="side-foot">侧栏可收起 · 角色槽：未指定</div>
+<div class="app" id="app">
+  <aside class="aside">
+    <div class="logo"><div class="mark">粤</div><strong>粤教服务</strong></div>
+    <nav class="menu">
+      <div class="cap">工作台</div>
+      <a class="on" href="#" data-page="home"><span class="ico">⌂</span><span class="txt">工作台</span></a>
+      <div class="cap">业务模块 · 后接</div>
+      <a href="#" data-page="pf"><span class="ico">▣</span><span class="txt">客户研判</span></a>
+      <a href="#" data-page="cs"><span class="ico">◈</span><span class="txt">客服 Agent</span></a>
+      <a href="#" data-page="ent"><span class="ico">☰</span><span class="txt">企业助手</span></a>
+      <a href="#" data-page="stu"><span class="ico">○</span><span class="txt">学生助手</span></a>
+      <a href="#" data-page="rpt"><span class="ico">▤</span><span class="txt">智能报告</span></a>
+      <div class="cap">系统</div>
+      <a href="#" data-page="set"><span class="ico">⚙</span><span class="txt">设置</span><span class="badge">槽</span></a>
+    </nav>
   </aside>
   <div class="main">
-    <header class="top">
-      <div class="crumb">控制台 / 工作台 / 列表骨架</div>
-      <input class="find" placeholder="全局搜索槽" disabled>
-      <div class="icon">铃<em></em></div>
-      <div class="avatar">可</div>
-      <a class="back" href="00-总览.html">换壳</a>
+    <header class="navbar">
+      <button class="fold-btn" id="fold" type="button" title="收起侧栏">☰</button>
+      <div class="crumb">粤教 / 控制台 / <b id="crumb">工作台</b></div>
+      <input class="search" placeholder="搜索菜单 / 客户 / 工单" disabled>
+      <button class="nav-ico" type="button" title="通知">🔔<em></em></button>
+      <div class="user"><div class="avatar">可</div><span>瞿可为</span></div>
     </header>
-    <div class="body">
-      <div class="head">
+    <div class="tags">
+      <span class="tag on">工作台 <i>×</i></span>
+      <span class="tag">客户研判 <i>×</i></span>
+      <span class="tag">企业助手 <i>×</i></span>
+    </div>
+    <main class="body">
+      <div class="page-head">
         <div>
-          <h1>空工作台</h1>
-          <p class="sub">左菜单管模块，中间铺列表和表单。数字和行都是骨架，接入接口后替换。</p>
+          <h1>工作台</h1>
+          <p>已选定侧栏控制台作为粤教后台壳。数字和表格是骨架，接 FastAPI 后替换。</p>
         </div>
         <div class="btns">
-          <button class="btn" type="button">导出槽</button>
-          <button class="btn pri" type="button">新建槽</button>
+          <button class="btn" type="button">导出</button>
+          <button class="btn pri" type="button">新建</button>
         </div>
       </div>
-      <div class="stats">
-        <div class="stat"><div class="n">— —</div><div class="l">统计槽 A</div></div>
-        <div class="stat"><div class="n">— —</div><div class="l">统计槽 B</div></div>
-        <div class="stat"><div class="n">— —</div><div class="l">统计槽 C</div></div>
-        <div class="stat"><div class="n">— —</div><div class="l">统计槽 D</div></div>
+      <div class="kpis">
+        <div class="kpi"><div class="l">今日意向</div><div class="n">— —</div><div class="f"><b></b></div></div>
+        <div class="kpi"><div class="l">待审批</div><div class="n">— —</div><div class="f"><b style="width:22%"></b></div></div>
+        <div class="kpi"><div class="l">未结投诉</div><div class="n">— —</div><div class="f"><b style="width:55%"></b></div></div>
+        <div class="kpi"><div class="l">会话中</div><div class="n">— —</div><div class="f"><b style="width:70%"></b></div></div>
       </div>
-      <div class="panel">
-        <div class="filters">
-          <span class="chip on">全部</span>
-          <span class="chip">状态槽</span>
-          <span class="chip">时间槽</span>
-          <span class="chip">负责人槽</span>
+      <div class="card">
+        <div class="toolbar">
+          <div class="filters">
+            <select class="sel" disabled><option>全部状态</option></select>
+            <select class="sel" disabled><option>全部模块</option></select>
+            <input class="inp" placeholder="关键词" disabled>
+            <button class="btn" type="button">查询</button>
+            <button class="btn" type="button">重置</button>
+          </div>
         </div>
         <table>
-          <thead><tr><th>名称</th><th>状态</th><th>更新</th><th>负责人</th><th></th></tr></thead>
+          <thead>
+            <tr><th style="width:48px">#</th><th>名称</th><th>模块</th><th>状态</th><th>更新时间</th><th>负责人</th><th>操作</th></tr>
+          </thead>
           <tbody>
-            <tr><td><div class="sk" style="width:46%"></div></td><td><div class="sk" style="width:28%"></div></td><td><div class="sk" style="width:40%"></div></td><td><div class="sk" style="width:30%"></div></td><td class="ops">查看 · 编辑</td></tr>
-            <tr><td><div class="sk" style="width:58%"></div></td><td><div class="sk" style="width:22%"></div></td><td><div class="sk" style="width:36%"></div></td><td><div class="sk" style="width:34%"></div></td><td class="ops">查看 · 编辑</td></tr>
-            <tr><td><div class="sk" style="width:38%"></div></td><td><div class="sk" style="width:32%"></div></td><td><div class="sk" style="width:44%"></div></td><td><div class="sk" style="width:24%"></div></td><td class="ops">查看 · 编辑</td></tr>
-            <tr><td><div class="sk" style="width:62%"></div></td><td><div class="sk" style="width:20%"></div></td><td><div class="sk" style="width:30%"></div></td><td><div class="sk" style="width:40%"></div></td><td class="ops">查看 · 编辑</td></tr>
-            <tr><td><div class="sk" style="width:50%"></div></td><td><div class="sk" style="width:26%"></div></td><td><div class="sk" style="width:38%"></div></td><td><div class="sk" style="width:28%"></div></td><td class="ops">查看 · 编辑</td></tr>
+            <tr><td>1</td><td><div class="sk" style="width:52%"></div></td><td>客户研判</td><td><span class="dot"></span>骨架</td><td><div class="sk" style="width:70%"></div></td><td><div class="sk" style="width:40%"></div></td><td><span class="link">查看</span><span class="link">编辑</span></td></tr>
+            <tr><td>2</td><td><div class="sk" style="width:64%"></div></td><td>企业助手</td><td><span class="dot"></span>骨架</td><td><div class="sk" style="width:62%"></div></td><td><div class="sk" style="width:36%"></div></td><td><span class="link">查看</span><span class="link">编辑</span></td></tr>
+            <tr><td>3</td><td><div class="sk" style="width:44%"></div></td><td>客服 Agent</td><td><span class="dot"></span>骨架</td><td><div class="sk" style="width:58%"></div></td><td><div class="sk" style="width:48%"></div></td><td><span class="link">查看</span><span class="link">编辑</span></td></tr>
+            <tr><td>4</td><td><div class="sk" style="width:71%"></div></td><td>学生助手</td><td><span class="dot"></span>骨架</td><td><div class="sk" style="width:66%"></div></td><td><div class="sk" style="width:30%"></div></td><td><span class="link">查看</span><span class="link">编辑</span></td></tr>
+            <tr><td>5</td><td><div class="sk" style="width:38%"></div></td><td>智能报告</td><td><span class="dot"></span>骨架</td><td><div class="sk" style="width:50%"></div></td><td><div class="sk" style="width:42%"></div></td><td><span class="link">查看</span><span class="link">编辑</span></td></tr>
           </tbody>
         </table>
-        <div class="pager">
-          <span>共 — 条 · 每页 10</span>
-          <div class="pages"><span class="on">1</span><span>2</span><span>3</span></div>
-        </div>
+        <div class="pager">共 — 条　每页 10　<b>‹</b><b class="on">1</b><b>2</b><b>3</b><b>›</b></div>
       </div>
-    </div>
+      <p class="tip">引擎用 ElementAdmin v3（见 <a href="../脚手架文件.md">脚手架文件.md</a>）。这页是布局稿：侧栏 + 顶栏 + 页签 + 列表。</p>
+    </main>
   </div>
 </div>
+<script>
+(function(){
+  var app = document.getElementById("app");
+  document.getElementById("fold").onclick = function(){ app.classList.toggle("fold"); };
+  var crumb = document.getElementById("crumb");
+  document.querySelectorAll(".menu a").forEach(function(a){
+    a.addEventListener("click", function(e){
+      e.preventDefault();
+      document.querySelectorAll(".menu a").forEach(function(x){ x.classList.remove("on"); });
+      a.classList.add("on");
+      crumb.textContent = a.querySelector(".txt").textContent;
+    });
+  });
+})();
+</script>
 </body>
 </html>
