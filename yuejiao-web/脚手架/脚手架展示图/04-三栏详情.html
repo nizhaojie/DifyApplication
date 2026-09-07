@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>脚手架 D · 三栏详情</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1f2328;--mute:#6e7781;--line:#d0d7de;--bg:#f6f8fa;--blue:#0969da;--soft:#ddf4ff}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:"Noto Sans SC","IBM Plex Mono",sans-serif;background:#eef1f4;color:var(--ink);font-size:14px}
+a{color:inherit;text-decoration:none}
+.app{height:100vh;display:grid;grid-template-rows:52px 1fr}
+.top{background:#24292f;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 16px}
+.top b{letter-spacing:.04em}
+.top .sub{color:#8b949e;font-size:12px;margin-left:10px;font-family:"IBM Plex Mono",monospace}
+.top a{color:#ffa198;font-family:"IBM Plex Mono",monospace;font-size:11px}
+.shell{display:grid;grid-template-columns:72px 320px 1fr;min-height:0}
+.rail{background:#2d333b;display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:10px}
+.ico{width:42px;height:42px;border-radius:10px;border:1px solid #444c56;color:#8b949e;display:grid;place-items:center;font-size:11px;text-align:center;line-height:1.2}
+.ico.on{background:#58a6ff;color:#0d1117;border-color:#58a6ff;font-weight:600}
+.list{background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.tools{padding:10px;border-bottom:1px solid var(--line);display:flex;gap:8px}
+.tools input{flex:1;border:1px solid var(--line);background:var(--bg);padding:7px 8px;font:inherit}
+.tools button{border:1px solid var(--line);background:#fff;padding:0 10px;color:var(--mute)}
+.rows{overflow:auto}
+.row{padding:12px 14px;border-bottom:1px solid #f1f3f5;cursor:default}
+.row:hover{background:#f6f8fa}
+.row.on{background:var(--soft);box-shadow:inset 3px 0 0 var(--blue)}
+.row .ttl{font-weight:600;margin-bottom:4px}
+.row .meta{color:var(--mute);font-size:12px;display:flex;justify-content:space-between}
+.ph{color:#8c959f;border:1px dashed var(--line);margin:10px;padding:16px;text-align:center}
+.detail{background:var(--bg);overflow:auto}
+.bar{background:#fff;border-bottom:1px solid var(--line);padding:14px 24px;display:flex;justify-content:space-between;align-items:center}
+.bar h1{font-size:20px;font-weight:600}
+.acts button{margin-left:8px;border:1px solid var(--line);background:#fff;padding:6px 10px;font:inherit}
+.acts .pri{background:var(--blue);color:#fff;border-color:var(--blue)}
+.content{padding:22px 24px 48px;display:grid;grid-template-columns:1fr 280px;gap:16px}
+.card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px}
+.card h3{font-size:13px;color:var(--mute);margin-bottom:12px;font-weight:500}
+.line{height:10px;background:#eaeef2;border-radius:4px;margin:8px 0}
+.kv{display:grid;grid-template-columns:72px 1fr;gap:8px;font-size:13px;margin:8px 0;color:var(--mute)}
+@media(max-width:980px){.shell{grid-template-columns:1fr}.rail,.list{display:none}.content{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div><b>粤教 · 壳 D</b><span class="sub">LIST / DETAIL</span></div>
+    <a href="00-总览.html">换壳</a>
+  </header>
+  <div class="shell">
+    <nav class="rail">
+      <div class="ico on">主</div>
+      <div class="ico">槽<br>1</div>
+      <div class="ico">槽<br>2</div>
+      <div class="ico">槽<br>3</div>
+      <div class="ico">槽<br>4</div>
+    </nav>
+    <aside class="list">
+      <div class="tools">
+        <input placeholder="筛选槽" disabled>
+        <button type="button">+</button>
+      </div>
+      <div class="rows">
+        <div class="row on">
+          <div class="ttl">当前选中 · 占位标题</div>
+          <div class="meta"><span>状态槽</span><span>刚刚</span></div>
+        </div>
+        <div class="row">
+          <div class="ttl" style="color:#8c959f">列表项骨架</div>
+          <div class="meta"><span>未接入</span><span>—:—</span></div>
+        </div>
+        <div class="row">
+          <div class="ttl" style="color:#8c959f">列表项骨架</div>
+          <div class="meta"><span>未接入</span><span>—:—</span></div>
+        </div>
+        <div class="ph">循环渲染槽 · 客户 / 工单 / 请假</div>
+      </div>
+    </aside>
+    <main class="detail">
+      <div class="bar">
+        <div>
+          <h1>详情空着</h1>
+          <div style="color:var(--mute);font-size:12px;margin-top:4px">编号槽 · 创建时间槽 · 负责人槽</div>
+        </div>
+        <div class="acts">
+          <button type="button">次要操作</button>
+          <button class="pri" type="button">主操作槽</button>
+        </div>
+      </div>
+      <div class="content">
+        <div>
+          <div class="card">
+            <h3>正文 / 时间线槽</h3>
+            <div class="line" style="width:92%"></div>
+            <div class="line" style="width:80%"></div>
+            <div class="line" style="width:64%"></div>
+            <div class="line" style="width:74%"></div>
+            <p style="color:var(--mute);font-size:13px;margin-top:12px">跟进记录、审批意见、对话摘要以后按时间往下叠。</p>
+          </div>
+          <div class="card" style="margin-top:12px">
+            <h3>附件 / 评论槽</h3>
+            <div class="line" style="width:48%"></div>
+            <div class="line" style="width:36%"></div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <h3>属性</h3>
+            <div class="kv"><span>状态</span><span>空</span></div>
+            <div class="kv"><span>类型</span><span>槽</span></div>
+            <div class="kv"><span>负责人</span><span>—</span></div>
+            <div class="kv"><span>更新</span><span>—</span></div>
+          </div>
+          <div class="card" style="margin-top:12px">
+            <h3>关联槽</h3>
+            <p style="color:var(--mute);font-size:13px">以后链到客户、课程或请假单。</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

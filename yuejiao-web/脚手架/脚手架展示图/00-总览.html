@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>粤教 · 选一个脚手架壳</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;600&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#16130e;--mute:#6d6456;--paper:#fbf7ee;--line:#cfc4ad;--red:#c41e1e;--gold:#9a7b2f}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:"Noto Serif SC",Songti SC,SimSun,serif;color:var(--ink);line-height:1.75;
+  background:
+    radial-gradient(900px 420px at 10% -10%,#fff8e8,transparent 60%),
+    radial-gradient(700px 380px at 110% 0%,#f3e4d4,transparent 55%),
+    #f3eee4;
+}
+body::after{
+  content:"";position:fixed;inset:0;pointer-events:none;opacity:.035;z-index:0;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence baseFrequency='.8' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+a{color:inherit;text-decoration:none}
+.wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:56px 28px 96px}
+.hero{display:grid;grid-template-columns:1.2fr .8fr;gap:40px;align-items:end;margin-bottom:42px;padding-bottom:32px;border-bottom:1px solid var(--line)}
+.kicker{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.32em;color:var(--gold);margin-bottom:14px}
+h1{font-family:"ZCOOL XiaoWei",KaiTi,serif;font-weight:400;font-size:clamp(36px,5vw,56px);letter-spacing:.12em;line-height:1.15}
+.lead{color:var(--mute);margin-top:16px;max-width:560px;font-size:16px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.pill{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.06em;border:1px solid var(--line);background:var(--paper);padding:5px 12px;border-radius:999px;color:var(--mute)}
+.aside-note{background:var(--paper);border:1px solid var(--line);padding:18px 20px;box-shadow:6px 6px 0 rgba(22,19,14,.08)}
+.aside-note b{display:block;font-family:"ZCOOL XiaoWei",serif;font-size:20px;font-weight:400;margin-bottom:6px}
+.aside-note p{color:var(--mute);font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:18px}
+.card{grid-column:span 4;display:block;background:var(--paper);border:1px solid var(--line);box-shadow:0 10px 28px rgba(40,30,10,.06);overflow:hidden;transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease}
+.card:hover{transform:translateY(-6px);box-shadow:0 18px 36px rgba(40,30,10,.12);border-color:#b9a888}
+.preview{height:148px;padding:14px;background:#efe8d8;border-bottom:1px solid var(--line)}
+.mini{height:100%;border:1px solid #c8bda6;background:#fffdf8;display:grid;overflow:hidden}
+.mini.a{grid-template-columns:28px 1fr}
+.mini.a .s{background:#1b1814}
+.mini.b{grid-template-rows:18px 1fr}
+.mini.b .s{background:#fff;border-bottom:1px solid #ddd4c2;display:flex;gap:6px;align-items:center;padding:0 8px}
+.mini.b .s i{display:block;height:4px;width:18px;background:#d8cfbe}
+.mini.c{grid-template-columns:26px 1fr 26px}
+.mini.c .m{background:#f7f1e6;display:flex;align-items:flex-end;justify-content:center;padding:8px}
+.mini.c .m b{width:46%;height:18px;background:#efe4d2;border:1px solid #d8cfbe}
+.mini.d{grid-template-columns:14px 32px 1fr}
+.mini.d .r{background:#2a2d32}
+.mini.e{padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#e8efe9}
+.mini.e i{background:#fff;border:1px dashed #9bb09d}
+.info{padding:16px 18px 18px;position:relative}
+.no{position:absolute;right:14px;top:8px;font-family:"ZCOOL XiaoWei",serif;font-size:36px;color:#ece4d4;line-height:1}
+.mod{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.18em;color:var(--gold)}
+.card h2{font-family:"ZCOOL XiaoWei",serif;font-weight:400;font-size:24px;letter-spacing:.08em;margin:6px 0 8px}
+.card p{color:var(--mute);font-size:13.5px;min-height:66px}
+.go{margin-top:10px;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--red);letter-spacing:.08em}
+.foot{margin-top:36px;color:var(--mute);font-size:13.5px;border-left:3px solid var(--red);padding:10px 14px;background:rgba(196,30,30,.06)}
+@media(max-width:980px){.hero{grid-template-columns:1fr}.card{grid-column:span 6}}
+@media(max-width:640px){.card{grid-column:span 12}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div>
+      <div class="kicker">SCAFFOLD PICKER · FRAME FIRST</div>
+      <h1>先选壳<br>再往里面加东西</h1>
+      <p class="lead">五种空框架，结构不一样。虚线槽是以后放功能的位置，现在没有粤教业务。点卡片看完整壳，选定一种再说。</p>
+      <div class="meta">
+        <span class="pill">5 种布局</span>
+        <span class="pill">空状态 + 骨架</span>
+        <span class="pill">静态示意 · 不接接口</span>
+      </div>
+    </div>
+    <div class="aside-note">
+      <b>怎么选</b>
+      <p>后台列表多 → 侧栏。入口宣传感 → 顶栏。Agent 当主界面 → 对话。点一条看详情 → 三栏。先看数再下钻 → 仪表盘。</p>
+    </div>
+  </div>
+
+  <div class="grid">
+    <a class="card" href="01-侧栏控制台.html">
+      <div class="preview"><div class="mini a"><div class="s"></div><div></div></div></div>
+      <div class="info">
+        <div class="no">壹</div>
+        <div class="mod">TYPE A · SIDEBAR</div>
+        <h2>侧栏控制台</h2>
+        <p>墨色侧栏、顶栏搜索、筛选条、骨架表格和分页。后台最稳的一种。</p>
+        <div class="go">打开完整壳 →</div>
+      </div>
+    </a>
+    <a class="card" href="02-顶栏门户.html">
+      <div class="preview"><div class="mini b"><div class="s"><i></i><i></i><i></i></div><div></div></div></div>
+      <div class="info">
+        <div class="no">贰</div>
+        <div class="mod">TYPE B · TOPNAV</div>
+        <h2>顶栏门户</h2>
+        <p>宽顶栏、大标题、入口磁贴。像从官网走进系统，适合先摆模块门。</p>
+        <div class="go">打开完整壳 →</div>
+      </div>
+    </a>
+    <a class="card" href="03-对话工作台.html">
+      <div class="preview"><div class="mini c"><div class="s"></div><div class="m"><b></b></div><div class="s"></div></div></div>
+      <div class="info">
+        <div class="no">叁</div>
+        <div class="mod">TYPE C · CHAT</div>
+        <h2>对话工作台</h2>
+        <p>会话列、主对话画布、右侧上下文。三个 Agent 以后都坐在中间说话。</p>
+        <div class="go">打开完整壳 →</div>
+      </div>
+    </a>
+    <a class="card" href="04-三栏详情.html">
+      <div class="preview"><div class="mini d"><div class="r"></div><div class="s"></div><div></div></div></div>
+      <div class="info">
+        <div class="no">肆</div>
+        <div class="mod">TYPE D · SPLIT</div>
+        <h2>三栏详情</h2>
+        <p>窄图标轨、中列清单、右侧详情。客户、工单、请假都是点一条展开。</p>
+        <div class="go">打开完整壳 →</div>
+      </div>
+    </a>
+    <a class="card" href="05-仪表盘宫格.html">
+      <div class="preview"><div class="mini e"><i></i><i></i><i></i><i></i></div></div>
+      <div class="info">
+        <div class="no">伍</div>
+        <div class="mod">TYPE E · GRID</div>
+        <h2>仪表盘宫格</h2>
+        <p>KPI、空图表、待办与入口槽。先看全局，再从卡片钻进具体页。</p>
+        <div class="go">打开完整壳 →</div>
+      </div>
+    </a>
+  </div>
+  <p class="foot">这些壳只决定「页面怎么摆」。选中后再往槽里加研判、客服、助手、报告，并落到 Vue 工程。</p>
+</div>
+</body>
+</html>

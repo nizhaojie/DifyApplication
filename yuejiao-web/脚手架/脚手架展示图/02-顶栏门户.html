@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>脚手架 B · 顶栏门户</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;600&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1b1712;--mute:#6d6458;--line:#ddd3c2;--paper:#fffdf9;--gold:#9a7b2f;--red:#b23a2e}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Noto Serif SC",Songti SC,serif;background:#f6f1e7;color:var(--ink)}
+a{color:inherit;text-decoration:none}
+.top{position:sticky;top:0;z-index:5;background:rgba(255,253,249,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);height:68px;display:flex;align-items:center;padding:0 40px;gap:28px}
+.logo{font-family:"ZCOOL XiaoWei",serif;font-size:24px;letter-spacing:.2em}
+.logo em{color:var(--red);font-style:normal}
+.nav{display:flex;align-items:center;gap:6px;flex:1}
+.nav a{padding:8px 12px;font-size:14px;color:var(--mute)}
+.nav a.on{color:var(--ink);box-shadow:inset 0 -2px 0 var(--ink)}
+.slot{padding:6px 12px;border:1px dashed #cbbfaa;color:#9a9184;font-size:13px}
+.right{display:flex;align-items:center;gap:14px;font-size:13px;color:var(--mute)}
+.right .back{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--red);border-bottom:1px solid var(--red)}
+.avatar{width:32px;height:32px;border:1px solid var(--ink);display:grid;place-items:center;font-family:"ZCOOL XiaoWei",serif}
+.hero{padding:72px 40px 48px;background:
+  linear-gradient(180deg,#fffdf8 0%,transparent 70%),
+  radial-gradient(600px 240px at 80% 0%,#f3e0d2,transparent 70%);
+  border-bottom:1px solid var(--line)}
+.kicker{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.3em;color:var(--gold)}
+h1{font-family:"ZCOOL XiaoWei",serif;font-weight:400;font-size:clamp(40px,6vw,64px);letter-spacing:.14em;margin:12px 0 10px;line-height:1.15}
+.hero p{color:var(--mute);max-width:620px;font-size:16px}
+.rule{width:64px;height:2px;background:var(--red);margin:22px 0}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 40px 80px}
+.sec{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.22em;color:var(--gold);margin-bottom:14px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.tile{background:var(--paper);border:1px solid var(--line);padding:26px 22px 22px;min-height:210px;box-shadow:0 8px 20px rgba(40,30,10,.04);transition:transform .2s ease}
+.tile:hover{transform:translateY(-4px)}
+.tile .ico{width:36px;height:36px;border:1px solid var(--ink);display:grid;place-items:center;font-family:"ZCOOL XiaoWei",serif;margin-bottom:16px}
+.tile h3{font-family:"ZCOOL XiaoWei",serif;font-weight:400;font-size:24px;letter-spacing:.06em;margin-bottom:8px}
+.tile p{color:var(--mute);font-size:14px}
+.tile.empty{border-style:dashed;color:#9a9184;display:flex;flex-direction:column;justify-content:space-between}
+.tile.empty .ph{height:12px;background:#efe8d8;margin:8px 0;width:70%}
+.band{margin-top:28px;display:grid;grid-template-columns:1.4fr .8fr;gap:16px}
+.panel{background:var(--paper);border:1px solid var(--line);padding:24px;min-height:180px}
+.panel h3{font-family:"ZCOOL XiaoWei",serif;font-weight:400;font-size:22px;margin-bottom:8px}
+.panel p{color:var(--mute);font-size:14px}
+.dash{margin-top:16px;display:grid;gap:10px}
+.dash i{display:block;height:10px;background:#efe8d8}
+footer{border-top:1px solid var(--line);padding:22px 40px;display:flex;justify-content:space-between;color:var(--mute);font-size:12px;font-family:"IBM Plex Mono",monospace}
+@media(max-width:900px){.tiles,.band{grid-template-columns:1fr}.top{padding:0 16px;flex-wrap:wrap;height:auto}.hero,.wrap{padding-left:16px;padding-right:16px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="logo">粤教 <em>壳 B</em></div>
+  <nav class="nav">
+    <a class="on" href="#">首页</a>
+    <span class="slot">顶栏槽 1</span>
+    <span class="slot">顶栏槽 2</span>
+    <span class="slot">顶栏槽 3</span>
+    <span class="slot">顶栏槽 4</span>
+  </nav>
+  <div class="right">
+    <a class="back" href="00-总览.html">换壳</a>
+    登录槽
+    <div class="avatar">可</div>
+  </div>
+</header>
+<section class="hero">
+  <div class="kicker">TOP NAV PORTAL · 门户壳</div>
+  <h1>从门口走进系统</h1>
+  <div class="rule"></div>
+  <p>菜单横在顶上，中间很宽。下面磁贴是模块门，点进去再进具体功能。现在只有一张示意，其余是空槽。</p>
+</section>
+<main class="wrap">
+  <div class="sec">MODULE GATES · 入口磁贴</div>
+  <div class="tiles">
+    <div class="tile">
+      <div class="ico">示</div>
+      <h3>示例入口</h3>
+      <p>正式做的时候改成真实模块名和一句说明。旁边虚线才是留给业务的门。</p>
+    </div>
+    <div class="tile empty"><div><div class="ph"></div><div class="ph" style="width:48%"></div></div>入口槽</div>
+    <div class="tile empty"><div><div class="ph"></div><div class="ph" style="width:56%"></div></div>入口槽</div>
+    <div class="tile empty"><div><div class="ph"></div><div class="ph" style="width:40%"></div></div>入口槽</div>
+    <div class="tile empty"><div><div class="ph"></div><div class="ph" style="width:62%"></div></div>入口槽</div>
+    <div class="tile empty"><div><div class="ph"></div><div class="ph" style="width:50%"></div></div>入口槽</div>
+  </div>
+  <div class="band">
+    <div class="panel">
+      <h3>公告 / 引导槽</h3>
+      <p>以后放使用说明、今日提示或答辩演示入口。现在用灰条占位。</p>
+      <div class="dash"><i style="width:92%"></i><i style="width:74%"></i><i style="width:60%"></i></div>
+    </div>
+    <div class="panel">
+      <h3>快捷操作槽</h3>
+      <p>登录后的两三个主按钮放这里，避免顶栏太挤。</p>
+      <div class="dash"><i style="width:80%"></i><i style="width:54%"></i></div>
+    </div>
+  </div>
+</main>
+<footer>
+  <span>YUEJIAO · PORTAL SHELL</span>
+  <span>静态框架 · 不接数据</span>
+</footer>
+</body>
+</html>

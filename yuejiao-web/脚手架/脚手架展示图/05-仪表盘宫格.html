@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>脚手架 E · 仪表盘宫格</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;600&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#14301c;--mute:#4d6754;--line:#c5d4c8;--paper:#f7fbf7;--mint:#e7f3ea}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Noto Serif SC",Songti SC,serif;background:linear-gradient(180deg,#e7f0e8,#eef3ef 28%);color:var(--ink)}
+a{color:inherit;text-decoration:none}
+.top{height:64px;background:#14301c;color:#e8f3ea;display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+.brand{display:flex;align-items:center;gap:10px}
+.seal{width:28px;height:28px;border:1px solid #8fbf98;display:grid;place-items:center;font-family:"ZCOOL XiaoWei",serif}
+.brand b{font-family:"ZCOOL XiaoWei",serif;font-weight:400;font-size:22px;letter-spacing:.14em}
+.top a{font-family:"IBM Plex Mono",monospace;font-size:11px;color:#b7d0bb;border-bottom:1px solid #b7d0bb}
+.wrap{max-width:1160px;margin:0 auto;padding:28px 24px 72px}
+.pagehead{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:22px;gap:16px}
+.kicker{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.24em;color:#3d6b48}
+h1{font-family:"ZCOOL XiaoWei",serif;font-weight:400;font-size:36px;letter-spacing:.08em;margin:6px 0 4px}
+.lead{color:var(--mute)}
+.seg{display:flex;border:1px solid var(--ink);background:#fff}
+.seg span{padding:7px 12px;font-size:13px;color:var(--mute)}
+.seg span.on{background:var(--ink);color:#fff}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+.kpi{background:var(--paper);border:1px solid var(--line);padding:16px 16px 14px;box-shadow:0 8px 18px rgba(20,48,28,.04)}
+.kpi .l{font-size:12px;color:var(--mute)}
+.kpi .n{font-family:"IBM Plex Mono",monospace;font-size:28px;margin:6px 0 8px;color:#9bb59f}
+.spark{display:flex;align-items:flex-end;gap:3px;height:28px}
+.spark i{flex:1;background:#cfe0d2}
+.grid{display:grid;grid-template-columns:1.6fr 1fr;gap:12px}
+.card{background:var(--paper);border:1px solid var(--line);padding:18px;min-height:260px}
+.card h3{font-family:"ZCOOL XiaoWei",serif;font-weight:400;font-size:22px;margin-bottom:6px}
+.card p{color:var(--mute);font-size:13.5px;margin-bottom:14px}
+.chart{height:150px;border:1px dashed #9bb59f;background:
+  linear-gradient(180deg,transparent 0 24px,rgba(20,48,28,.05) 25px),
+  repeating-linear-gradient(90deg,transparent 0 39px,rgba(20,48,28,.05) 40px);
+  display:flex;align-items:flex-end;justify-content:space-around;padding:16px 20px 10px}
+.chart b{width:18px;background:#c5d4c8;display:block}
+.list{display:grid;gap:8px}
+.todo{border:1px dashed #9bb59f;padding:10px 12px;color:#7a9480;font-size:13px;display:flex;justify-content:space-between}
+.row2{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+.gate{background:var(--paper);border:1px dashed #9bb59f;min-height:120px;padding:16px;color:#7a9480}
+.gate h4{font-family:"ZCOOL XiaoWei",serif;font-weight:400;font-size:20px;color:var(--ink);margin-bottom:6px}
+@media(max-width:900px){.kpis,.grid,.row2{grid-template-columns:1fr}.pagehead{flex-direction:column;align-items:flex-start}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><div class="seal">盘</div><b>粤教 · 壳 E</b></div>
+  <a href="00-总览.html">换壳</a>
+</header>
+<main class="wrap">
+  <div class="pagehead">
+    <div>
+      <div class="kicker">DASHBOARD GRID</div>
+      <h1>先看全局，再钻进去</h1>
+      <p class="lead">KPI、空图表、待办和三扇门都是槽。有数据后灰条换成真数字和 ECharts。</p>
+    </div>
+    <div class="seg"><span class="on">今日</span><span>本周</span><span>本月</span></div>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><div class="l">指标槽 A</div><div class="n">— —</div><div class="spark"><i style="height:40%"></i><i style="height:55%"></i><i style="height:35%"></i><i style="height:70%"></i><i style="height:48%"></i><i style="height:62%"></i></div></div>
+    <div class="kpi"><div class="l">指标槽 B</div><div class="n">— —</div><div class="spark"><i style="height:30%"></i><i style="height:44%"></i><i style="height:50%"></i><i style="height:38%"></i><i style="height:66%"></i><i style="height:52%"></i></div></div>
+    <div class="kpi"><div class="l">指标槽 C</div><div class="n">— —</div><div class="spark"><i style="height:58%"></i><i style="height:42%"></i><i style="height:47%"></i><i style="height:60%"></i><i style="height:33%"></i><i style="height:41%"></i></div></div>
+    <div class="kpi"><div class="l">指标槽 D</div><div class="n">— —</div><div class="spark"><i style="height:22%"></i><i style="height:36%"></i><i style="height:48%"></i><i style="height:54%"></i><i style="height:61%"></i><i style="height:70%"></i></div></div>
+  </div>
+  <div class="grid">
+    <div class="card">
+      <h3>主图表槽</h3>
+      <p>趋势、漏斗或堆叠柱以后放这里。现在只是网格和空柱。</p>
+      <div class="chart">
+        <b style="height:36%"></b><b style="height:52%"></b><b style="height:44%"></b>
+        <b style="height:68%"></b><b style="height:40%"></b><b style="height:58%"></b>
+        <b style="height:30%"></b>
+      </div>
+    </div>
+    <div class="card">
+      <h3>待办槽</h3>
+      <p>审批、投诉、日报提醒以后一条条进来。</p>
+      <div class="list">
+        <div class="todo"><span>待办骨架 1</span><span>—</span></div>
+        <div class="todo"><span>待办骨架 2</span><span>—</span></div>
+        <div class="todo"><span>待办骨架 3</span><span>—</span></div>
+        <div class="todo"><span>待办骨架 4</span><span>—</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="row2">
+    <div class="gate"><h4>门 01</h4>模块入口槽</div>
+    <div class="gate"><h4>门 02</h4>模块入口槽</div>
+    <div class="gate"><h4>门 03</h4>模块入口槽</div>
+  </div>
+</main>
+</body>
+</html>
