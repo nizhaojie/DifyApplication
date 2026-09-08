@@ -27,8 +27,7 @@ class ChatSessionResponse(BaseModel):
     last_message_time: Optional[datetime] = None
     create_time: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class ChatMessageItem(BaseModel):
@@ -43,8 +42,7 @@ class ChatMessageItem(BaseModel):
     response_time_ms: Optional[int] = None
     create_time: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class ChatRequest(BaseModel):
@@ -87,8 +85,7 @@ class CourseProjectItem(BaseModel):
     tags: Optional[List[str]] = None
     status: int
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class CourseRecommendRequest(BaseModel):
@@ -142,8 +139,7 @@ class EventLectureItem(BaseModel):
     has_available_seats: bool
     status: str
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class EventRegisterRequest(BaseModel):
