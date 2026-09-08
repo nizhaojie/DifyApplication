@@ -30,8 +30,36 @@ NONEMPTY_DAILY_INSIGHT = {
     "suggested_action": "协调未提交人员补交，并跟进已暴露风险。",
 }
 
+EMPTY_PSYCH_INSIGHT = {
+    "overview_narrative": "本周无人有心理记录。",
+    "week_risk_narrative": "本周没有未解除的风险学生。",
+    "watchlist_narrative": "没有需要持续关注的学生。",
+    "approaching_node_narrative": "没有考务截止日期落在周期前后各七天内。",
+    "suggested_action": "维持日常关怀巡视即可。",
+}
+
+NONEMPTY_PSYCH_INSIGHT = {
+    "overview_narrative": "本周心理记录按人数、标签与均分汇总。",
+    "week_risk_narrative": "本周风险学生与持续关注分列。",
+    "watchlist_narrative": "持续关注来自中高风险画像。",
+    "approaching_node_narrative": "节点临近只列出考务截止日期命中的学生。",
+    "suggested_action": "优先关怀本周风险学生，并跟进持续关注名单。",
+}
+
+
 class FixedInsightAdapter:
     def narrate(self, kind: str, numbers: dict) -> dict:
+        if kind == "psych_weekly":
+            has_watchlist = bool(numbers.get("watchlist_count"))
+            has_nodes = bool(numbers.get("approaching_nodes"))
+            if (
+                numbers.get("recorded_student_count") == 0
+                and numbers.get("week_risk_count") == 0
+                and not has_watchlist
+                and not has_nodes
+            ):
+                return dict(EMPTY_PSYCH_INSIGHT)
+            return dict(NONEMPTY_PSYCH_INSIGHT)
         coverage = numbers.get("coverage")
         if isinstance(coverage, dict):
             if coverage.get("submitted_count") == 0:

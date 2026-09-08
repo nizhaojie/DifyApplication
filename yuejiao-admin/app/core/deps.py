@@ -8,6 +8,7 @@ from app.integrations.dify import DifyWorkflowInsightAdapter
 from app.modules.report.application import (
     KIND_COMPLAINT_WEEKLY,
     KIND_DAILY_SUMMARY,
+    KIND_PSYCH_WEEKLY,
     KIND_WEEKLY_SUMMARY,
     ReportApplication,
 )
@@ -36,6 +37,7 @@ def get_report_app(conn=Depends(get_conn)) -> ReportApplication:
                 KIND_COMPLAINT_WEEKLY: settings.dify_complaint_weekly_api_key,
                 KIND_DAILY_SUMMARY: settings.dify_daily_summary_api_key,
                 KIND_WEEKLY_SUMMARY: settings.dify_daily_summary_api_key,
+                KIND_PSYCH_WEEKLY: settings.dify_psych_weekly_api_key,
             },
             timeout=settings.dify_timeout_seconds,
         ),

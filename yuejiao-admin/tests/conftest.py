@@ -135,3 +135,123 @@ def insert_staff(
             (username, "x", real_name, user_types[role_code], role_ids[role_code]),
         )
         return cur.lastrowid
+
+
+def insert_psych_record(
+    conn,
+    *,
+    student_id: int,
+    record_date: date,
+    emotion_tag: str | None = "焦虑",
+    emotion_score: int | None = 40,
+    interaction_content: str | None = "交互全文不应进入报告",
+    trigger_keywords=None,
+):
+    import json
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO student_psych_record
+                (student_id, emotion_tag, emotion_score, interaction_content,
+                 trigger_keywords, record_date)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (
+                student_id,
+                emotion_tag,
+                emotion_score,
+                interaction_content,
+                json.dumps(trigger_keywords, ensure_ascii=False) if trigger_keywords is not None else None,
+                record_date,
+            ),
+        )
+        return cur.lastrowid
+
+
+def insert_psych_alert(
+    conn,
+    *,
+    student_id: int,
+    created: datetime,
+    risk_level: str = "high",
+    status: str = "pending",
+    trigger_reason: str = "预警原句不应进入报告",
+    resolved_time: datetime | None = None,
+):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO student_psych_alert
+                (student_id, trigger_reason, risk_level, status,
+                 resolved_time, create_time, update_time)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                student_id,
+                trigger_reason,
+                risk_level,
+                status,
+                None if resolved_time is None else resolved_time.replace(tzinfo=None),
+                created.replace(tzinfo=None),
+                created.replace(tzinfo=None),
+            ),
+        )
+        return cur.lastrowid
+
+
+def insert_psych_profile(
+    conn,
+    *,
+    student_id: int,
+    risk_level: str = "medium",
+    latest_emotion_tag: str | None = "焦虑",
+    emotion_score: int | None = 40,
+    weekly_summary=None,
+):
+    import json
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO student_psych_profile
+                (student_id, latest_emotion_tag, emotion_score, risk_level, weekly_summary)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (
+                student_id,
+                latest_emotion_tag,
+                emotion_score,
+                risk_level,
+                json.dumps(weekly_summary, ensure_ascii=False) if weekly_summary is not None else None,
+            ),
+        )
+        return cur.lastrowid
+
+
+def insert_academic_deadline(
+    conn,
+    *,
+    deadline: datetime,
+    student_id: int | None,
+    title: str = "期末考试",
+    deadline_type: str = "exam",
+    description: str | None = "节点描述不应编造开学季",
+):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO academic_deadline
+                (student_id, deadline_type, title, description, deadline)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (
+                student_id,
+                deadline_type,
+                title,
+                description,
+                deadline.replace(tzinfo=None),
+            ),
+        )
+        return cur.lastrowid
+

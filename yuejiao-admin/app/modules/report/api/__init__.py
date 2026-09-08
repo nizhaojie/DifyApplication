@@ -7,6 +7,7 @@ from app.core.response import ok
 from app.modules.report.application import (
     KIND_COMPLAINT_WEEKLY,
     KIND_DAILY_SUMMARY,
+    KIND_PSYCH_WEEKLY,
     KIND_WEEKLY_SUMMARY,
     Report,
     ReportApplication,
@@ -15,7 +16,12 @@ from pydantic import BaseModel
 
 router = APIRouter()
 
-OPEN_KINDS = {KIND_COMPLAINT_WEEKLY, KIND_DAILY_SUMMARY, KIND_WEEKLY_SUMMARY}
+OPEN_KINDS = {
+    KIND_COMPLAINT_WEEKLY,
+    KIND_DAILY_SUMMARY,
+    KIND_WEEKLY_SUMMARY,
+    KIND_PSYCH_WEEKLY,
+}
 
 
 class GenerateBody(BaseModel):

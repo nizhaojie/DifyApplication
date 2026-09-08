@@ -11,12 +11,17 @@ from app.modules.report.insight import InsightError
 KIND_COMPLAINT_WEEKLY = "complaint_weekly"
 KIND_DAILY_SUMMARY = "daily_summary"
 KIND_WEEKLY_SUMMARY = "weekly_summary"
+KIND_PSYCH_WEEKLY = "psych_weekly"
 DAILY_SUMMARY_KINDS = {KIND_DAILY_SUMMARY, KIND_WEEKLY_SUMMARY}
 EXPECTED_ROLE_CODES = ("employee", "manager", "team_leader")
+WEEK_RISK_STATUSES = ("pending", "following")
+WATCHLIST_LEVELS = ("medium", "high")
+RISK_RANK = {"high": 0, "medium": 1, "low": 2}
 TITLES = {
     KIND_COMPLAINT_WEEKLY: "投诉处理周报",
     KIND_DAILY_SUMMARY: "员工日报智能汇总",
     KIND_WEEKLY_SUMMARY: "员工日报智能汇总",
+    KIND_PSYCH_WEEKLY: "学生心理健康周报",
 }
 
 
@@ -117,7 +122,82 @@ class ReportApplication:
     def _aggregate(self, kind: str, start: date, end: date) -> dict[str, Any]:
         if kind in DAILY_SUMMARY_KINDS:
             return self._aggregate_daily_summary(start, end)
+        if kind == KIND_PSYCH_WEEKLY:
+            return self._aggregate_psych_weekly(start, end)
         return self._aggregate_complaint_weekly(start, end)
+
+    def _aggregate_psych_weekly(self, start: date, end: date) -> dict[str, Any]:
+        records = self._load_psych_records(start, end)
+        recorded_ids = {row["student_id"] for row in records}
+        scores = [row["emotion_score"] for row in records if row["emotion_score"] is not None]
+        week_risk_students = week_risk_list(self._load_psych_alerts(), start, end)
+        watchlist_students = watchlist(self._load_psych_profiles())
+        approaching_nodes = approaching_node_list(self._load_academic_deadlines(), start, end)
+        return {
+            "recorded_student_count": len(recorded_ids),
+            "emotion_tags": bucket_emotion_tags(records),
+            "average_emotion_score": (
+                round(sum(scores) / len(scores), 2) if scores else None
+            ),
+            "week_risk_count": len(week_risk_students),
+            "week_risk_students": week_risk_students,
+            "watchlist_count": len(watchlist_students),
+            "watchlist_students": watchlist_students,
+            "approaching_nodes": approaching_nodes,
+        }
+
+    def _load_psych_records(self, start: date, end: date) -> list[dict]:
+        with self._conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT r.student_id, r.emotion_tag, r.emotion_score, r.record_date,
+                       u.real_name
+                FROM student_psych_record r
+                JOIN sys_user u ON u.id = r.student_id
+                WHERE u.user_type = 'student'
+                  AND r.record_date BETWEEN %s AND %s
+                """,
+                (start, end),
+            )
+            return list(cur.fetchall())
+
+    def _load_psych_alerts(self) -> list[dict]:
+        with self._conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT a.student_id, a.risk_level, a.status, a.create_time,
+                       u.real_name, p.latest_emotion_tag
+                FROM student_psych_alert a
+                JOIN sys_user u ON u.id = a.student_id
+                LEFT JOIN student_psych_profile p ON p.student_id = a.student_id
+                WHERE u.user_type = 'student'
+                """
+            )
+            return list(cur.fetchall())
+
+    def _load_psych_profiles(self) -> list[dict]:
+        with self._conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT p.student_id, p.risk_level, p.latest_emotion_tag, u.real_name
+                FROM student_psych_profile p
+                JOIN sys_user u ON u.id = p.student_id
+                WHERE u.user_type = 'student'
+                """
+            )
+            return list(cur.fetchall())
+
+    def _load_academic_deadlines(self) -> list[dict]:
+        with self._conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT d.student_id, d.title, d.deadline, u.real_name
+                FROM academic_deadline d
+                JOIN sys_user u ON u.id = d.student_id
+                WHERE u.user_type = 'student'
+                """
+            )
+            return list(cur.fetchall())
 
     def _aggregate_daily_summary(self, start: date, end: date) -> dict[str, Any]:
         expected = self._load_expected_submitters()
@@ -316,12 +396,81 @@ def satisfaction(tickets: list[dict]) -> dict:
     }
 
 
+def week_risk_list(alerts: list[dict], start: date, end: date) -> list[dict]:
+    chosen: dict[int, dict] = {}
+    for alert in alerts:
+        if alert["status"] not in WEEK_RISK_STATUSES:
+            continue
+        created = as_shanghai(alert["create_time"]).date()
+        if not (start <= created <= end):
+            continue
+        student_id = alert["student_id"]
+        item = {
+            "student_name": alert.get("real_name") or "",
+            "risk_level": alert["risk_level"],
+            "emotion_tag": alert.get("latest_emotion_tag") or "",
+        }
+        previous = chosen.get(student_id)
+        if previous is None or RISK_RANK.get(item["risk_level"], 9) < RISK_RANK.get(
+            previous["risk_level"], 9
+        ):
+            chosen[student_id] = item
+    return list(chosen.values())
+
+
+def watchlist(profiles: list[dict]) -> list[dict]:
+    return [
+        {
+            "student_name": row.get("real_name") or "",
+            "risk_level": row["risk_level"],
+            "emotion_tag": row.get("latest_emotion_tag") or "",
+        }
+        for row in profiles
+        if row["risk_level"] in WATCHLIST_LEVELS
+    ]
+
+
+def approaching_node_list(deadlines: list[dict], start: date, end: date) -> list[dict]:
+    window_start = start - timedelta(days=7)
+    window_end = end + timedelta(days=7)
+    nodes = []
+    for row in deadlines:
+        due = as_shanghai(row["deadline"]).date()
+        if window_start <= due <= window_end:
+            nodes.append(
+                {
+                    "student_name": row.get("real_name") or "",
+                    "title": row["title"],
+                    "deadline": due.isoformat(),
+                }
+            )
+    return nodes
+
+
+def bucket_emotion_tags(records: list[dict]) -> list[dict]:
+    counts: dict[str, int] = {}
+    for row in records:
+        name = (row.get("emotion_tag") or "").strip()
+        if not name:
+            continue
+        counts[name] = counts.get(name, 0) + 1
+    return [
+        {"name": name, "count": counts[name]}
+        for name in sorted(counts, key=lambda item: (-counts[item], item))
+    ]
+
+
 def insight_payload(kind: str, numbers: dict) -> dict:
     if kind in DAILY_SUMMARY_KINDS:
         coverage = numbers.get("coverage") or {}
         missing = list(coverage.get("missing") or [])
         submitted = list(coverage.get("submitted") or [])
         return {**numbers, "insight_detail": (missing + submitted)[:50]}
+    if kind == KIND_PSYCH_WEEKLY:
+        week_risk = list(numbers.get("week_risk_students") or [])
+        watchlist_students = list(numbers.get("watchlist_students") or [])
+        nodes = list(numbers.get("approaching_nodes") or [])
+        return {**numbers, "insight_detail": (week_risk + watchlist_students + nodes)[:50]}
     open_alerts = list(numbers.get("open_complaints") or [])
     handling = list((numbers.get("handling") or {}).get("items") or [])
     detail = (open_alerts + handling)[:50]
