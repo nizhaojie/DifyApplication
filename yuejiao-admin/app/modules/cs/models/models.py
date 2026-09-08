@@ -20,6 +20,7 @@ class ChatSession(Base):
     """Customer service conversation session model."""
 
     __tablename__ = "chat_session"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(BIGINT, primary_key=True, autoincrement=True)
     session_id = Column(String(64), unique=True, nullable=False, index=True)
@@ -36,6 +37,7 @@ class ChatMessage(Base):
     """Individual message exchange within a conversation session."""
 
     __tablename__ = "chat_message"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(BIGINT, primary_key=True, autoincrement=True)
     session_id = Column(String(64), nullable=False, index=True)

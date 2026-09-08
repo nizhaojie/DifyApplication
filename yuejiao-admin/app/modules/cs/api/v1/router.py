@@ -3,7 +3,7 @@
 from typing import Any, Dict, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from app.core.deps import get_db
+from app.core.deps import get_sync_db
 from app.core.response import UnifiedResponse, make_error_response, make_success_response
 from app.modules.cs.crud.crud import list_messages_by_session_id
 from app.modules.cs.schemas.schemas import (
@@ -36,7 +36,7 @@ router = APIRouter(prefix="/cs", tags=["Customer Service Agent"])
 )
 def chat_endpoint(
     request: ChatRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ) -> UnifiedResponse[ChatResponse]:
     """Main conversational endpoint coordinating 7 customer service scenarios."""
     try:
@@ -55,7 +55,7 @@ def chat_endpoint(
 def get_session_history(
     session_id: str,
     limit: int = Query(default=50, ge=1, le=200),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ) -> UnifiedResponse[List[ChatMessageItem]]:
     """Retrieve chronologically ordered message history for a conversation session."""
     messages = list_messages_by_session_id(db=db, session_id=session_id, limit=limit)
@@ -70,7 +70,7 @@ def get_session_history(
 )
 def recommend_courses_endpoint(
     request: CourseRecommendRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ) -> UnifiedResponse[CourseRecommendResponse]:
     """Recommend best-fit educational programs based on education, country, and budget."""
     recommendation = course_matcher.recommend(db=db, criteria=request)
@@ -83,7 +83,7 @@ def recommend_courses_endpoint(
     summary="List Upcoming Seminar Events",
 )
 def list_events_endpoint(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ) -> UnifiedResponse[List[EventLectureItem]]:
     """Fetch active and upcoming seminar lecture events."""
     events = event_service.list_active_events(db=db)
@@ -97,7 +97,7 @@ def list_events_endpoint(
 )
 def register_event_endpoint(
     request: EventRegisterRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ) -> UnifiedResponse[EventRegisterResponse]:
     """Sign up for an event lecture with seat check and anti-duplication."""
     registration_outcome = event_service.register(db=db, payload=request)
@@ -115,7 +115,7 @@ def register_event_endpoint(
 )
 def query_user_registrations_endpoint(
     contact_info: str = Query(..., description="Phone number or contact info"),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ) -> UnifiedResponse[List[Dict[str, Any]]]:
     """Retrieve all active seminar registrations for a given contact."""
     records = event_service.query_user_registrations(db=db, contact_info=contact_info)
@@ -129,7 +129,7 @@ def query_user_registrations_endpoint(
 )
 def search_knowledge_base_endpoint(
     request: KnowledgeSearchRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ) -> UnifiedResponse[List[KnowledgeChunkResult]]:
     """Perform hybrid keyword retrieval over segmented knowledge documents."""
     results = kb_engine.search(

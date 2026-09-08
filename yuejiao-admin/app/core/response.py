@@ -43,3 +43,13 @@ def make_error_response(
         message=message,
         data=payload,
     )
+
+
+def ok(data: Any = None, message: str = "ok", total: int | None = None) -> dict[str, Any]:
+    """Build standard dictionary success response for enterprise/report modules."""
+    return {"code": 200, "message": message, "data": data, "total": total}
+
+
+def fail(message: str, code: int = 400, data: Any = None) -> dict[str, Any]:
+    """Build standard dictionary error response for enterprise/report modules."""
+    return {"code": code, "message": message, "data": data, "total": None}

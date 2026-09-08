@@ -5,6 +5,12 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
+      path: '/login',
+      name: 'login',
+      component: () => import('@/views/login/index.vue'),
+      meta: { title: '登录', public: true },
+    },
+    {
       path: '/',
       component: AdminLayout,
       redirect: '/dashboard',
@@ -31,7 +37,31 @@ const router = createRouter({
           path: 'enterprise',
           name: 'enterprise',
           component: () => import('@/views/enterprise/index.vue'),
-          meta: { title: '企业助手', hint: '空白模版。以后接意向录入、查询、日报、审批。' },
+          meta: { title: '企业助手', hint: '口述录入、查询、日报、请假审批。' },
+        },
+        {
+          path: 'enterprise/company',
+          name: 'enterprise-company',
+          component: () => import('@/views/enterprise/company.vue'),
+          meta: { title: '公司简介', hint: '粤教服务企业信息。' },
+        },
+        {
+          path: 'enterprise/guide',
+          name: 'enterprise-guide',
+          component: () => import('@/views/enterprise/guide.vue'),
+          meta: { title: '新人指南', hint: '入职办公与 IT 指引。' },
+        },
+        {
+          path: 'enterprise/board',
+          name: 'enterprise-board',
+          component: () => import('@/views/enterprise/board.vue'),
+          meta: { title: '客户看板', hint: '线索漏斗与意向国家。' },
+        },
+        {
+          path: 'enterprise/memory',
+          name: 'enterprise-memory',
+          component: () => import('@/views/enterprise/memory.vue'),
+          meta: { title: '对话记忆', hint: '企业助手会话历史，刷新仍在。' },
         },
         {
           path: 'student',
@@ -43,7 +73,31 @@ const router = createRouter({
           path: 'report',
           name: 'report',
           component: () => import('@/views/report/index.vue'),
-          meta: { title: '智能报告', hint: '空白模版。以后接客户经营、日报汇总、心理/投诉周报。' },
+          meta: { title: '智能报告', hint: '客户经营、日报汇总、心理/投诉周报。' },
+        },
+        {
+          path: 'report/customer-ops',
+          name: 'report-customer-ops',
+          component: () => import('@/views/report/customer-ops.vue'),
+          meta: { title: '全域客户经营分析' },
+        },
+        {
+          path: 'report/daily-summary',
+          name: 'report-daily-summary',
+          component: () => import('@/views/report/daily-summary.vue'),
+          meta: { title: '员工日报智能汇总' },
+        },
+        {
+          path: 'report/psych-weekly',
+          name: 'report-psych-weekly',
+          component: () => import('@/views/report/psych-weekly.vue'),
+          meta: { title: '学生心理健康周报' },
+        },
+        {
+          path: 'report/complaint-weekly',
+          name: 'report-complaint-weekly',
+          component: () => import('@/views/report/complaint-weekly.vue'),
+          meta: { title: '投诉处理周报' },
         },
         {
           path: 'settings',
@@ -54,6 +108,15 @@ const router = createRouter({
       ],
     },
   ],
+})
+
+router.beforeEach((to) => {
+  const token = localStorage.getItem('yuejiao_token')
+  if (to.meta.public) return true
+  if (!token) {
+    return { path: '/login', query: { redirect: to.fullPath } }
+  }
+  return true
 })
 
 export default router
