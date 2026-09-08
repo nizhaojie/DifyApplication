@@ -1,0 +1,253 @@
+app:
+  name: cs-agent-main
+  mode: advanced-chat
+  icon: 🤖
+  icon_background: '#FFE8E8'
+  description: 粤教国际智能客服小粤同学 - 覆盖7大业务场景，集成RAG知识库切片检索、课程推荐工具与讲座报名闭环工作流
+kind: app
+version: 0.1.5
+workflow:
+  conversation_variables: []
+  environment_variables:
+    - name: CS_BACKEND_URL
+      value: http://127.0.0.1:8000/api/v1/cs
+  features:
+    opening_statement: "您好！我是粤教国际官方智能升学顾问「小粤同学」🎓\n\n我可以为您提供：\n• 🇩🇪 德国中德双元制职业教育（免学费+企业每月实训津贴）\n• 🇸🇬 新加坡定向本硕连读（专升本1~1.5年/本升硕1年，带薪实习）\n• 📜 德国/新加坡最新签证、工作签与永居政策解读\n• 💡 对公银行账号、退费政策及36条官方权威FAQ秒回\n• 🎯 适合您的专属课程推荐与近期讲座一键预约\n\n请问您目前的学历背景是什么？或者您对哪个国家/项目最感兴趣呢？"
+    suggested_questions:
+      - 请问中德双元制职业教育的招生学历要求是什么？
+      - 大专学历去新加坡读专升本需要多长时间？
+      - 近期有什么关于德国双元制或新加坡留学的讲座分享会？
+      - 公司的对公转账银行账号和开户行是什么？
+      - 德国双元制毕业后在德国工作签证和永居申请政策是怎样的？
+    file_upload:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    text_to_speech:
+      enabled: false
+  nodes:
+    - id: 'node_start'
+      title: 开始
+      type: start
+      position:
+        x: 80
+        y: 320
+      data:
+        variables: []
+
+    - id: 'node_classifier'
+      title: 7大场景意图分类器
+      type: question-classifier
+      position:
+        x: 320
+        y: 320
+      data:
+        query:
+          - 'node_start'
+          - 'sys.query'
+        model:
+          provider: deepseek
+          name: deepseek-chat
+          mode: chat
+          completion_params:
+            temperature: 0.1
+        instructions: |
+          请严格根据用户提问的内容，将其精准分类到以下7大场景类别之一：
+          - company_inquiry: 咨询公司背景、历史、资质、部门架构、业务分布、办公地址
+          - business_query: 咨询公司具体业务模式（中德双元制培养模式、新加坡本硕学制周期、出国流程等）
+          - policy_query: 咨询德国或新加坡各国的留学签证、工作签证、永居居留、移民及官方入学政策要求
+          - faq: 咨询36条高频标准化问答，特别是对公缴费银行账户、公司简称、收费标准、退费政策
+          - course_recommend: 表明自身学历（初中/中专/高中/大专/本科）、意向国家（德国/新加坡）或预算，寻求课程或升学项目推荐
+          - event_register: 询问近期讲座活动、分享会，或提出报名、预约讲座活动席位
+          - casual_chat: 日常打招呼、问好、情感表达、闲聊或无明确业务诉求的对话
+        classes:
+          - id: 'class_company'
+            name: company_inquiry
+          - id: 'class_business'
+            name: business_query
+          - id: 'class_policy'
+            name: policy_query
+          - id: 'class_faq'
+            name: faq
+          - id: 'class_course'
+            name: course_recommend
+          - id: 'class_event'
+            name: event_register
+          - id: 'class_chat'
+            name: casual_chat
+
+    - id: 'node_kb_retrieval'
+      title: 知识库 RAG 检索
+      type: knowledge-retrieval
+      position:
+        x: 680
+        y: 120
+      data:
+        query:
+          - 'node_start'
+          - 'sys.query'
+        dataset_ids:
+          - 'dataset_company_info'
+          - 'dataset_dual_system'
+          - 'dataset_singapore_study'
+          - 'dataset_visa_policy'
+        retrieval_mode: mixed
+        top_k: 3
+        score_threshold: 0.5
+
+    - id: 'node_tool_course'
+      title: 调用课程智能推荐工具
+      type: tool
+      position:
+        x: 680
+        y: 380
+      data:
+        provider_type: custom
+        provider_name: cs_backend_tools
+        tool_name: recommendCourses
+        tool_parameters:
+          education_level: '{{#node_start.sys.query#}}'
+          recommend_limit: 3
+
+    - id: 'node_tool_event'
+      title: 调用活动查询与报名工具
+      type: tool
+      position:
+        x: 680
+        y: 500
+      data:
+        provider_type: custom
+        provider_name: cs_backend_tools
+        tool_name: listEvents
+        tool_parameters: {}
+
+    - id: 'node_tool_faq'
+      title: 调用FAQ秒级匹配工具
+      type: tool
+      position:
+        x: 680
+        y: 260
+      data:
+        provider_type: custom
+        provider_name: cs_backend_tools
+        tool_name: matchFaq
+        tool_parameters:
+          question: '{{#node_start.sys.query#}}'
+          confidence_threshold: 0.55
+
+    - id: 'node_llm_reasoning'
+      title: 小粤同学智能应答与防幻觉引擎
+      type: llm
+      position:
+        x: 1040
+        y: 320
+      data:
+        model:
+          provider: deepseek
+          name: deepseek-chat
+          mode: chat
+          completion_params:
+            temperature: 0.3
+            max_tokens: 1500
+        prompt_template:
+          - role: system
+            text: |
+              # 人设定位
+              你是「小粤同学」，广东教育国际交流服务中心有限公司（简称“粤教服务”）的官方智能升学与出国留学顾问。
+              你的说话风格亲切、热情、严谨、专业，符合当代年轻学生的沟通语境，适度使用表情符号保持对话温度。
+
+              # 核心服务板块
+              1. 🇩🇪 中德双元制职业教育：校企双场所培养、免学费、企业每月发放实训津贴（800-1400欧元/月）、欧标B1要求、国内外保姆式服务。
+              2. 🇸🇬 新加坡定向培养本硕：2+2本科班、0.5/1+2定向班、1年制专升本/本升硕、带薪实习（月薪6000-8000元）、中留服学历认证。
+              3. 🏛️ 官方对公缴费账户：
+                 - 账户名称：广东省教育服务有限公司
+                 - 银行账号：9550889900011455492
+                 - 开户行：广发银行广州华夏路支行
+                 - 提示：转账务必备注项目及学员姓名，严禁向任何个人账户转账！
+
+              # 严格防幻觉与合规纪律（铁律）
+              1. 严禁捏造虚假学费或向客户许诺“100%保录/免试包过”等不实承诺；
+              2. 解释各国留学、签证与工作签证政策时，必须在文末声明：“各使领馆与移民局政策具备时效性，具体门槛与清单请以官方最新公告为准”；
+              3. 当知识库或工具未检索到确切信息时，诚恳告知客户并引导：“关于该项细节，建议留下您的联系方式，稍后由专属升学规划顾问老师为您1v1权威解答”。
+              4. 闲聊场景下保持温暖可爱的人设，并在3~4轮闲聊后自然插入一句关切与留学规划引导。
+
+              # 参考上下文
+              - 意图分支：{{#node_classifier.class_name#}}
+              - 知识库片段：{{#node_kb_retrieval.result#}}
+              - FAQ匹配结果：{{#node_tool_faq.result#}}
+              - 课程推荐结果：{{#node_tool_course.result#}}
+              - 活动查询结果：{{#node_tool_event.result#}}
+          - role: user
+            text: '{{#node_start.sys.query#}}'
+
+    - id: 'node_answer'
+      title: 直接回复
+      type: answer
+      position:
+        x: 1360
+        y: 320
+      data:
+        answer: '{{#node_llm_reasoning.text#}}'
+
+  edges:
+    - id: 'edge_start_to_classifier'
+      source: 'node_start'
+      target: 'node_classifier'
+
+    # 意图分流
+    - id: 'edge_classifier_company'
+      source: 'node_classifier'
+      sourceHandle: 'class_company'
+      target: 'node_kb_retrieval'
+
+    - id: 'edge_classifier_business'
+      source: 'node_classifier'
+      sourceHandle: 'class_business'
+      target: 'node_kb_retrieval'
+
+    - id: 'edge_classifier_policy'
+      source: 'node_classifier'
+      sourceHandle: 'class_policy'
+      target: 'node_kb_retrieval'
+
+    - id: 'edge_classifier_faq'
+      source: 'node_classifier'
+      sourceHandle: 'class_faq'
+      target: 'node_tool_faq'
+
+    - id: 'edge_classifier_course'
+      source: 'node_classifier'
+      sourceHandle: 'class_course'
+      target: 'node_tool_course'
+
+    - id: 'edge_classifier_event'
+      source: 'node_classifier'
+      sourceHandle: 'class_event'
+      target: 'node_tool_event'
+
+    - id: 'edge_classifier_chat'
+      source: 'node_classifier'
+      sourceHandle: 'class_chat'
+      target: 'node_llm_reasoning'
+
+    # 各分支汇聚至 LLM
+    - id: 'edge_kb_to_llm'
+      source: 'node_kb_retrieval'
+      target: 'node_llm_reasoning'
+
+    - id: 'edge_faq_to_llm'
+      source: 'node_tool_faq'
+      target: 'node_llm_reasoning'
+
+    - id: 'edge_course_to_llm'
+      source: 'node_tool_course'
+      target: 'node_llm_reasoning'
+
+    - id: 'edge_event_to_llm'
+      source: 'node_tool_event'
+      target: 'node_llm_reasoning'
+
+    # 输出
+    - id: 'edge_llm_to_answer'
+      source: 'node_llm_reasoning'
+      target: 'node_answer'
