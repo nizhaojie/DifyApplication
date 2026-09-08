@@ -8,6 +8,7 @@ from app.modules.cs.crud.crud import (
     create_event_registration,
     get_event_by_id,
     has_user_registered_for_event,
+    list_event_registrations_by_contact,
     list_events,
 )
 from app.modules.cs.models.models import EventLecture
@@ -154,6 +155,37 @@ class EventLectureService:
                 f"地点/链接：{event_model.location}。请保持手机畅通！"
             ),
         )
+
+    def query_user_registrations(
+        self, db: Session, contact_info: str
+    ) -> List[Dict[str, Any]]:
+        """Query active event registrations for a given contact phone/email."""
+        records = list_event_registrations_by_contact(db, contact_info=contact_info)
+        results = []
+        for reg in records:
+            event_obj = get_event_by_id(db, reg.event_id)
+            results.append(
+                {
+                    "registration_id": reg.id,
+                    "event_id": reg.event_id,
+                    "event_name": event_obj.event_name if event_obj else "未知活动",
+                    "start_time": (
+                        event_obj.start_time.strftime("%Y年%m月%d日 %H:%M")
+                        if event_obj and event_obj.start_time
+                        else ""
+                    ),
+                    "location": event_obj.location if event_obj else "",
+                    "customer_name": reg.customer_name,
+                    "contact_info": reg.contact_info,
+                    "status": reg.status,
+                    "register_time": (
+                        reg.create_time.strftime("%Y-%m-%d %H:%M:%S")
+                        if reg.create_time
+                        else ""
+                    ),
+                }
+            )
+        return results
 
 
 event_service = EventLectureService()

@@ -231,7 +231,54 @@ class DialogManager:
 
             active_events = event_service.list_active_events(db)
 
-            if parsed_phone and active_events:
+            # Check if user is inquiring about their existing registration status (Chat Memory)
+            query_status_indicators = [
+                "报名了吗", "报上名了吗", "查报名", "报名状态", "报名成功了吗",
+                "查一下报名", "我的报名", "我报了哪", "有没有报上", "查预约", "查询预约",
+            ]
+            is_status_query = any(token in user_message_text for token in query_status_indicators)
+
+            if is_status_query:
+                # 1. Look for phone in current message or request
+                target_phone = parsed_phone or (
+                    request.visitor_contact.strip() if request.visitor_contact else None
+                )
+                # 2. Look for phone in previous conversation messages within this session (Session Memory)
+                if not target_phone:
+                    for prev_msg in reversed(previous_messages):
+                        phone_match = re.search(r"1[3-9]\d{9}", prev_msg.content)
+                        if phone_match:
+                            target_phone = phone_match.group(0)
+                            break
+
+                if target_phone:
+                    my_regs = event_service.query_user_registrations(db, contact_info=target_phone)
+                    if my_regs:
+                        latest_reg = my_regs[0]
+                        reply_text = (
+                            f"【预约查询结果】小粤已为您核验到有效的活动报名记录：\n\n"
+                            f"🎯 讲座名称：【{latest_reg['event_name']}】\n"
+                            f"📅 开场时间：{latest_reg['start_time']}\n"
+                            f"📍 活动地点：{latest_reg['location']}\n"
+                            f"👤 预约人：{latest_reg['customer_name']}（{latest_reg['contact_info']}）\n\n"
+                            f"系统已锁定席位，顾问老师将在活动前与您取得联系，请准时参加哦！"
+                        )
+                        card_type = "register_success"
+                        card_content = latest_reg
+                    else:
+                        reply_text = (
+                            f"小粤在系统中核验了手机号【{target_phone}】，暂未查询到有效的活动预约记录。\n"
+                            f"近期精选讲座排期如下，您可以直接在对话中回复【我想报名宣讲会，姓名，手机号】，我帮您秒级锁定义务席位~"
+                        )
+                        card_type = "event_list"
+                        card_content = [ev.model_dump() for ev in active_events]
+                else:
+                    reply_text = (
+                        "小粤非常乐意为您查询活动预约状态！\n"
+                        "请在对话中发送您报名时填写的手机号（例如：【查询报名 13812345678】），我立刻为您检索后台数据~"
+                    )
+
+            elif parsed_phone and active_events:
                 customer_name = parsed_name or "意向学员"
                 # Pick earliest event that has seats available, or first event
                 available_events = [ev for ev in active_events if ev.has_available_seats]

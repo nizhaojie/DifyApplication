@@ -1,0 +1,154 @@
+app:
+  name: cs-agent-clean
+  mode: advanced-chat
+  icon: 🎓
+  icon_background: '#FFE8E8'
+  description: 粤教服务官方智能升学客服小粤同学 - 干净通用版工作流（无虚构依赖，支持在本地任意Dify版本直接一键导入）
+kind: app
+version: 0.1.5
+workflow:
+  conversation_variables: []
+  environment_variables:
+    - name: CS_BACKEND_URL
+      value: http://host.docker.internal:8000/api/v1/cs
+  features:
+    opening_statement: "您好！我是粤教国际官方智能升学顾问「小粤同学」🎓\n\n我可以为您提供：\n• 🇩🇪 德国中德双元制职业教育（免学费+企业每月实训津贴）\n• 🇸🇬 新加坡定向本硕连读（专升本1~1.5年/本升硕1年，带薪实习）\n• 📜 德国/新加坡最新签证、工作签与永居政策解读\n• 💡 对公银行账号、退费政策及36条官方权威FAQ秒回\n• 🎯 适合您的专属课程推荐与近期讲座一键预约\n\n请问您目前的学历背景是什么？或者您对哪个国家/项目最感兴趣呢？"
+    suggested_questions:
+      - 请问中德双元制职业教育的招生学历要求是什么？
+      - 大专学历去新加坡读专升本需要多长时间？
+      - 近期有什么关于德国双元制或新加坡留学的讲座分享会？
+      - 公司的对公转账银行账号和开户行是什么？
+      - 德国双元制毕业后在德国工作签证和永居申请政策是怎样的？
+    file_upload:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    text_to_speech:
+      enabled: false
+  nodes:
+    - id: 'node_start'
+      title: 开始
+      type: start
+      position:
+        x: 80
+        y: 280
+      data:
+        variables: []
+
+    - id: 'node_classifier'
+      title: 7大场景意图分类器
+      type: question-classifier
+      position:
+        x: 340
+        y: 280
+      data:
+        query:
+          - 'node_start'
+          - 'sys.query'
+        instructions: |
+          请根据用户提问内容，将其准确分类到以下7大业务场景之一：
+          - company_inquiry: 咨询公司背景、国企资质、校区分布、历史简介
+          - business_query: 咨询中德双元制模式、新加坡定向本硕模式、工学交替、带薪实训
+          - policy_query: 咨询德国/新加坡签证、工作许可、永居绿卡、留服认证、落户政策
+          - faq: 咨询对公银行缴费账户、公司简称、学费退费政策等高频问答
+          - course_recommend: 表明自身学历、意向国家或预算，寻求课程或升学项目推荐
+          - event_register: 询问近期讲座活动、分享会，或提出报名预约、查询报名状态
+          - casual_chat: 日常打招呼、问好、情感表达、闲聊互动
+        classes:
+          - id: 'class_company'
+            name: company_inquiry
+          - id: 'class_business'
+            name: business_query
+          - id: 'class_policy'
+            name: policy_query
+          - id: 'class_faq'
+            name: faq
+          - id: 'class_course'
+            name: course_recommend
+          - id: 'class_event'
+            name: event_register
+          - id: 'class_chat'
+            name: casual_chat
+
+    - id: 'node_llm'
+      title: 小粤同学智能应答节点
+      type: llm
+      position:
+        x: 680
+        y: 280
+      data:
+        prompt_template:
+          - role: system
+            text: |
+              # 角色设定
+              你是“粤教服务（广东教育国际交流服务中心有限公司）”官方唯一认证的智能升学顾问「小粤同学」。
+              你的语言风格：阳光、亲切、严谨、专业，充满正能量与年轻活力。
+
+              # 核心业务底座知识与事实基准
+              1. 【公司资质】：广东教育国际交流服务中心有限公司（简称“粤教服务”），深耕国际教育40余年，省属国企背景平台。校区分布于广州天河、黄埔、白云及佛山南海。
+              2. 【对公银行账户（铁律，绝不可改）】：
+                 - 账户名称：广东省教育服务有限公司
+                 - 账号：9550889900011455492
+                 - 开户行：广发银行广州华夏路支行
+                 - 郑重提醒：严禁任何个人微信、支付宝转账！一切缴费必须汇入官方对公账户。
+              3. 【中德精英人才共建计划（德国双元制）】：免大学学费，校企双元培养（3天企业+2天学校），每月享受政府与企业实训津贴，要求德语欧标B1，毕业获德国IHK/HWK职业资格证书，工作满2年可申请德国永居。
+              4. 【新加坡国际本硕计划】：初中起点2+2、高中起点0.5/1+2定向本科直通车，专升本仅需1~1.5年，本升硕仅需1年。受中国教育部留学服务中心正式认证，海归享一线城市落户与创业补贴。
+              5. 【退费政策】：因不可抗力或未达签证门槛退费，严格按协议扣除已发生的官方申请成本与合理管理费后退回。
+
+              # 提示词执行铁律
+              - 涉及对公银行账户、公司资质、收费标准、退费政策时，必须 100% 严格依照上述事实输出，严禁擅自修改数字与账号！
+              - 涉及签证与海外移民政策时，文末附带【防幻觉与时效声明】：“海外留学与签证政策具有时效性，供参考，请以使领馆最新官方发布为准。”
+              - 涉及讲座预约与报名查询时，引导用户提供姓名与手机号。
+          - role: user
+            text: '{{#node_start.sys.query#}}'
+        context:
+          enabled: true
+        memory:
+          window:
+            enabled: true
+            size: 10
+
+    - id: 'node_answer'
+      title: 直接回复输出
+      type: answer
+      position:
+        x: 980
+        y: 280
+      data:
+        answer: '{{#node_llm.text#}}'
+
+  edges:
+    - id: 'edge_start_classifier'
+      source: 'node_start'
+      target: 'node_classifier'
+    - id: 'edge_classifier_company'
+      source: 'node_classifier'
+      target: 'node_llm'
+      sourceHandle: 'class_company'
+    - id: 'edge_classifier_business'
+      source: 'node_classifier'
+      target: 'node_llm'
+      sourceHandle: 'class_business'
+    - id: 'edge_classifier_policy'
+      source: 'node_classifier'
+      target: 'node_llm'
+      sourceHandle: 'class_policy'
+    - id: 'edge_classifier_faq'
+      source: 'node_classifier'
+      target: 'node_llm'
+      sourceHandle: 'class_faq'
+    - id: 'edge_classifier_course'
+      source: 'node_classifier'
+      target: 'node_llm'
+      sourceHandle: 'class_course'
+    - id: 'edge_classifier_event'
+      source: 'node_classifier'
+      target: 'node_llm'
+      sourceHandle: 'class_event'
+    - id: 'edge_classifier_chat'
+      source: 'node_classifier'
+      target: 'node_llm'
+      sourceHandle: 'class_chat'
+    - id: 'edge_llm_answer'
+      source: 'node_llm'
+      target: 'node_answer'

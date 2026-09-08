@@ -44,7 +44,7 @@ class AppSettings(BaseSettings):
     db_charset: str = "utf8mb4"
 
     # Dify integration settings
-    dify_api_base_url: str = "https://api.dify.ai/v1"
+    dify_api_base_url: str = "http://127.0.0.1:8080/v1"
     dify_api_key: str = ""
 
     @property

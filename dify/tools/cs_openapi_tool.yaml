@@ -4,8 +4,10 @@ info:
   description: 面向留学与教育服务机构的 OpenAPI 3.0 工具集，为 Dify Agent 提供课程推荐、活动查询、活动报名闭环、知识库检索与 FAQ 匹配能力。
   version: 1.0.0
 servers:
+  - url: http://host.docker.internal:8000/api/v1/cs
+    description: Docker 容器访问 Windows 宿主机后端（Dify Docker 部署推荐）
   - url: http://127.0.0.1:8000/api/v1/cs
-    description: 本地 FastAPI 后端服务
+    description: 本地宿主机调试服务
 
 paths:
   /courses/recommend:
@@ -193,6 +195,53 @@ paths:
                       message:
                         type: string
                         example: 恭喜！您已成功预约活动席位
+
+  /events/registrations:
+    get:
+      summary: 查询访客已报名的活动预约记录
+      operationId: queryRegistrations
+      description: 依据手机号码或联系方式，查询用户在系统后台已成功预约的所有讲座或活动记录，包含活动名称、开场时间及地点。
+      parameters:
+        - name: contact_info
+          in: query
+          required: true
+          description: 预约时填写的手机号或联系方式
+          schema:
+            type: string
+            example: "13800138000"
+      responses:
+        '200':
+          description: 查询成功返回列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        registration_id:
+                          type: integer
+                        event_name:
+                          type: string
+                        start_time:
+                          type: string
+                        location:
+                          type: string
+                        customer_name:
+                          type: string
+                        contact_info:
+                          type: string
+                        status:
+                          type: string
 
   /faq/match:
     post:

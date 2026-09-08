@@ -40,7 +40,8 @@ def chat_endpoint(
 ) -> UnifiedResponse[ChatResponse]:
     """Main conversational endpoint coordinating 7 customer service scenarios."""
     try:
-        response_payload = dialog_manager.handle_message(db=db, request=request)
+        from app.modules.cs.services.dify.dify_service import dify_service
+        response_payload = dify_service.execute_chat_flow(chat_request=request, db_session=db)
         return make_success_response(payload=response_payload)
     except Exception as exc:
         return make_error_response(message=f"Chat processing failed: {str(exc)}")
@@ -105,6 +106,20 @@ def register_event_endpoint(
     return make_error_response(
         message=registration_outcome.message, payload=registration_outcome
     )
+
+
+@router.get(
+    "/events/registrations",
+    response_model=UnifiedResponse[List[Dict[str, Any]]],
+    summary="Query User Event Registrations",
+)
+def query_user_registrations_endpoint(
+    contact_info: str = Query(..., description="Phone number or contact info"),
+    db: Session = Depends(get_db),
+) -> UnifiedResponse[List[Dict[str, Any]]]:
+    """Retrieve all active seminar registrations for a given contact."""
+    records = event_service.query_user_registrations(db=db, contact_info=contact_info)
+    return make_success_response(payload=records)
 
 
 @router.post(

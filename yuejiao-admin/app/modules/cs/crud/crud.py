@@ -192,6 +192,21 @@ def has_user_registered_for_event(
     return existing_registration is not None
 
 
+def list_event_registrations_by_contact(
+    db: Session, contact_info: str
+) -> List[EventRegistration]:
+    """Retrieve all active event registrations for a given contact (phone/wechat)."""
+    return (
+        db.query(EventRegistration)
+        .filter(
+            EventRegistration.contact_info == contact_info.strip(),
+            EventRegistration.status != "cancelled",
+        )
+        .order_by(EventRegistration.create_time.desc())
+        .all()
+    )
+
+
 def create_event_registration(
     db: Session,
     event_id: int,

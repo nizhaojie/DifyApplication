@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, reactive, ref } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
 import {
   CircleCheckFilled,
   Delete,
@@ -26,18 +26,10 @@ function getCurrentTimeStr(): string {
 
 // Session State
 const sessionId = ref('')
-const visitorName = ref('')
-const visitorContact = ref('')
 const inputMessage = ref('')
 const isSending = ref(false)
 const messageListRef = ref<HTMLDivElement | null>(null)
 const faqDrawerVisible = ref(false)
-const visitorDialogVisible = ref(false)
-
-const visitorForm = reactive({
-  name: '',
-  contact: '',
-})
 
 // Welcome Message
 const defaultWelcomeMessage: UIConversationMessage = {
@@ -76,18 +68,6 @@ function initSession() {
   } else {
     sessionId.value = `cs_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
     localStorage.setItem('cs_session_id', sessionId.value)
-  }
-
-  const savedName = localStorage.getItem('cs_visitor_name')
-  if (savedName) {
-    visitorName.value = savedName
-    visitorForm.name = savedName
-  }
-
-  const savedContact = localStorage.getItem('cs_visitor_contact')
-  if (savedContact) {
-    visitorContact.value = savedContact
-    visitorForm.contact = savedContact
   }
 
   messages.value = [{ ...defaultWelcomeMessage, time: getCurrentTimeStr() }]
@@ -152,8 +132,6 @@ async function handleSend(textToSend?: string) {
     const res = await csApi.sendMessage({
       session_id: sessionId.value,
       message: content,
-      visitor_name: visitorName.value || undefined,
-      visitor_contact: visitorContact.value || undefined,
     })
 
     if (res.session_id) {
@@ -235,14 +213,6 @@ function handleResetSession() {
     .catch(() => {})
 }
 
-function saveVisitorInfo() {
-  visitorName.value = visitorForm.name.trim()
-  visitorContact.value = visitorForm.contact.trim()
-  localStorage.setItem('cs_visitor_name', visitorName.value)
-  localStorage.setItem('cs_visitor_contact', visitorContact.value)
-  visitorDialogVisible.value = false
-  ElMessage.success('访客联系信息已保存！后续咨询将自动为您对接专属顾问')
-}
 
 type TagType = 'primary' | 'success' | 'warning' | 'info' | 'danger'
 
@@ -294,15 +264,6 @@ function getIntentTagType(intentCode?: string): TagType {
         </div>
 
         <div class="header-actions">
-          <el-button
-            size="small"
-            class="visitor-btn"
-            @click="visitorDialogVisible = true"
-          >
-            <el-icon><User /></el-icon>
-            <span>{{ visitorName ? `访客：${visitorName}` : '登记意向信息' }}</span>
-          </el-button>
-
           <el-button
             type="primary"
             size="small"
@@ -553,31 +514,6 @@ function getIntentTagType(intentCode?: string): TagType {
       v-model="faqDrawerVisible"
       @select-question="handleSelectFaqQuestion"
     />
-
-    <!-- 访客意向登记弹窗 -->
-    <el-dialog
-      v-model="visitorDialogVisible"
-      title="登记您的留学/升学咨询意向"
-      width="420px"
-      destroy-on-close
-      append-to-body
-    >
-      <div class="dialog-tips">
-        填写您的联系方式，我们将为您指派专属顾问老师提供 1v1 免费规划方案：
-      </div>
-      <el-form label-position="top">
-        <el-form-item label="您的姓名">
-          <el-input v-model="visitorForm.name" placeholder="例如：张同学 / 李家长" />
-        </el-form-item>
-        <el-form-item label="联系电话 / 微信">
-          <el-input v-model="visitorForm.contact" placeholder="用于顾问老师回访与方案发送" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="visitorDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveVisitorInfo">确认保存</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -689,12 +625,6 @@ function getIntentTagType(intentCode?: string): TagType {
 .faq-btn:hover {
   background: #d95454;
   border-color: #d95454;
-}
-
-.visitor-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .reset-btn {
@@ -1054,14 +984,5 @@ function getIntentTagType(intentCode?: string): TagType {
 .send-btn:hover {
   background: #d95454;
   border-color: #d95454;
-}
-
-.dialog-tips {
-  font-size: 13px;
-  color: #606266;
-  margin-bottom: 12px;
-  background: #f4f6f8;
-  padding: 8px 12px;
-  border-radius: 4px;
 }
 </style>
