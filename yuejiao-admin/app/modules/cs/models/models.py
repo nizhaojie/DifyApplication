@@ -28,7 +28,7 @@ class ChatSession(Base):
     visitor_contact = Column(String(128), nullable=True)
     status = Column(String(32), nullable=False, default="active", index=True)
     last_message_time = Column(DateTime, nullable=True)
-    create_time = Column(DateTime, nullable=False, default=datetime.utcnow)
+    create_time = Column(DateTime, nullable=False, default=datetime.now)
     close_time = Column(DateTime, nullable=True)
 
 
@@ -44,7 +44,7 @@ class ChatMessage(Base):
     intent = Column(String(64), nullable=True, index=True)
     tokens_used = Column(Integer, nullable=True)
     response_time_ms = Column(Integer, nullable=True)
-    create_time = Column(DateTime, nullable=False, default=datetime.utcnow)
+    create_time = Column(DateTime, nullable=False, default=datetime.now)
 
 
 class CourseProject(Base):
@@ -61,9 +61,9 @@ class CourseProject(Base):
     duration = Column(String(64), nullable=True)
     tags = Column(JSON, nullable=True)
     status = Column(SmallInteger, nullable=False, default=1, index=True)
-    create_time = Column(DateTime, nullable=False, default=datetime.utcnow)
+    create_time = Column(DateTime, nullable=False, default=datetime.now)
     update_time = Column(
-        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
     )
 
 
@@ -83,9 +83,9 @@ class EventLecture(Base):
     current_participants = Column(Integer, nullable=False, default=0)
     organizer_id = Column(BIGINT, nullable=True)
     status = Column(String(32), nullable=False, default="upcoming", index=True)
-    create_time = Column(DateTime, nullable=False, default=datetime.utcnow)
+    create_time = Column(DateTime, nullable=False, default=datetime.now)
     update_time = Column(
-        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
     )
 
 
@@ -101,7 +101,7 @@ class EventRegistration(Base):
     contact_info = Column(String(128), nullable=True)
     status = Column(String(32), nullable=False, default="registered")
     remark = Column(String(255), nullable=True)
-    create_time = Column(DateTime, nullable=False, default=datetime.utcnow)
+    create_time = Column(DateTime, nullable=False, default=datetime.now)
 
 
 class KnowledgeBase(Base):
@@ -117,9 +117,9 @@ class KnowledgeBase(Base):
     chunk_index = Column(Integer, nullable=False, default=0)
     embedding_vector = Column(LargeBinary, nullable=True)
     status = Column(SmallInteger, nullable=False, default=1)
-    create_time = Column(DateTime, nullable=False, default=datetime.utcnow)
+    create_time = Column(DateTime, nullable=False, default=datetime.now)
     update_time = Column(
-        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
     )
 
 
@@ -135,7 +135,7 @@ class IntentConfig(Base):
     system_prompt = Column(Text, nullable=True)
     routing_rule = Column(JSON, nullable=True)
     status = Column(SmallInteger, nullable=False, default=1)
-    create_time = Column(DateTime, nullable=False, default=datetime.utcnow)
+    create_time = Column(DateTime, nullable=False, default=datetime.now)
     update_time = Column(
-        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
     )

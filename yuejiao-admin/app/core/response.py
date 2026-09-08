@@ -14,7 +14,7 @@ class UnifiedResponse(BaseModel, Generic[DataType]):
     message: str = Field(default="success", description="Response descriptive message")
     data: Optional[DataType] = Field(default=None, description="Response payload")
     timestamp: str = Field(
-        default_factory=lambda: datetime.utcnow().isoformat() + "Z",
+        default_factory=lambda: datetime.now().isoformat(),
         description="Response timestamp UTC",
     )
 

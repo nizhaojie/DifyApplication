@@ -40,7 +40,7 @@ def create_chat_session(
         visitor_name=visitor_name,
         visitor_contact=visitor_contact,
         status="active",
-        last_message_time=datetime.utcnow(),
+        last_message_time=datetime.now(),
     )
     db.add(session_record)
     db.commit()
@@ -57,7 +57,7 @@ def update_session_activity(
     """Update last message timestamp and optional visitor contact info."""
     session_record = get_session_by_session_id(db, session_id)
     if session_record:
-        session_record.last_message_time = datetime.utcnow()
+        session_record.last_message_time = datetime.now()
         if visitor_name and not session_record.visitor_name:
             session_record.visitor_name = visitor_name
         if visitor_contact and not session_record.visitor_contact:
@@ -84,7 +84,7 @@ def create_chat_message(
         intent=intent,
         tokens_used=tokens_used,
         response_time_ms=response_time_ms,
-        create_time=datetime.utcnow(),
+        create_time=datetime.now(),
     )
     db.add(message_record)
     db.commit()
@@ -210,7 +210,7 @@ def create_event_registration(
         contact_info=contact_info,
         remark=remark,
         status="registered",
-        create_time=datetime.utcnow(),
+        create_time=datetime.now(),
     )
     db.add(registration_record)
 

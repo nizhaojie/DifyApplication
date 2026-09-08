@@ -108,7 +108,7 @@ class FaqEngine:
             len(common_bigrams) / len(candidate_bigrams) if candidate_bigrams else 0.0
         )
 
-        if char_recall >= 0.85 and bigram_recall >= 0.4:
+        if char_recall >= 0.85 and bigram_recall >= 0.35:
             return max(0.80, 0.70 + 0.30 * bigram_recall)
 
         combined_score = 0.4 * char_f1 + 0.6 * bigram_recall
@@ -116,26 +116,27 @@ class FaqEngine:
 
     @classmethod
     def _calculate_answer_boost(
-        cls, query_string: str, candidate_answer: str
+        cls, query_string: str, candidate_answer: str, question_score: float
     ) -> float:
-        """Check if crucial query keywords appear in answer (e.g. 账户, 银行, 汇款)."""
+        """Boost score ONLY when query mentions specific entities like bank accounts."""
         normalized_query = cls._normalize_text(query_string)
         normalized_answer = cls._normalize_text(candidate_answer)
 
-        # Look for salient 2-char tokens from query present in answer
-        query_bigrams = cls._extract_bigrams(normalized_query)
-        if not query_bigrams:
+        specific_faq_signals = ["对公", "银行", "账户", "账号", "开户行", "退费"]
+        has_signal = any(sig in normalized_query for sig in specific_faq_signals)
+
+        if not has_signal and question_score < 0.3:
             return 0.0
 
+        query_bigrams = cls._extract_bigrams(normalized_query)
         matched_bigrams = [
             bg for bg in query_bigrams if bg in normalized_answer
         ]
-        if len(matched_bigrams) >= 3:
-            return 0.75
-        elif len(matched_bigrams) == 2:
-            return 0.60
-        elif len(matched_bigrams) == 1:
-            return 0.30
+
+        if has_signal and len(matched_bigrams) >= 2:
+            return 0.80
+        elif question_score >= 0.3 and len(matched_bigrams) >= 3:
+            return 0.65
         return 0.0
 
     def match(
@@ -153,9 +154,10 @@ class FaqEngine:
 
         for candidate in self._faq_items:
             q_score = self._calculate_similarity(user_question, candidate.question)
-            a_boost = self._calculate_answer_boost(user_question, candidate.answer)
-            # Comprehensive score
-            final_score = max(q_score, 0.5 * q_score + 0.5 * a_boost, a_boost)
+            a_boost = self._calculate_answer_boost(
+                user_question, candidate.answer, q_score
+            )
+            final_score = max(q_score, a_boost)
 
             if final_score > highest_score:
                 highest_score = final_score

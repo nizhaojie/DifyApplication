@@ -28,13 +28,25 @@ def test_list_active_events(db_session):
 
 def test_event_registration_success_and_duplicate(db_session):
     """Ensure valid registration succeeds, increments participants, and prevents duplicates."""
-    events = event_service.list_active_events(db=db_session)
-    target_event = events[0]
-    initial_count = target_event.current_participants
+    # Create an isolated event for this registration test
+    isolated_event = EventLecture(
+        event_name=f"专场测试研讨会_{uuid.uuid4().hex[:6]}",
+        event_type="online",
+        description="专场测试专用说明会",
+        start_time=datetime.now() + timedelta(days=7),
+        location="腾讯会议：123-456-789",
+        max_participants=50,
+        current_participants=0,
+        status="upcoming",
+    )
+    db_session.add(isolated_event)
+    db_session.commit()
+    db_session.refresh(isolated_event)
 
+    target_event_id = isolated_event.id
     unique_phone = f"137{uuid.uuid4().hex[:8]}"
     register_request = EventRegisterRequest(
-        event_id=target_event.id,
+        event_id=target_event_id,
         customer_name="李华",
         contact_info=unique_phone,
         remark="对德国双元制非常感兴趣",
@@ -47,9 +59,8 @@ def test_event_registration_success_and_duplicate(db_session):
     assert "报名成功" in response_first.message
 
     # Verify participant count incremented
-    updated_events = event_service.list_active_events(db=db_session)
-    refreshed_event = next(e for e in updated_events if e.id == target_event.id)
-    assert refreshed_event.current_participants == initial_count + 1
+    db_session.refresh(isolated_event)
+    assert isolated_event.current_participants == 1
 
     # 2. Duplicate registration with same phone should be intercepted
     response_second = event_service.register(db=db_session, payload=register_request)

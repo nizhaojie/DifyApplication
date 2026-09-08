@@ -96,7 +96,7 @@ def test_event_and_registration_lifecycle(db_session):
         event_name=unique_event_name,
         event_type="online",
         description="全面解读中德双元制实训薪资与B1考培策略",
-        start_time=datetime.utcnow() + timedelta(days=3),
+        start_time=datetime.now() + timedelta(days=3),
         location="腾讯会议：888-999-000",
         max_participants=2,
         current_participants=0,
