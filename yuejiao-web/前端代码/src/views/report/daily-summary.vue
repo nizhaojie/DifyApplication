@@ -8,6 +8,12 @@ import {
   type ReportKind,
   type ReportRecord,
 } from '@/api/report'
+import {
+  periodRangeLabel,
+  resolveDayPeriod,
+  resolveWeekPeriod,
+  shanghaiDate,
+} from './period'
 
 type PeriodGrain = 'week' | 'day'
 
@@ -19,21 +25,14 @@ const failure = ref('')
 const current = ref<ReportRecord | null>(null)
 const history = ref<ReportRecord[]>([])
 
-function shanghaiIsoDate(when = new Date()) {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Shanghai',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(when)
-}
-
-function shanghaiDate(when = new Date()) {
-  return new Date(`${shanghaiIsoDate(when)}T00:00:00+08:00`)
-}
-
 const kind = computed<ReportKind>(() => (periodGrain.value === 'day' ? 'daily_summary' : 'weekly_summary'))
-const periodStart = computed(() => shanghaiIsoDate(selectedDate.value))
+const resolvedPeriod = computed(() =>
+  periodGrain.value === 'day'
+    ? resolveDayPeriod(selectedDate.value)
+    : resolveWeekPeriod(selectedDate.value),
+)
+const periodStart = computed(() => resolvedPeriod.value.start)
+const periodLabel = computed(() => periodRangeLabel(resolvedPeriod.value))
 const coverage = computed(() => current.value?.content?.numbers?.coverage as Record<string, any> | undefined)
 const insight = computed(() => current.value?.content?.insight as Record<string, string> | undefined)
 const submittedNames = computed(() => {
@@ -107,14 +106,17 @@ onMounted(async () => {
           <el-radio-button label="week">本周</el-radio-button>
           <el-radio-button label="day">今日</el-radio-button>
         </el-radio-group>
-        <el-date-picker
-          v-if="periodGrain === 'week'"
-          v-model="selectedDate"
-          type="week"
-          format="YYYY 第 ww 周"
-          placeholder="选择周期"
-          :clearable="false"
-        />
+        <div v-if="periodGrain === 'week'" class="period-control">
+          <span class="period-range">{{ periodLabel }}</span>
+          <el-date-picker
+            v-model="selectedDate"
+            class="period-picker"
+            type="week"
+            :first-day-of-week="1"
+            placeholder="选择周期"
+            :clearable="false"
+          />
+        </div>
         <el-date-picker
           v-else
           v-model="selectedDate"
@@ -240,6 +242,34 @@ onMounted(async () => {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.period-control {
+  position: relative;
+  min-width: 240px;
+  height: 32px;
+  overflow: hidden;
+}
+
+.period-range {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 14px;
+  color: #606266;
+}
+
+.period-control :deep(.el-date-editor) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .fail {

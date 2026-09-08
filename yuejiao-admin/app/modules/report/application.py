@@ -89,7 +89,16 @@ class ReportApplication:
                 (kind,),
             )
             rows = cur.fetchall()
-        return [_row_to_report(row) for row in rows]
+        latest_by_period: dict[date, Report] = {}
+        for row in rows:
+            report = _row_to_report(row)
+            if report.period_start not in latest_by_period:
+                latest_by_period[report.period_start] = report
+        return sorted(
+            latest_by_period.values(),
+            key=lambda report: report.period_start,
+            reverse=True,
+        )
 
     def _insert_generating(self, kind: str, title: str, start: date, end: date) -> int:
         with self._conn.cursor() as cur:

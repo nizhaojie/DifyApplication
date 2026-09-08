@@ -110,16 +110,17 @@ def test_historical_week_is_monday_through_sunday(app):
     assert report.period_end == date(2025, 3, 9)
 
 
-def test_second_generate_appends_and_current_is_the_new_success(app):
+def test_second_generate_replaces_previous_success_in_history(app):
     first = app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
     second = app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
 
     assert first.id != second.id
     current = app.current(KIND_WEEKLY_SUMMARY, WEEK_START)
     assert current.id == second.id
-    history_ids = [item.id for item in app.history(KIND_WEEKLY_SUMMARY)]
-    assert first.id in history_ids
-    assert second.id in history_ids
+    history = app.history(KIND_WEEKLY_SUMMARY)
+    same_period = [item for item in history if item.period_start == WEEK_START]
+    assert [item.id for item in same_period] == [second.id]
+    assert first.id not in [item.id for item in history]
 
 
 def test_insight_failure_does_not_replace_current_report(app, conn, insight):

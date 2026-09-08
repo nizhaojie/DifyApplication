@@ -7,24 +7,20 @@ import {
   generateReport,
   type ReportRecord,
 } from '@/api/report'
+import { periodRangeLabel, resolveWeekPeriod, shanghaiDate } from './period'
 
 const KIND = 'complaint_weekly' as const
 
-const weekDate = ref(new Date())
+const weekDate = ref(shanghaiDate())
 const generating = ref(false)
 const loading = ref(false)
 const failure = ref('')
 const current = ref<ReportRecord | null>(null)
 const history = ref<ReportRecord[]>([])
 
-function isoDate(value: Date) {
-  const year = value.getFullYear()
-  const month = String(value.getMonth() + 1).padStart(2, '0')
-  const day = String(value.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-const periodStart = computed(() => isoDate(weekDate.value))
+const resolvedPeriod = computed(() => resolveWeekPeriod(weekDate.value))
+const periodStart = computed(() => resolvedPeriod.value.start)
+const periodLabel = computed(() => periodRangeLabel(resolvedPeriod.value))
 const numbers = computed(() => current.value?.content?.numbers as Record<string, any> | undefined)
 const insight = computed(() => current.value?.content?.insight as Record<string, string> | undefined)
 
@@ -60,7 +56,7 @@ async function onGenerate() {
 }
 
 async function openHistory(item: ReportRecord) {
-  weekDate.value = new Date(`${item.period_start}T00:00:00+08:00`)
+  weekDate.value = shanghaiDate(new Date(`${item.period_start}T00:00:00+08:00`))
   failure.value = ''
   await loadCurrent()
 }
@@ -78,14 +74,18 @@ onMounted(async () => {
         <p>选定周期后手动生成。数字来自工单表，叙述与建议来自洞察。</p>
       </div>
       <div class="actions">
-        <el-date-picker
-          v-model="weekDate"
-          type="week"
-          format="YYYY 第 ww 周"
-          placeholder="选择周期"
-          :clearable="false"
-          @change="loadCurrent"
-        />
+        <div class="period-control">
+          <span class="period-range">{{ periodLabel }}</span>
+          <el-date-picker
+            v-model="weekDate"
+            class="period-picker"
+            type="week"
+            :first-day-of-week="1"
+            placeholder="选择周期"
+            :clearable="false"
+            @change="loadCurrent"
+          />
+        </div>
         <el-button type="primary" :loading="generating" @click="onGenerate">手动生成</el-button>
       </div>
     </header>
@@ -219,6 +219,34 @@ onMounted(async () => {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.period-control {
+  position: relative;
+  min-width: 240px;
+  height: 32px;
+  overflow: hidden;
+}
+
+.period-range {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 14px;
+  color: #606266;
+}
+
+.period-control :deep(.el-date-editor) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .fail {
