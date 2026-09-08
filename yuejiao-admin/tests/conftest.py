@@ -255,3 +255,87 @@ def insert_academic_deadline(
         )
         return cur.lastrowid
 
+
+def insert_lead(
+    conn,
+    *,
+    customer_name: str,
+    created: datetime,
+    status: str = "new",
+    last_contact: datetime | None = None,
+    education_level: str | None = "本科",
+    intended_country: str | None = "英国",
+    source_channel: str | None = "线上广告",
+    lost_reason: str | None = None,
+    owner_employee_id: int = 3,
+):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO crm_lead
+                (customer_name, education_level, intended_country, source_channel,
+                 status, owner_employee_id, last_contact_time, lost_reason,
+                 create_time, update_time)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                customer_name,
+                education_level,
+                intended_country,
+                source_channel,
+                status,
+                owner_employee_id,
+                None if last_contact is None else last_contact.replace(tzinfo=None),
+                lost_reason,
+                created.replace(tzinfo=None),
+                created.replace(tzinfo=None),
+            ),
+        )
+        return cur.lastrowid
+
+
+def insert_follow_up(
+    conn,
+    *,
+    lead_id: int,
+    created: datetime,
+    content: str = "电话跟进意向国家与预算。",
+    employee_id: int = 3,
+    follow_type: str = "phone",
+):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO crm_follow_up
+                (lead_id, employee_id, follow_type, content, create_time)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (
+                lead_id,
+                employee_id,
+                follow_type,
+                content,
+                created.replace(tzinfo=None),
+            ),
+        )
+        return cur.lastrowid
+
+
+def insert_customer_profile(
+    conn,
+    *,
+    customer_name: str,
+    match_result: str = "matched",
+):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO customer_profile
+                (customer_name, match_result, matched_product, match_score)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (customer_name, match_result, "留学申请", 88.0),
+        )
+        return cur.lastrowid
+
+

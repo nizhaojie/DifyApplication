@@ -30,6 +30,22 @@ NONEMPTY_DAILY_INSIGHT = {
     "suggested_action": "协调未提交人员补交，并跟进已暴露风险。",
 }
 
+EMPTY_CUSTOMER_OPS_INSIGHT = {
+    "overview_narrative": "本周期没有进入漏斗的客户，三类客群人数为零。",
+    "intent_narrative": "没有意向客群可分组，也没有流失预警对象。",
+    "signed_narrative": "没有成交客户，样本不足以归纳共性。",
+    "lost_narrative": "没有流失客群可归因。",
+    "suggested_action": "维持现有获客节奏，待有客户进入漏斗后再复盘转化与挽回。",
+}
+
+NONEMPTY_CUSTOMER_OPS_INSIGHT = {
+    "overview_narrative": "三类客群按期末存量汇总，新增意向按进入漏斗时间计。",
+    "intent_narrative": "意向特征按意向国家、学历、来源渠道分组；流失预警为跟进停滞满十四天。",
+    "signed_narrative": "转化路径为跟进时间线加当前状态，高价值特征用同一套分组维度。",
+    "lost_narrative": "流失归因基于已记录的流失原因。",
+    "suggested_action": "优先跟进流失预警对象，并按意向特征加强获客与挽回。",
+}
+
 EMPTY_PSYCH_INSIGHT = {
     "overview_narrative": "本周无人有心理记录。",
     "week_risk_narrative": "本周没有未解除的风险学生。",
@@ -49,6 +65,21 @@ NONEMPTY_PSYCH_INSIGHT = {
 
 class FixedInsightAdapter:
     def narrate(self, kind: str, numbers: dict) -> dict:
+        if kind == "customer_ops":
+            if (
+                numbers.get("intent_count") == 0
+                and numbers.get("signed_count") == 0
+                and numbers.get("lost_count") == 0
+                and numbers.get("new_intent_count") == 0
+            ):
+                return dict(EMPTY_CUSTOMER_OPS_INSIGHT)
+            insight = dict(NONEMPTY_CUSTOMER_OPS_INSIGHT)
+            if (numbers.get("signed_count") or 0) < 2:
+                insight["signed_narrative"] = (
+                    "成交样本不足以归纳共性。转化路径为跟进时间线加当前状态，"
+                    "高价值特征仍按意向国家、学历、来源渠道分组。"
+                )
+            return insight
         if kind == "psych_weekly":
             has_watchlist = bool(numbers.get("watchlist_count"))
             has_nodes = bool(numbers.get("approaching_nodes"))

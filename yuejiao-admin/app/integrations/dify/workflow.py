@@ -31,11 +31,20 @@ PSYCH_INSIGHT_KEYS = (
     "suggested_action",
 )
 
+CUSTOMER_OPS_INSIGHT_KEYS = (
+    "overview_narrative",
+    "intent_narrative",
+    "signed_narrative",
+    "lost_narrative",
+    "suggested_action",
+)
+
 INSIGHT_KEYS_BY_KIND = {
     "complaint_weekly": COMPLAINT_INSIGHT_KEYS,
     "daily_summary": DAILY_INSIGHT_KEYS,
     "weekly_summary": DAILY_INSIGHT_KEYS,
     "psych_weekly": PSYCH_INSIGHT_KEYS,
+    "customer_ops": CUSTOMER_OPS_INSIGHT_KEYS,
 }
 
 INSIGHT_KEYS = COMPLAINT_INSIGHT_KEYS

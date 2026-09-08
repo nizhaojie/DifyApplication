@@ -6,6 +6,7 @@ from app.core.deps import get_report_app
 from app.core.response import ok
 from app.modules.report.application import (
     KIND_COMPLAINT_WEEKLY,
+    KIND_CUSTOMER_OPS,
     KIND_DAILY_SUMMARY,
     KIND_PSYCH_WEEKLY,
     KIND_WEEKLY_SUMMARY,
@@ -17,6 +18,7 @@ from pydantic import BaseModel
 router = APIRouter()
 
 OPEN_KINDS = {
+    KIND_CUSTOMER_OPS,
     KIND_COMPLAINT_WEEKLY,
     KIND_DAILY_SUMMARY,
     KIND_WEEKLY_SUMMARY,

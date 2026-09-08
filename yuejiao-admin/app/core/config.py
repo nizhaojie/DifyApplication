@@ -18,6 +18,7 @@ class Settings:
     dify_complaint_weekly_api_key: str = os.getenv("DIFY_COMPLAINT_WEEKLY_API_KEY", "")
     dify_daily_summary_api_key: str = os.getenv("DIFY_DAILY_SUMMARY_API_KEY", "")
     dify_psych_weekly_api_key: str = os.getenv("DIFY_PSYCH_WEEKLY_API_KEY", "")
+    dify_customer_ops_api_key: str = os.getenv("DIFY_CUSTOMER_OPS_API_KEY", "")
     dify_timeout_seconds: float = float(os.getenv("DIFY_TIMEOUT_SECONDS", "90"))
 
 
