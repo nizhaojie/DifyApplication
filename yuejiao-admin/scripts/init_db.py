@@ -25,6 +25,13 @@ from app.modules.cs.models.models import (
     IntentConfig,
     KnowledgeBase,
 )
+
+# 导入全部模块模型，确保 create_all 覆盖所有表（与 app/main.py 保持一致）
+from app.modules import enterprise, profile, student, system  # noqa: F401
+from app.modules.enterprise.models import *  # noqa: F401,F403
+from app.modules.profile.models import *  # noqa: F401,F403
+from app.modules.student.models import *  # noqa: F401,F403
+from app.modules.system.models import *  # noqa: F401,F403
 from app.modules.cs.services.event.event_service import event_service
 from app.modules.cs.services.rag.kb_engine import kb_engine
 from app.modules.cs.services.recommend.course_matcher import course_matcher
