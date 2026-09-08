@@ -81,6 +81,14 @@ body {
   background: var(--el-color-primary) !important;
 }
 
+.aside .el-sub-menu__title {
+  color: #cfd3dc !important;
+}
+
+.aside .el-sub-menu__title:hover {
+  background: var(--aside-hover) !important;
+}
+
 .header {
   display: flex;
   align-items: center;

@@ -54,6 +54,7 @@ function closeTag(path: string) {
       </div>
       <el-menu
         :default-active="route.path"
+        :default-openeds="['report']"
         :collapse="collapsed"
         router
         background-color="#1d1e1f"
@@ -82,10 +83,16 @@ function closeTag(path: string) {
           <el-icon><User /></el-icon>
           <span>学生助手</span>
         </el-menu-item>
-        <el-menu-item index="/report">
-          <el-icon><Document /></el-icon>
-          <span>智能报告</span>
-        </el-menu-item>
+        <el-sub-menu index="report">
+          <template #title>
+            <el-icon><Document /></el-icon>
+            <span>智能报告</span>
+          </template>
+          <el-menu-item index="/report/customer-ops">全域客户经营分析</el-menu-item>
+          <el-menu-item index="/report/daily-summary">员工日报智能汇总</el-menu-item>
+          <el-menu-item index="/report/psych-weekly">学生心理健康周报</el-menu-item>
+          <el-menu-item index="/report/complaint-weekly">投诉处理周报</el-menu-item>
+        </el-sub-menu>
         <div v-if="!collapsed" class="menu-cap">系统</div>
         <el-menu-item index="/settings">
           <el-icon><Setting /></el-icon>
