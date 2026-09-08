@@ -6,7 +6,7 @@ import urllib.request
 
 from app.modules.report.insight import InsightError
 
-INSIGHT_KEYS = (
+COMPLAINT_INSIGHT_KEYS = (
     "volume_narrative",
     "category_narrative",
     "handling_narrative",
@@ -15,21 +15,41 @@ INSIGHT_KEYS = (
     "suggested_action",
 )
 
+DAILY_INSIGHT_KEYS = (
+    "coverage_narrative",
+    "progress_narrative",
+    "output_narrative",
+    "risk_narrative",
+    "suggested_action",
+)
+
+INSIGHT_KEYS_BY_KIND = {
+    "complaint_weekly": COMPLAINT_INSIGHT_KEYS,
+    "daily_summary": DAILY_INSIGHT_KEYS,
+    "weekly_summary": DAILY_INSIGHT_KEYS,
+}
+
+INSIGHT_KEYS = COMPLAINT_INSIGHT_KEYS
+
 
 class DifyWorkflowInsightAdapter:
-    def __init__(self, *, base_url: str, api_key: str, timeout: float = 90, user: str = "yuejiao-admin"):
+    def __init__(self, *, base_url: str, api_keys: dict[str, str], timeout: float = 90, user: str = "yuejiao-admin"):
         self._base_url = base_url.rstrip("/")
-        self._api_key = api_key
+        self._api_keys = api_keys
         self._timeout = timeout
         self._user = user
 
     def narrate(self, kind: str, numbers: dict) -> dict:
-        if not self._api_key:
-            raise InsightError("未配置投诉处理周报 Dify Workflow")
-        raw = self._run(json.dumps(numbers, ensure_ascii=False))
-        return parse_insight(raw)
+        keys = INSIGHT_KEYS_BY_KIND.get(kind)
+        if not keys:
+            raise InsightError("未配置该报告种类的洞察")
+        api_key = self._api_keys.get(kind) or ""
+        if not api_key:
+            raise InsightError("未配置该报告种类的 Dify Workflow")
+        raw = self._run(api_key, json.dumps(numbers, ensure_ascii=False))
+        return parse_insight(raw, keys)
 
-    def _run(self, aggregates: str) -> object:
+    def _run(self, api_key: str, aggregates: str) -> object:
         url = f"{self._base_url}/workflows/run"
         payload = {
             "inputs": {"aggregates": aggregates},
@@ -40,7 +60,7 @@ class DifyWorkflowInsightAdapter:
             url,
             data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
             headers={
-                "Authorization": f"Bearer {self._api_key}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             },
             method="POST",
@@ -71,12 +91,12 @@ def extract_insight_output(body: dict) -> object:
     raise InsightError("洞察生成失败：Workflow 未返回 insight")
 
 
-def parse_insight(raw: object) -> dict:
+def parse_insight(raw: object, keys: tuple[str, ...] = INSIGHT_KEYS) -> dict:
     data = _as_object(raw)
-    missing = [key for key in INSIGHT_KEYS if not str(data.get(key) or "").strip()]
+    missing = [key for key in keys if not str(data.get(key) or "").strip()]
     if missing:
         raise InsightError("洞察生成失败：返回缺少叙述或建议动作")
-    return {key: str(data[key]).strip() for key in INSIGHT_KEYS}
+    return {key: str(data[key]).strip() for key in keys}
 
 
 def _as_object(raw: object) -> dict:

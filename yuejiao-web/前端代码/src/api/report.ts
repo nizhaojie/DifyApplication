@@ -1,4 +1,4 @@
-export type ReportKind = 'customer_ops' | 'daily_summary' | 'psych_weekly' | 'complaint_weekly'
+export type ReportKind = 'customer_ops' | 'daily_summary' | 'weekly_summary' | 'psych_weekly' | 'complaint_weekly'
 
 export interface ReportRecord {
   id: number

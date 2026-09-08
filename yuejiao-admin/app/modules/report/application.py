@@ -9,8 +9,14 @@ from app.modules.report.clock import SHANGHAI
 from app.modules.report.insight import InsightError
 
 KIND_COMPLAINT_WEEKLY = "complaint_weekly"
+KIND_DAILY_SUMMARY = "daily_summary"
+KIND_WEEKLY_SUMMARY = "weekly_summary"
+DAILY_SUMMARY_KINDS = {KIND_DAILY_SUMMARY, KIND_WEEKLY_SUMMARY}
+EXPECTED_ROLE_CODES = ("employee", "manager", "team_leader")
 TITLES = {
     KIND_COMPLAINT_WEEKLY: "投诉处理周报",
+    KIND_DAILY_SUMMARY: "员工日报智能汇总",
+    KIND_WEEKLY_SUMMARY: "员工日报智能汇总",
 }
 
 
@@ -34,12 +40,12 @@ class ReportApplication:
         self._insight = insight
 
     def generate(self, kind: str, period_start: date) -> Report:
-        start, end = resolve_period(period_start, self._clock.now())
+        start, end = resolve_period(period_start, self._clock.now(), kind=kind)
         title = f"{TITLES[kind]} {start.isoformat()} ~ {end.isoformat()}"
         report_id = self._insert_generating(kind, title, start, end)
         try:
-            numbers = self._aggregate_complaint_weekly(start, end)
-            insight = self._insight.narrate(kind, insight_payload(numbers))
+            numbers = self._aggregate(kind, start, end)
+            insight = self._insight.narrate(kind, insight_payload(kind, numbers))
             content = {"numbers": numbers, "insight": insight}
             self._finish(report_id, "completed", content, None)
         except InsightError as exc:
@@ -47,7 +53,7 @@ class ReportApplication:
         return self._get(report_id)
 
     def current(self, kind: str, period_start: date) -> Report | None:
-        start, _end = resolve_period(period_start, self._clock.now())
+        start, _end = resolve_period(period_start, self._clock.now(), kind=kind)
         with self._conn.cursor() as cur:
             cur.execute(
                 """
@@ -108,6 +114,68 @@ class ReportApplication:
             raise RuntimeError(f"report {report_id} missing after write")
         return _row_to_report(row)
 
+    def _aggregate(self, kind: str, start: date, end: date) -> dict[str, Any]:
+        if kind in DAILY_SUMMARY_KINDS:
+            return self._aggregate_daily_summary(start, end)
+        return self._aggregate_complaint_weekly(start, end)
+
+    def _aggregate_daily_summary(self, start: date, end: date) -> dict[str, Any]:
+        expected = self._load_expected_submitters()
+        reports = self._load_daily_reports(start, end)
+        submitted = [
+            {
+                "user_id": row["employee_id"],
+                "name": row.get("real_name") or "",
+                "report_date": row["report_date"].isoformat(),
+                "content": row.get("content") or "",
+                "key_progress": _decode_json_field(row.get("key_progress")),
+                "risks": _decode_json_field(row.get("risks")),
+            }
+            for row in reports
+            if row["status"] == "submitted"
+        ]
+        submitted_ids = {item["user_id"] for item in submitted}
+        missing = [person for person in expected if person["user_id"] not in submitted_ids]
+        return {
+            "coverage": {
+                "expected_count": len(expected),
+                "submitted_count": len(submitted_ids),
+                "missing_count": len(missing),
+                "expected": expected,
+                "submitted": submitted,
+                "missing": missing,
+            }
+        }
+
+    def _load_expected_submitters(self) -> list[dict]:
+        placeholders = ",".join(["%s"] * len(EXPECTED_ROLE_CODES))
+        with self._conn.cursor() as cur:
+            cur.execute(
+                f"""
+                SELECT u.id AS user_id, u.real_name AS name
+                FROM sys_user u
+                JOIN sys_role r ON r.id = u.role_id
+                WHERE r.role_code IN ({placeholders})
+                ORDER BY u.id
+                """,
+                EXPECTED_ROLE_CODES,
+            )
+            return list(cur.fetchall())
+
+    def _load_daily_reports(self, start: date, end: date) -> list[dict]:
+        with self._conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT d.employee_id, d.report_date, d.content, d.key_progress,
+                       d.risks, d.status, u.real_name
+                FROM employee_daily_report d
+                JOIN sys_user u ON u.id = d.employee_id
+                WHERE d.report_date BETWEEN %s AND %s
+                """,
+                (start, end),
+            )
+            return list(cur.fetchall())
+
     def _aggregate_complaint_weekly(self, start: date, end: date) -> dict[str, Any]:
         tickets = self._load_complaints()
         end_instant = period_end_instant(end, self._clock.now())
@@ -164,7 +232,9 @@ class ReportApplication:
             return list(cur.fetchall())
 
 
-def resolve_period(on_date: date, now: datetime) -> tuple[date, date]:
+def resolve_period(on_date: date, now: datetime, *, kind: str = KIND_COMPLAINT_WEEKLY) -> tuple[date, date]:
+    if kind == KIND_DAILY_SUMMARY:
+        return on_date, on_date
     monday = on_date - timedelta(days=on_date.weekday())
     today = now.astimezone(SHANGHAI).date()
     this_monday = today - timedelta(days=today.weekday())
@@ -246,11 +316,22 @@ def satisfaction(tickets: list[dict]) -> dict:
     }
 
 
-def insight_payload(numbers: dict) -> dict:
+def insight_payload(kind: str, numbers: dict) -> dict:
+    if kind in DAILY_SUMMARY_KINDS:
+        coverage = numbers.get("coverage") or {}
+        missing = list(coverage.get("missing") or [])
+        submitted = list(coverage.get("submitted") or [])
+        return {**numbers, "insight_detail": (missing + submitted)[:50]}
     open_alerts = list(numbers.get("open_complaints") or [])
     handling = list((numbers.get("handling") or {}).get("items") or [])
     detail = (open_alerts + handling)[:50]
     return {**numbers, "insight_detail": detail}
+
+
+def _decode_json_field(field: Any) -> Any:
+    if isinstance(field, str):
+        return json.loads(field)
+    return field
 
 
 def _row_to_report(row: dict) -> Report:

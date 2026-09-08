@@ -70,3 +70,68 @@ def insert_ticket(
             ),
         )
         return cur.lastrowid
+
+
+def insert_daily_report(
+    conn,
+    *,
+    employee_id: int,
+    report_date: date,
+    status: str = "submitted",
+    content: str = "今日完成客户跟进。",
+    key_progress=None,
+    risks=None,
+    raw_content: str | None = "口述内容",
+):
+    import json
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO employee_daily_report
+                (employee_id, report_date, raw_content, content, key_progress, risks, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                employee_id,
+                report_date,
+                raw_content,
+                content,
+                json.dumps(key_progress, ensure_ascii=False) if key_progress is not None else None,
+                json.dumps(risks, ensure_ascii=False) if risks is not None else None,
+                status,
+            ),
+        )
+        return cur.lastrowid
+
+
+def insert_staff(
+    conn,
+    *,
+    username: str,
+    real_name: str,
+    role_code: str = "employee",
+):
+    role_ids = {
+        "admin": 1,
+        "employee": 2,
+        "manager": 3,
+        "team_leader": 4,
+        "student": 5,
+    }
+    user_types = {
+        "admin": "admin",
+        "student": "student",
+        "employee": "employee",
+        "manager": "employee",
+        "team_leader": "employee",
+    }
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO sys_user (username, password_hash, real_name, user_type, role_id, status)
+            VALUES (%s, %s, %s, %s, %s, 'normal')
+            """,
+            (username, "x", real_name, user_types[role_code], role_ids[role_code]),
+        )
+        return cur.lastrowid

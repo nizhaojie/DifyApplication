@@ -4,10 +4,18 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.deps import get_report_app
 from app.core.response import ok
-from app.modules.report.application import KIND_COMPLAINT_WEEKLY, Report, ReportApplication
+from app.modules.report.application import (
+    KIND_COMPLAINT_WEEKLY,
+    KIND_DAILY_SUMMARY,
+    KIND_WEEKLY_SUMMARY,
+    Report,
+    ReportApplication,
+)
 from pydantic import BaseModel
 
 router = APIRouter()
+
+OPEN_KINDS = {KIND_COMPLAINT_WEEKLY, KIND_DAILY_SUMMARY, KIND_WEEKLY_SUMMARY}
 
 
 class GenerateBody(BaseModel):
@@ -31,7 +39,7 @@ def report_to_dict(report: Report) -> dict:
 
 @router.post("/generate")
 def generate(body: GenerateBody, app: ReportApplication = Depends(get_report_app)):
-    if body.kind != KIND_COMPLAINT_WEEKLY:
+    if body.kind not in OPEN_KINDS:
         raise HTTPException(status_code=400, detail="该报告种类尚未开放")
     report = app.generate(body.kind, body.period_start)
     return ok(report_to_dict(report))
