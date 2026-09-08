@@ -12,6 +12,7 @@ from app.modules.enterprise.crud import lead as lead_crud
 from app.modules.enterprise.crud import ops as ops_crud
 from app.modules.enterprise.models.lead import CrmLead
 from app.modules.enterprise.services.knowledge import answer as kb_answer
+from app.modules.enterprise.services import student_ops
 from app.modules.enterprise.services.lead.extract import (
     FOLLOW_TYPES,
     LEAD_STATUSES,
@@ -155,19 +156,19 @@ async def submit_daily_from_text(db: AsyncSession, text: str, owner: SysUser, re
 
 async def brief(db: AsyncSession, owner: SysUser) -> dict:
     todos = await ops_crud.pending_todos(db, int(owner.id))
-    leaves = await ops_crud.list_leaves(db, status="pending")
-    tickets = await ops_crud.list_tickets(db, status="pending")
+    ops = await student_ops.overview(db)
     funnel = await lead_crud.funnel_counts(db)
     return {
         "employee_id": owner.id,
         "employee_name": owner.real_name,
         "pending_todos": len(todos),
-        "pending_leave_approvals": len(leaves),
-        "pending_tickets": len([item for item in tickets if item["status"] in {"pending", "processing"}]),
+        "pending_leave_approvals": ops["pending_leaves"],
+        "pending_tickets": ops["open_tickets"],
         "funnel": funnel,
         "todos": [row_to_dict(item) for item in todos],
-        "leaves": leaves[:5],
-        "tickets": tickets[:5],
+        "leaves": ops["leaves"][:5],
+        "tickets": ops["tickets"][:5],
+        "bridge": ops["bridge"],
     }
 
 
@@ -187,9 +188,12 @@ async def approve_leave(db: AsyncSession, service_id: int, action: str, comment:
     service.approval_time = datetime.now()
     from app.modules.student.models.info import StudentInfo
 
+    word = "已通过" if action == "approved" else "未通过"
+    student_name = None
     info = await db.get(StudentInfo, service.student_id)
     if info is not None:
-        word = "已通过" if action == "approved" else "未通过"
+        student_user = await db.get(SysUser, info.user_id)
+        student_name = None if student_user is None else student_user.real_name
         await ops_crud.add_notification(
             db,
             user_id=info.user_id,
@@ -199,12 +203,19 @@ async def approve_leave(db: AsyncSession, service_id: int, action: str, comment:
             title="请假审批结果",
             content=f"你的请假申请{word}。{comment or ''}".strip(),
             channel="system",
-            status="sent",
+            status="pending",
         )
     await ops_crud.complete_related_todo(db, "student_admin_service", int(service.id))
     await db.commit()
     await db.refresh(service)
-    return row_to_dict(service)
+    data = student_ops.enrich_leave(row_to_dict(service))
+    data["student_name"] = student_name
+    data["student_notify"] = student_ops.mock_notify_student(
+        "leave_result",
+        student_name,
+        f"你的请假申请{word}。{comment or ''}".strip(),
+    )
+    return data
 
 
 async def command_from_text(db: AsyncSession, text: str, owner: SysUser) -> dict:
@@ -221,10 +232,12 @@ async def command_from_text(db: AsyncSession, text: str, owner: SysUser) -> dict
         data["student_name"] = student.real_name
         data["action_text"] = "已通过" if action == "approved" else "已驳回"
         return {"type": "leave", "result": data}
+    if any(token in text for token in ("投诉", "工单")):
+        return await student_ops.command_ticket_from_text(db, text, owner)
     if extract_status(text):
         data = await update_status_from_text(db, text)
         return {"type": "lead_status", "result": data}
-    raise BizError("没有听懂指令。可以说「同意张三的请假」或「把李四改成已签约」")
+    raise BizError("没有听懂指令。可以说「同意张三的请假」「把张三的投诉标成已解决」或「把李四改成已签约」")
 
 
 async def nl2sql(db: AsyncSession, query: str) -> dict:
@@ -273,7 +286,7 @@ def identity_reply(query: str, owner: SysUser) -> dict | None:
         }
     if compact in {"你是谁", "你叫什么", "你是什么"}:
         return {
-            "reply": "我是粤教企业助手，可以录入客户、查跟进、批请假、交日报，也能查公司简称、入职办公和打印机位置。",
+            "reply": "我是粤教企业助手，可以录入客户、查跟进、批请假、跟投诉、交日报，也能查公司简称、入职办公和打印机位置。",
             "conversation_id": None,
             "source": "local",
             "intent": "help",
@@ -291,7 +304,7 @@ def identity_reply(query: str, owner: SysUser) -> dict | None:
 def looks_like_brief(query: str) -> bool:
     if "咨询" in query or "录入" in query:
         return False
-    return any(token in query for token in ("待办", "工作概览")) or "今天有什么" in query
+    return any(token in query for token in ("待办", "工作概览", "有没有请假", "有没有投诉")) or "今天有什么" in query
 
 
 def help_text() -> str:
@@ -302,7 +315,8 @@ def help_text() -> str:
         "3. 改状态，例如：把张三改成已签约\n"
         "4. 口述日报，说清进展、问题和明天计划\n"
         "5. 一句话批请假，例如：同意张三的请假\n"
-        "6. 问公司简称、入职办公、打印机位置\n"
+        "6. 查投诉 / 结案，例如：有哪些待处理投诉；把张三的投诉标成已解决\n"
+        "7. 问公司简称、入职办公、打印机位置\n"
         "点下面的能力可以直接填例句。"
     )
 
@@ -313,7 +327,7 @@ def greeting(brief_data: dict) -> str:
         f"{name}，待办 {brief_data.get('pending_todos') or 0} 条，"
         f"待审批请假 {brief_data.get('pending_leave_approvals') or 0} 条，"
         f"待处理投诉 {brief_data.get('pending_tickets') or 0} 条。"
-        "可以直接说客户，或点下面的能力。"
+        "可以直接说客户、请假或投诉，或点下面的能力。"
     )
 
 
@@ -324,7 +338,9 @@ def attach_view(data: dict) -> dict:
     intent = str(payload.get("intent") or "")
     title = str(payload.get("title") or "").strip()
     if not payload.get("citation"):
-        if source == "kb" or intent in {"faq", "docs", "guide"}:
+        if intent in {"memory", "identity", "self_intro"}:
+            payload["citation"] = "对话记忆"
+        elif source == "kb" or intent in {"faq", "docs", "guide"}:
             book = {"faq": "常见问答对", "guide": "新人指南", "docs": "企业信息"}.get(intent, "知识库")
             label = "知识库" if book == "知识库" else f"知识库 · {book}"
             if title:
@@ -391,7 +407,25 @@ def format_local_reply(intent: str, data: dict) -> str:
         )
     if intent == "leave":
         result = data["result"]
-        return f"**{result.get('student_name') or '该同学'}** 的请假{result.get('action_text')}，学生端会收到通知。"
+        return f"**{result.get('student_name') or '该同学'}** 的请假{result.get('action_text')}。学生助手尚未接通，已记下假通知。"
+    if intent == "ticket":
+        result = data.get("result") or data
+        return f"**{result.get('student_name') or '该同学'}** 的投诉{result.get('action_text') or '已更新'}。学生助手尚未接通，已记下假通知「已解决」。"
+    if intent == "ticket_query":
+        items = data.get("items") or []
+        if not items:
+            return "没有待处理的学生投诉。"
+        table = _md_table(
+            items,
+            [
+                ("student_name", "学生"),
+                ("title", "工单"),
+                ("category", "分类"),
+                ("status_text", "状态"),
+                ("priority_text", "优先级"),
+            ],
+        )
+        return f"学生投诉 **{data.get('total', len(items))}** 条：\n\n{table}"
     if intent == "nl2sql":
         rows = data.get("rows") or []
         if not rows:
@@ -404,7 +438,8 @@ def format_local_reply(intent: str, data: dict) -> str:
             f"**{data.get('employee_name')}** 今日概览\n\n"
             f"- 待办 {data.get('pending_todos')} 条\n"
             f"- 待审批请假 {data.get('pending_leave_approvals')} 条\n"
-            f"- 待处理投诉 {data.get('pending_tickets')} 条"
+            f"- 待处理投诉 {data.get('pending_tickets')} 条\n"
+            f"- 学生助手：未接通（假接口）"
         )
     if intent == "guide":
         items = data.get("items") or []
@@ -440,6 +475,9 @@ async def handle_local_chat(db: AsyncSession, query: str, owner: SysUser) -> dic
     if any(token in text_in for token in ("同意", "批准", "通过", "拒绝", "驳回")) and "请假" in text_in:
         intent = "leave"
         data = await command_from_text(db, text_in, owner)
+    elif any(token in text_in for token in ("投诉", "工单")):
+        data = await student_ops.command_ticket_from_text(db, text_in, owner)
+        intent = "ticket" if data.get("type") == "ticket" else "ticket_query"
     elif extract_status(text_in) and extract_person_name(text_in):
         intent = "lead_update"
         data = await update_status_from_text(db, text_in)
@@ -451,7 +489,7 @@ async def handle_local_chat(db: AsyncSession, query: str, owner: SysUser) -> dic
     ):
         intent = "lead_entry"
         data = await create_lead_from_text(db, text_in, owner)
-    elif any(token in text_in for token in ("待办", "有没有请假", "工作概览", "今天有什么")):
+    elif any(token in text_in for token in ("待办", "有没有请假", "有没有投诉", "工作概览", "今天有什么")):
         intent = "brief"
         data = await brief(db, owner)
     elif any(token in text_in for token in ("入职", "制度", "指引", "考勤")):

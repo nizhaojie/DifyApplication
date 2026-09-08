@@ -73,7 +73,31 @@ const router = createRouter({
           path: 'report',
           name: 'report',
           component: () => import('@/views/report/index.vue'),
-          meta: { title: '智能报告', hint: '空白模版。以后接客户经营、日报汇总、心理/投诉周报。' },
+          meta: { title: '智能报告', hint: '客户经营、日报汇总、心理/投诉周报。' },
+        },
+        {
+          path: 'report/customer-ops',
+          name: 'report-customer-ops',
+          component: () => import('@/views/report/customer-ops.vue'),
+          meta: { title: '全域客户经营分析' },
+        },
+        {
+          path: 'report/daily-summary',
+          name: 'report-daily-summary',
+          component: () => import('@/views/report/daily-summary.vue'),
+          meta: { title: '员工日报智能汇总' },
+        },
+        {
+          path: 'report/psych-weekly',
+          name: 'report-psych-weekly',
+          component: () => import('@/views/report/psych-weekly.vue'),
+          meta: { title: '学生心理健康周报' },
+        },
+        {
+          path: 'report/complaint-weekly',
+          name: 'report-complaint-weekly',
+          component: () => import('@/views/report/complaint-weekly.vue'),
+          meta: { title: '投诉处理周报' },
         },
         {
           path: 'settings',

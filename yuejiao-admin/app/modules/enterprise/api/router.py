@@ -12,6 +12,7 @@ from app.modules.enterprise.crud import ops as ops_crud
 from app.modules.enterprise.schemas.payload import LeadIn
 from app.modules.enterprise.services import chat as chat_service
 from app.modules.enterprise.services import memory as memory_service
+from app.modules.enterprise.services import student_ops
 from app.modules.enterprise.services.knowledge import answer as kb_answer
 from app.modules.enterprise.services.knowledge import company_card, guide_catalog, is_empty_kb_reply
 from app.modules.system.models.user import SysUser
@@ -33,7 +34,7 @@ async def chat(
     session = await memory_service.dump_memory(db, user)
     query = memory_service.apply_context(original, [item["content"] for item in session["messages"] if item.get("role") == "user"])
     conversation_id = body.conversation_id or session.get("conversation_id")
-    data = chat_service.attach_view(await _generate_reply(db, user, query, conversation_id))
+    data = chat_service.attach_view(await _generate_reply(db, user, query, conversation_id, session))
     try:
         await memory_service.remember_turn(
             db,
@@ -49,15 +50,12 @@ async def chat(
     return ok(data)
 
 
-async def _generate_reply(db, user: SysUser, query: str, conversation_id: str | None) -> dict:
-    if memory_service.looks_like_memory_ask(query):
-        snapshot = await memory_service.dump_memory(db, user)
-        return {
-            "reply": memory_service.summarize(snapshot["messages"], snapshot.get("last_person")),
-            "conversation_id": conversation_id,
-            "source": "local",
-            "intent": "memory",
-        }
+async def _generate_reply(db, user: SysUser, query: str, conversation_id: str | None, snapshot: dict | None = None) -> dict:
+    snapshot = snapshot or {}
+    memo = memory_service.reply_from_memory(query, user, snapshot)
+    if memo is not None:
+        memo["conversation_id"] = conversation_id
+        return memo
     quick = chat_service.identity_reply(query, user)
     if quick is not None:
         quick["conversation_id"] = conversation_id
@@ -75,7 +73,7 @@ async def _generate_reply(db, user: SysUser, query: str, conversation_id: str | 
     from app.modules.enterprise.services.lead.extract import extract_person_name, guess_person_name
 
     person = extract_person_name(query) or guess_person_name(query)
-    if person and any(token in query for token in ("电话", "联系", "查一下", "查询", "跟进")) and "请假" not in query:
+    if person and any(token in query for token in ("电话", "联系", "查一下", "查询", "跟进")) and "请假" not in query and "投诉" not in query and "工单" not in query:
         items, total = await chat_service.query_leads(db, keyword=person, page=1, page_size=8)
         payload = {"items": items, "total": total}
         return {
@@ -100,7 +98,10 @@ async def _generate_reply(db, user: SysUser, query: str, conversation_id: str | 
                 query,
                 user=user.username,
                 conversation_id=conversation_id,
-                inputs={"employee_id": str(user.id)},
+                inputs={
+                    "employee_id": str(user.id),
+                    **({"memory_hint": hint} if (hint := memory_service.memory_hint(snapshot)) else {}),
+                },
             )
             if is_empty_kb_reply(data.get("reply") or ""):
                 fallback = kb_answer(query, loose=True)
@@ -327,9 +328,40 @@ async def list_guides(keyword: str | None = None, db: AsyncSession = Depends(get
     return ok(items, total=len(items))
 
 
+@router.get("/ops")
+async def student_ops_overview(db: AsyncSession = Depends(get_db), _: SysUser = Depends(get_actor)):
+    data = await student_ops.overview(db)
+    return ok(data)
+
+
+@router.get("/student-bridge")
+async def student_bridge_status(_: SysUser = Depends(get_actor)):
+    return ok(student_ops.bridge_status())
+
+
+@router.post("/student-bridge/leave")
+async def mock_student_leave(
+    body: LeadIn,
+    db: AsyncSession = Depends(get_db),
+    _: SysUser = Depends(get_actor),
+):
+    data = await student_ops.mock_inbound_leave(db, body.model_dump())
+    return ok(data, message="已用假接口写入一条学生请假")
+
+
+@router.post("/student-bridge/ticket")
+async def mock_student_ticket(
+    body: LeadIn,
+    db: AsyncSession = Depends(get_db),
+    _: SysUser = Depends(get_actor),
+):
+    data = await student_ops.mock_inbound_ticket(db, body.model_dump())
+    return ok(data, message="已用假接口写入一条学生投诉")
+
+
 @router.get("/leaves")
 async def list_leaves(status: str | None = "pending", db: AsyncSession = Depends(get_db), _: SysUser = Depends(get_actor)):
-    items = await ops_crud.list_leaves(db, status=status)
+    items = await student_ops.list_leaves(db, status=status)
     return ok(items, total=len(items))
 
 
@@ -356,8 +388,35 @@ async def tool_command(
 
 @router.get("/tickets")
 async def list_tickets(status: str | None = None, db: AsyncSession = Depends(get_db), _: SysUser = Depends(get_actor)):
-    items = await ops_crud.list_tickets(db, status=status)
+    items = await student_ops.list_tickets(db, status=status)
     return ok(items, total=len(items))
+
+
+@router.post("/tickets/{ticket_id}/handle")
+async def handle_ticket(
+    ticket_id: int,
+    body: LeadIn,
+    db: AsyncSession = Depends(get_db),
+    user: SysUser = Depends(get_actor),
+):
+    data = await student_ops.handle_ticket(
+        db,
+        ticket_id,
+        body.action or body.status or "resolved",
+        body.solution or body.approval_comment or body.text,
+        user,
+    )
+    return ok(data, message="工单已更新")
+
+
+@router.post("/tools/ticket-from-text")
+async def tool_ticket(
+    body: LeadIn,
+    db: AsyncSession = Depends(get_db),
+    user: SysUser = Depends(get_actor),
+):
+    data = await student_ops.command_ticket_from_text(db, body.text or body.query or "", user)
+    return ok(data)
 
 
 @router.post("/nl2sql")

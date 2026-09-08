@@ -32,6 +32,26 @@ async def list_leaves(db: AsyncSession, status: str | None = None) -> list[dict]
     return items
 
 
+async def find_open_ticket_by_name(db: AsyncSession, name: str) -> tuple[StudentFeedbackTicket, SysUser] | None:
+    like = f"%{name}%"
+    row = (
+        await db.execute(
+            select(StudentFeedbackTicket, SysUser)
+            .join(StudentInfo, StudentInfo.id == StudentFeedbackTicket.student_id)
+            .join(SysUser, SysUser.id == StudentInfo.user_id)
+            .where(
+                StudentFeedbackTicket.status.in_(["pending", "processing"]),
+                SysUser.real_name.like(like),
+            )
+            .order_by(StudentFeedbackTicket.id.desc())
+            .limit(1)
+        )
+    ).first()
+    if row is None:
+        return None
+    return row[0], row[1]
+
+
 async def find_pending_leave_by_name(db: AsyncSession, name: str) -> tuple[StudentAdminService, SysUser] | None:
     like = f"%{name}%"
     row = (

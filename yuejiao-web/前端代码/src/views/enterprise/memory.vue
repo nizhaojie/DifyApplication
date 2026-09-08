@@ -7,6 +7,7 @@ import { clearMemory, fetchMemory, type MemoryMessage } from '@/api/enterprise'
 const router = useRouter()
 const loading = ref(false)
 const lastPerson = ref<string | null>(null)
+const preferredName = ref<string | null>(null)
 const total = ref(0)
 const messages = ref<MemoryMessage[]>([])
 
@@ -17,6 +18,7 @@ async function load() {
   try {
     const data = await fetchMemory()
     lastPerson.value = data.last_person
+    preferredName.value = data.preferred_name
     total.value = data.total
     messages.value = data.messages || []
   } finally {
@@ -41,7 +43,7 @@ onMounted(() => {
     <header class="ent-head">
       <div>
         <h1>对话记忆</h1>
-        <p class="hint">只看摘要。完整对话在工作台。刷新页面也不会丢。</p>
+        <p class="hint">会记住这轮对话里你说过的自称、最近客户。完整对话在工作台，刷新也不会丢。</p>
       </div>
       <div class="head-actions">
         <el-button @click="router.push('/enterprise')">回对话</el-button>
@@ -50,6 +52,10 @@ onMounted(() => {
     </header>
 
     <div class="stat-row compact">
+      <article class="stat-card">
+        <small>对话自称</small>
+        <strong>{{ preferredName || '还没有' }}</strong>
+      </article>
       <article class="stat-card">
         <small>最近客户</small>
         <strong>{{ lastPerson || '还没有' }}</strong>

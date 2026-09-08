@@ -404,11 +404,11 @@ workflow:
             更新状态：已签约、已流失、改成某状态。
             交日报：我的日报、今天干了、明天计划（提交）。
             查库：跟进记录、用自然语言查表。
-            指令：同意/拒绝请假。
+            指令：同意/拒绝请假；把投诉标成已解决。
             待办：今天有什么、待审批。
             组织架构：部门树、谁负责（查接口，不是知识库）。
             查阅日报：管理层看别人日报、按人汇总。
-            投诉工单：学生投诉、工单进度。
+            投诉工单：学生投诉、工单进度、结案。
             企业信息/新人指南：入职、打印机、健身房、IT故障、会议室、工牌、办公系统网址、事业部介绍长文。问简称不要走这里。
             问答对：公司简称、划转哪家、主营有哪些、学费、报名账号、德国B1、新加坡2+2这类标准FAQ。
             其他：闲聊或问你能做什么。
@@ -680,13 +680,15 @@ workflow:
           type: http-request
           title: 投诉工单
           selected: false
-          desc: GET /tickets
-          method: get
-          url: http://host.docker.internal:8001/api/v1/enterprise/tickets
+          desc: POST /tools/ticket-from-text
+          method: post
+          url: http://host.docker.internal:8001/api/v1/enterprise/tools/ticket-from-text
           authorization: {type: no-auth, config: null}
-          headers: "X-Employee-Id:{{#start.employee_id#}}"
+          headers: "Content-Type:application/json\nX-Employee-Id:{{#start.employee_id#}}"
           params: ''
-          body: {type: none, data: []}
+          body:
+            type: json
+            data: "{\"text\": \"{{#sys.query#}}\"}"
           ssl_verify: true
           retry_config: {enabled: true, max_retries: 2, retry_interval: 1000}
           timeout: {connect: 10, max_connect_timeout: 10, read: 60, max_read_timeout: 60, write: 30, max_write_timeout: 30}

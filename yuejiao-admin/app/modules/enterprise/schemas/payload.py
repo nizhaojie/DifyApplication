@@ -32,3 +32,10 @@ class LeadIn(BaseModel):
     semester: str | None = None
     credit: float | None = None
     conversation_id: str | None = None
+    student_name: str | None = None
+    leave_type: str | None = None
+    category: str | None = None
+    title: str | None = None
+    solution: str | None = None
+    priority: str | None = None
+    ticket_type: str | None = None

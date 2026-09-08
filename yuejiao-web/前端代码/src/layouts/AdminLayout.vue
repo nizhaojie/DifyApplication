@@ -117,10 +117,27 @@ function closeTag(path: string) {
           <el-icon><User /></el-icon>
           <span>学生助手</span>
         </el-menu-item>
-        <el-menu-item index="/report">
-          <el-icon><Document /></el-icon>
-          <span>智能报告</span>
-        </el-menu-item>
+        <el-sub-menu index="report">
+          <template #title>
+            <el-icon><Document /></el-icon>
+            <span>智能报告</span>
+          </template>
+          <el-menu-item index="/report">
+            <span>报告入口</span>
+          </el-menu-item>
+          <el-menu-item index="/report/customer-ops">
+            <span>全域客户经营分析</span>
+          </el-menu-item>
+          <el-menu-item index="/report/daily-summary">
+            <span>员工日报智能汇总</span>
+          </el-menu-item>
+          <el-menu-item index="/report/psych-weekly">
+            <span>学生心理健康周报</span>
+          </el-menu-item>
+          <el-menu-item index="/report/complaint-weekly">
+            <span>投诉处理周报</span>
+          </el-menu-item>
+        </el-sub-menu>
         <div v-if="!collapsed" class="menu-cap">系统</div>
         <el-menu-item index="/settings">
           <el-icon><Setting /></el-icon>

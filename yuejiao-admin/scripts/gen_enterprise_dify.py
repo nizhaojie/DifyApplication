@@ -251,11 +251,11 @@ parts.append(node_box(
             更新状态：已签约、已流失、改成某状态。
             交日报：我的日报、今天干了、明天计划（提交）。
             查库：跟进记录、用自然语言查表。
-            指令：同意/拒绝请假。
+            指令：同意/拒绝请假；把投诉标成已解决。
             待办：今天有什么、待审批。
             组织架构：部门树、谁负责（查接口，不是知识库）。
             查阅日报：管理层看别人日报、按人汇总。
-            投诉工单：学生投诉、工单进度。
+            投诉工单：学生投诉、工单进度、结案。
             企业信息/新人指南：入职、打印机、健身房、IT故障、会议室、工牌、办公系统网址、事业部介绍长文。问简称不要走这里。
             问答对：公司简称、划转哪家、主营有哪些、学费、报名账号、德国B1、新加坡2+2这类标准FAQ。
             其他：闲聊或问你能做什么。
@@ -295,7 +295,7 @@ for i, (nid, title, path, key) in enumerate(http_defs):
 parts.append(http_get("http_brief", "今日待办", "/brief", 700, ys[6]))
 parts.append(http_get("http_org", "组织架构", "/orgs", 700, ys[7]))
 parts.append(http_get("http_dailyq", "查阅日报", "/dailies", 700, ys[8]))
-parts.append(http_get("http_ticket", "投诉工单", "/tickets", 700, ys[9]))
+parts.append(http_post("http_ticket", "投诉工单", "/tools/ticket-from-text", 700, ys[9], "text"))
 
 parts.append(kr("kb_docs", "检索企业信息与新人指南", "导入后绑定知识库1：01-企业信息.md + 02-公司新人指南.md", 700, 1480))
 parts.append(kr("kb_faq", "检索常见问答对", "导入后绑定知识库2：03-常见问答对.md", 700, 1620))

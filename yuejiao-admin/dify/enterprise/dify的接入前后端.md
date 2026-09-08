@@ -124,7 +124,9 @@ npm run dev
 | 今日待办 | GET | `/brief` |
 | 组织架构 | GET | `/orgs` |
 | 查阅日报 | GET | `/dailies` |
-| 投诉工单 | GET | `/tickets` |
+| 投诉查询/结案 | POST | `/tools/ticket-from-text` |
+| 学生业务综管 | GET | `/ops` |
+| 学生助手假接口 | GET/POST | `/student-bridge` `/student-bridge/leave` `/student-bridge/ticket` |
 
 请求头带 `X-Employee-Id:{{#start.employee_id#}}`。后端聊天代理会把当前登录员工 id 放进 Dify `inputs.employee_id`。
 
@@ -174,7 +176,7 @@ Squid 默认读超时约 **5 秒**。工具接口应很快；NL2SQL 或库慢时
 ### 前端
 
 - 只配 `VITE_API_BASE`，不要把 Dify Key 放进 Vite。
-- 多轮对话靠 `conversation_id` 往返；刷新页面会话会丢（当前未持久化）。
+- 多轮对话靠 `conversation_id` 往返，同时写入 `chat_session` / `chat_message`。自称（「我是某某」）再问「我是谁」走后端记忆，不走账号短路。点「新对话」才清空。
 - 页头绿标「已接 Dify 对话流」来自 `GET /api/v1/enterprise/chat-status`，只说明 Key 已配，不保证这一句一定走了知识库。看气泡上的 `Dify` / `本地`。
 
 ### 密钥与红线
@@ -201,6 +203,8 @@ Squid 默认读超时约 **5 秒**。工具接口应很快；NL2SQL 或库慢时
 | 打印机在几楼？坏了找谁？ | 新人指南（本地快路径或知识库1） |
 | 张三 13800138000 想咨询美国硕士 | HTTP 录入，右侧客户表多一行 |
 | 我今天有什么待办？ | HTTP `/brief` |
+| 有哪些待处理投诉？ | HTTP 学生业务综管（假接口） |
+| 把张三的投诉标成已解决 | HTTP 结案 + 假通知 |
 
 ---
 

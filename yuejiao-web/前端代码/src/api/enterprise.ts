@@ -152,6 +152,7 @@ export interface MemorySnapshot {
   session_id: string
   conversation_id: string | null
   last_person: string | null
+  preferred_name: string | null
   total: number
   messages: MemoryMessage[]
 }

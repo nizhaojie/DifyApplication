@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+
 from fastapi import Depends, Header, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import InvalidTokenError
@@ -7,7 +9,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.exceptions import BizError
 from app.core.security import decode_token
-from app.db.session import get_db
+from app.db.session import get_db, open_connection
+from app.integrations.dify import DifyWorkflowInsightAdapter
+from app.modules.report.application import (
+    KIND_COMPLAINT_WEEKLY,
+    KIND_CUSTOMER_OPS,
+    KIND_DAILY_SUMMARY,
+    KIND_PSYCH_WEEKLY,
+    KIND_WEEKLY_SUMMARY,
+    ReportApplication,
+)
+from app.modules.report.clock import ShanghaiClock
 from app.modules.system.models.user import SysUser
 
 bearer = HTTPBearer(auto_error=False)
@@ -64,3 +76,33 @@ async def get_actor(
     if user is None:
         raise BizError("未找到演示员工 emp01，请先执行 seed_enterprise_demo.sql", code=401)
     return user
+
+
+def get_conn() -> Iterator:
+    conn = open_connection()
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def get_report_app(conn=Depends(get_conn)) -> ReportApplication:
+    return ReportApplication(
+        conn=conn,
+        clock=ShanghaiClock(),
+        insight=DifyWorkflowInsightAdapter(
+            base_url=settings.dify_api_base,
+            api_keys={
+                KIND_CUSTOMER_OPS: settings.dify_customer_ops_api_key,
+                KIND_COMPLAINT_WEEKLY: settings.dify_complaint_weekly_api_key,
+                KIND_DAILY_SUMMARY: settings.dify_daily_summary_api_key,
+                KIND_WEEKLY_SUMMARY: settings.dify_daily_summary_api_key,
+                KIND_PSYCH_WEEKLY: settings.dify_psych_weekly_api_key,
+            },
+            timeout=settings.dify_timeout_seconds,
+        ),
+    )

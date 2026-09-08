@@ -51,17 +51,25 @@ async def add_message(
     return item
 
 
-async def touch_session(db: AsyncSession, session: ChatSession, conversation_id: str | None) -> None:
+async def touch_session(
+    db: AsyncSession,
+    session: ChatSession,
+    conversation_id: str | None,
+    preferred_name: str | None = None,
+) -> None:
     session.last_message_time = datetime.now()
     session.status = "active"
     if conversation_id:
         session.visitor_contact = conversation_id
+    if preferred_name:
+        session.visitor_name = preferred_name
 
 
 async def clear_session(db: AsyncSession, owner: SysUser) -> ChatSession:
     session = await get_or_create_session(db, owner)
     await db.execute(delete(ChatMessage).where(ChatMessage.session_id == session.session_id))
     session.visitor_contact = None
+    session.visitor_name = owner.real_name
     session.last_message_time = None
     await db.commit()
     await db.refresh(session)

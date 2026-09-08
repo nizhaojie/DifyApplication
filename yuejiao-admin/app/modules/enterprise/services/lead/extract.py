@@ -29,6 +29,9 @@ PERSON_RE = re.compile(
     r"(?:查一下|查询一下|查询|同意|批准|通过|拒绝|驳回|把|将)\s*([\u4e00-\u9fa5]{2,4})"
 )
 LEAVE_PERSON_RE = re.compile(r"(?:同意|批准|通过|拒绝|驳回)\s*([\u4e00-\u9fa5]{2,4}?)的请假")
+TICKET_PERSON_RE = re.compile(
+    r"(?:把|将)?\s*([\u4e00-\u9fa5]{2,4}?)的(?:投诉|工单)"
+)
 STATUS_PERSON_RE = re.compile(r"(?:把|将)\s*([\u4e00-\u9fa5]{2,4}?)(?:改成|更新为|标记为|标成)")
 FOLLOW_TYPES = ("phone", "wechat", "meeting", "email", "other")
 
@@ -37,6 +40,9 @@ def extract_person_name(text: str) -> str | None:
     leave = LEAVE_PERSON_RE.search(text)
     if leave:
         return leave.group(1)
+    ticket = TICKET_PERSON_RE.search(text)
+    if ticket:
+        return ticket.group(1)
     status_hit = STATUS_PERSON_RE.search(text)
     if status_hit:
         return status_hit.group(1)

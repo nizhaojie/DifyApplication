@@ -147,7 +147,9 @@ async function send(text?: string) {
       last.payload = result.data
     }
     void scrollLog()
-    const skipReload = ['kb', 'identity', 'help', 'brief', 'docs', 'faq', 'guide', 'memory'].includes(result.intent || '')
+    const skipReload = ['kb', 'identity', 'help', 'brief', 'docs', 'faq', 'guide', 'memory', 'self_intro'].includes(
+      result.intent || '',
+    )
     if (!skipReload) void reload()
   } catch {
     const last = messages[messages.length - 1]
@@ -268,10 +270,18 @@ onMounted(async () => {
         messages.length,
         ...memory.messages.map((item) => {
           const role: ChatMsg['role'] = item.role === 'user' ? 'user' : 'assistant'
+          const intent = item.intent || ''
+          let citation: string | undefined
+          if (role === 'assistant') {
+            if (item.source === 'kb') citation = '知识库'
+            else if (['memory', 'identity', 'self_intro'].includes(intent)) citation = '对话记忆'
+            else citation = '业务办理'
+          }
           return {
             role,
             text: item.content,
-            citation: role === 'assistant' ? (item.source === 'kb' ? '知识库' : '业务办理') : undefined,
+            intent,
+            citation,
           }
         }),
       )
@@ -299,7 +309,7 @@ onMounted(async () => {
     <header class="ent-head">
       <div>
         <h1>企业助手</h1>
-        <p class="hint">口述录入、查客户、批请假、交日报。回车发送，Shift+回车换行。</p>
+        <p class="hint">口述录入、查客户、批请假、交日报。这轮对话会记住你说过的话，点「新对话」才清掉。</p>
       </div>
       <div class="head-actions">
         <el-tag :type="online ? 'success' : 'info'" effect="plain">已连接</el-tag>
