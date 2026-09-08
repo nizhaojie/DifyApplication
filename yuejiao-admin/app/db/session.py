@@ -45,6 +45,11 @@ def _get_async_database_url() -> str:
     import importlib.util
 
     url = settings.database_url
+    if url.startswith("sqlite"):
+        # 开发/测试用 SQLite 时切到 aiosqlite 异步驱动（同步引擎仍用内置 pysqlite）
+        if importlib.util.find_spec("aiosqlite") is not None:
+            return url.replace("sqlite://", "sqlite+aiosqlite://", 1)
+        return url
     if importlib.util.find_spec("asyncmy") is not None:
         return url
     if importlib.util.find_spec("aiomysql") is not None:

@@ -1,0 +1,186 @@
+# Dify 工作流 DSL：pf-extract （原始文本 → 结构化客户画像 JSON）
+#
+# 可直接通过 Dify 控制台「导入 DSL」或 POST /console/api/apps/imports
+#   {mode:"yaml-content", yaml_content:<本文件内容>} 导入。
+# 部署后把 API Key 填入 backend/.env 的 DIFY_EXTRACT_API_KEY。
+# backend services/dify_client.py 调 POST {DIFY_API_BASE}/workflows/run
+#   inputs={raw_text}，读 outputs.profile（JSON 字符串/dict 均可，见 _jsonish）。
+#
+# 字段对齐 backend/schemas/profile.py::CustomerProfile。
+# 模型：langgenius/tongyi/tongyi / qwen3.8-max（本租户默认凭据自动解析）。
+app:
+  description: 客户画像结构化抽取：原文 → CustomerProfile JSON
+  icon: 🤖
+  icon_background: '#FFEAD5'
+  mode: workflow
+  name: pf-extract
+  use_icon_as_answer_icon: false
+dependencies: []
+kind: app
+version: 0.7.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      enabled: false
+    opening_statement: ''
+    retriever_resource:
+      enabled: false
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+  graph:
+    edges:
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: start
+        targetType: llm
+      id: start-to-llm
+      source: start_node
+      sourceHandle: source
+      target: llm_node
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: end
+      id: llm-to-end
+      source: llm_node
+      sourceHandle: source
+      target: end_node
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    nodes:
+    - data:
+        desc: ''
+        selected: false
+        title: Start
+        type: start
+        variables:
+        - label: raw_text
+          max_length: null
+          options: []
+          required: true
+          type: paragraph
+          variable: raw_text
+      height: 90
+      id: start_node
+      position:
+        x: 30
+        y: 227
+      positionAbsolute:
+        x: 30
+        y: 227
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: 客户原文 → 结构化 CustomerProfile JSON
+        title: LLM
+        type: llm
+        model:
+          provider: langgenius/tongyi/tongyi
+          name: qwen3.8-max
+          mode: chat
+          completion_params:
+            temperature: 0.2
+            enable_thinking: false
+            max_tokens: 2048
+        prompt_template:
+        - id: a1111111-1111-1111-1111-111111111111
+          role: system
+          text: |-
+            你是客户信息结构化提取器。阅读「客户原文」，提取为严格 JSON 对象，字段对齐如下（缺失填 null，不得编造）：
+            - name: 姓名
+            - age: 年龄(整数)
+            - gender: 性别(男/女)
+            - education_level: 学历枚举 初中/高中/中职中技/大专/本科/硕士/博士
+            - education_raw: 学历原文表述
+            - location: 所在地
+            - income_level: 收入档位 低/中/高/很高
+            - income_rank: 收入档位数字 1低/2中/3高/4很高
+            - income_raw: 收入原文表述
+            - language: 语言数组，每项 {lang, level}，如 {"lang":"英语","level":"雅思5.0"}
+            - de_qualified: 德语是否达标 B1+ 或有强学习意愿(true/false/null)
+            - core_demand: 核心诉求
+            - needs: 需求标签数组，取自 升学/就业/移民/学历提升/落户/转换赛道/子女教育
+            - intended_country: 意向国家(德国/新加坡等，无法判断填 null)
+            - hands_on: 动手能力强(true/false/null)
+            - logic_strong: 逻辑能力强(true/false/null)
+            - learning_attitude: 学习态度好/接受封闭实训(true/false/null)
+            - background_keywords: 背景关键词数组(机电/汽车/IT/护理/建筑等)
+            - summary: 原文浓缩摘要(≤120字)
+            - tags: 原文显式标签对象(键为标签名,值0-1)，无则空对象 {}
+            规则：只输出一个 JSON 对象；不要 markdown 代码围栏；不要任何解释文字；
+            无法确定的字段填 null；数组无内容填 []；对象无内容填 {}。
+        - id: a2222222-2222-2222-2222-222222222222
+          role: user
+          text: '{{#start_node.raw_text#}}'
+        memory:
+          window:
+            enabled: false
+            size: 50
+          role_prefix:
+            user: ''
+            assistant: ''
+        vision:
+          enabled: false
+        context:
+          enabled: false
+          variable_selector: []
+        selected: false
+        variables: []
+      height: 90
+      id: llm_node
+      position:
+        x: 334
+        y: 227
+      positionAbsolute:
+        x: 334
+        y: 227
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: ''
+        outputs:
+        - variable: profile
+          value_selector:
+          - llm_node
+          - text
+        selected: false
+        title: End
+        type: end
+      height: 90
+      id: end_node
+      position:
+        x: 638
+        y: 227
+      positionAbsolute:
+        x: 638
+        y: 227
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.7

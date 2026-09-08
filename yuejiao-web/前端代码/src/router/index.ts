@@ -25,7 +25,7 @@ const router = createRouter({
           path: 'profile',
           name: 'profile',
           component: () => import('@/views/profile/index.vue'),
-          meta: { title: '客户研判', hint: '空白模版。以后接文本 / PDF / Excel 解析和匹配结果。' },
+          meta: { title: '客户研判', hint: '文本 / PDF / Excel 客户画像研判，接入 Dify 工作流。' },
         },
         {
           path: 'cs',

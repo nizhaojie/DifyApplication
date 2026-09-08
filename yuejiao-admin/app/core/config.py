@@ -75,6 +75,13 @@ class Settings(BaseSettings):
     dify_customer_ops_api_key: str = ""
     dify_timeout_seconds: float = 90
 
+    # Profile（客户研判）模块 Dify 配置（pf-extract / pf-narrate 两个工作流，独立 Key）
+    pf_dify_api_base: str = "http://localhost/v1"
+    dify_extract_api_key: str = ""
+    dify_narrate_api_key: str = ""
+    # Dify 不可达兜底：off | heuristic
+    pf_llm_fallback: str = "heuristic"
+
     @property
     def cors_origin_list(self) -> list[str]:
         origins = [item.strip() for item in self.cors_origins.split(",") if item.strip()]

@@ -16,6 +16,7 @@ from app.modules.cs.services.event.event_service import event_service
 from app.modules.cs.services.rag.kb_engine import kb_engine
 from app.modules.cs.services.recommend.course_matcher import course_matcher
 from app.modules.enterprise.models import *  # noqa: F401,F403
+from app.modules.profile.models import *  # noqa: F401,F403
 from app.modules.student.models import *  # noqa: F401,F403
 from app.modules.system.models import *  # noqa: F401,F403
 
