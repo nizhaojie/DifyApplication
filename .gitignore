@@ -1,4 +1,4 @@
-﻿.env
+.env
 .env.*
 !.env.example
 venv/
@@ -14,4 +14,4 @@ node_modules/
 # ==========================================
 ~$*
 docs/raw_materials/
-
+docs/客服Agent模块·阶段交付文档*.md
