@@ -1,0 +1,39 @@
+"""Export cs module CRUD operations."""
+
+from app.modules.cs.crud.crud import (
+    bulk_create_course_projects,
+    bulk_create_events,
+    bulk_create_knowledge_chunks,
+    count_knowledge_chunks,
+    create_chat_message,
+    create_chat_session,
+    create_event_registration,
+    get_course_project_by_id,
+    get_event_by_id,
+    get_session_by_session_id,
+    has_user_registered_for_event,
+    list_course_projects,
+    list_events,
+    list_knowledge_chunks,
+    list_messages_by_session_id,
+    update_session_activity,
+)
+
+__all__ = [
+    "get_session_by_session_id",
+    "create_chat_session",
+    "update_session_activity",
+    "create_chat_message",
+    "list_messages_by_session_id",
+    "list_course_projects",
+    "get_course_project_by_id",
+    "bulk_create_course_projects",
+    "list_events",
+    "get_event_by_id",
+    "has_user_registered_for_event",
+    "create_event_registration",
+    "bulk_create_events",
+    "list_knowledge_chunks",
+    "bulk_create_knowledge_chunks",
+    "count_knowledge_chunks",
+]
