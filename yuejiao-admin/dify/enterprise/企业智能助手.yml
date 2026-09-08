@@ -1,0 +1,1283 @@
+app:
+  description: |-
+    粤教企业智能助手（员工端）。业务走 FastAPI；知识库必须建两个：
+    1) 企业信息+公司新人指南；2) 常见问答对。
+    导入后为分类器和全部 LLM 选择已配置模型；两个知识检索节点分别绑定上述两个库。
+    HTTP 默认 http://host.docker.internal:8001 （Docker 里不要用 127.0.0.1）。
+  icon: 💼
+  icon_background: '#FDECEC'
+  icon_type: emoji
+  mode: advanced-chat
+  name: 粤教-企业智能助手
+  use_icon_as_answer_icon: false
+dependencies: []
+kind: app
+version: 0.7.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      enabled: false
+    opening_statement: 你好，我是粤教企业助手。可以口述录入客户、查跟进、批请假、交日报；问公司简称、入职办公、IT 故障我会查知识库，没有的内容不编。
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions:
+      - 公司简称是什么？
+      - 打印机在几楼？坏了找谁？
+      - 张三 13800138000 想咨询美国硕士
+      - 查一下李四最近跟进记录
+      - 同意张三的请假
+      - 我今天有什么待办？
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.45
+    edges:
+      - id: start-clf
+        type: custom
+        source: start
+        sourceHandle: source
+        target: classifier
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: start, targetType: question-classifier}
+      - id: clf-entry
+        type: custom
+        source: classifier
+        sourceHandle: class_lead_entry
+        target: http_entry
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: question-classifier, targetType: http-request}
+      - id: clf-query
+        type: custom
+        source: classifier
+        sourceHandle: class_lead_query
+        target: http_query
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: question-classifier, targetType: http-request}
+      - id: clf-update
+        type: custom
+        source: classifier
+        sourceHandle: class_lead_update
+        target: http_update
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: question-classifier, targetType: http-request}
+      - id: clf-daily
+        type: custom
+        source: classifier
+        sourceHandle: class_daily
+        target: http_daily
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: question-classifier, targetType: http-request}
+      - id: clf-nl2sql
+        type: custom
+        source: classifier
+        sourceHandle: class_nl2sql
+        target: http_nl2sql
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: question-classifier, targetType: http-request}
+      - id: clf-cmd
+        type: custom
+        source: classifier
+        sourceHandle: class_command
+        target: http_cmd
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: question-classifier, targetType: http-request}
+      - id: clf-brief
+        type: custom
+        source: classifier
+        sourceHandle: class_brief
+        target: http_brief
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: question-classifier, targetType: http-request}
+      - id: clf-org
+        type: custom
+        source: classifier
+        sourceHandle: class_org
+        target: http_org
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: question-classifier, targetType: http-request}
+      - id: clf-dailyq
+        type: custom
+        source: classifier
+        sourceHandle: class_daily_query
+        target: http_dailyq
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: question-classifier, targetType: http-request}
+      - id: clf-ticket
+        type: custom
+        source: classifier
+        sourceHandle: class_ticket
+        target: http_ticket
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: question-classifier, targetType: http-request}
+      - id: clf-docs
+        type: custom
+        source: classifier
+        sourceHandle: class_docs
+        target: kb_docs
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: question-classifier, targetType: knowledge-retrieval}
+      - id: clf-faq
+        type: custom
+        source: classifier
+        sourceHandle: class_faq
+        target: kb_faq
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: question-classifier, targetType: knowledge-retrieval}
+      - id: clf-help
+        type: custom
+        source: classifier
+        sourceHandle: class_help
+        target: llm_help
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: question-classifier, targetType: llm}
+      - id: http_entry-llm_entry
+        type: custom
+        source: http_entry
+        sourceHandle: source
+        target: llm_entry
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: http-request, targetType: llm}
+      - id: llm_entry-ans
+        type: custom
+        source: llm_entry
+        sourceHandle: source
+        target: ans_entry
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: llm, targetType: answer}
+      - id: http_query-llm_query
+        type: custom
+        source: http_query
+        sourceHandle: source
+        target: llm_query
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: http-request, targetType: llm}
+      - id: llm_query-ans
+        type: custom
+        source: llm_query
+        sourceHandle: source
+        target: ans_query
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: llm, targetType: answer}
+      - id: http_update-llm_update
+        type: custom
+        source: http_update
+        sourceHandle: source
+        target: llm_update
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: http-request, targetType: llm}
+      - id: llm_update-ans
+        type: custom
+        source: llm_update
+        sourceHandle: source
+        target: ans_update
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: llm, targetType: answer}
+      - id: http_daily-llm_daily
+        type: custom
+        source: http_daily
+        sourceHandle: source
+        target: llm_daily
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: http-request, targetType: llm}
+      - id: llm_daily-ans
+        type: custom
+        source: llm_daily
+        sourceHandle: source
+        target: ans_daily
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: llm, targetType: answer}
+      - id: http_nl2sql-llm_nl2sql
+        type: custom
+        source: http_nl2sql
+        sourceHandle: source
+        target: llm_nl2sql
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: http-request, targetType: llm}
+      - id: llm_nl2sql-ans
+        type: custom
+        source: llm_nl2sql
+        sourceHandle: source
+        target: ans_nl2sql
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: llm, targetType: answer}
+      - id: http_cmd-llm_cmd
+        type: custom
+        source: http_cmd
+        sourceHandle: source
+        target: llm_cmd
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: http-request, targetType: llm}
+      - id: llm_cmd-ans
+        type: custom
+        source: llm_cmd
+        sourceHandle: source
+        target: ans_cmd
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: llm, targetType: answer}
+      - id: http_brief-llm_brief
+        type: custom
+        source: http_brief
+        sourceHandle: source
+        target: llm_brief
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: http-request, targetType: llm}
+      - id: llm_brief-ans
+        type: custom
+        source: llm_brief
+        sourceHandle: source
+        target: ans_brief
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: llm, targetType: answer}
+      - id: http_org-llm_org
+        type: custom
+        source: http_org
+        sourceHandle: source
+        target: llm_org
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: http-request, targetType: llm}
+      - id: llm_org-ans
+        type: custom
+        source: llm_org
+        sourceHandle: source
+        target: ans_org
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: llm, targetType: answer}
+      - id: http_dailyq-llm_dailyq
+        type: custom
+        source: http_dailyq
+        sourceHandle: source
+        target: llm_dailyq
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: http-request, targetType: llm}
+      - id: llm_dailyq-ans
+        type: custom
+        source: llm_dailyq
+        sourceHandle: source
+        target: ans_dailyq
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: llm, targetType: answer}
+      - id: http_ticket-llm_ticket
+        type: custom
+        source: http_ticket
+        sourceHandle: source
+        target: llm_ticket
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: http-request, targetType: llm}
+      - id: llm_ticket-ans
+        type: custom
+        source: llm_ticket
+        sourceHandle: source
+        target: ans_ticket
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: llm, targetType: answer}
+      - id: kb_docs-llm
+        type: custom
+        source: kb_docs
+        sourceHandle: source
+        target: llm_docs
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: knowledge-retrieval, targetType: llm}
+      - id: llm_docs-ans
+        type: custom
+        source: llm_docs
+        sourceHandle: source
+        target: ans_docs
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: llm, targetType: answer}
+      - id: kb_faq-llm
+        type: custom
+        source: kb_faq
+        sourceHandle: source
+        target: llm_faq
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: knowledge-retrieval, targetType: llm}
+      - id: llm_faq-ans
+        type: custom
+        source: llm_faq
+        sourceHandle: source
+        target: ans_faq
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: llm, targetType: answer}
+      - id: llm_help-ans
+        type: custom
+        source: llm_help
+        sourceHandle: source
+        target: ans_help
+        targetHandle: target
+        zIndex: 0
+        data: {isInIteration: false, isInLoop: false, sourceType: llm, targetType: answer}
+    nodes:
+      - id: start
+        type: custom
+        width: 244
+        height: 90
+        position: {x: 80, y: 720}
+        positionAbsolute: {x: 80, y: 720}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: start
+          title: 开始
+          selected: false
+          desc: 对话流自带 sys.query。employee_id 对应后端员工主键。
+          variables:
+            - label: employee_id
+              variable: employee_id
+              type: text-input
+              required: false
+              max_length: 16
+              default: '1'
+              options: []
+
+      - id: classifier
+        type: custom
+        width: 244
+        height: 280
+        position: {x: 380, y: 620}
+        positionAbsolute: {x: 380, y: 620}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: question-classifier
+          title: 企业助手意图
+          selected: false
+          desc: 只分类，不直接回答。知识问答要拆到两个库。
+          query_variable_selector: [start, sys.query]
+          instructions: |-
+            根据员工原话只分到下面一类。不要回答问题。
+            硬性规则：含「简称」「公司叫什么」「粤教叫什么」必须分到「常见问答对」，禁止分到「企业信息与新人指南」。
+            录入：新客户、电话、想咨询、帮我记下。
+            查询客户：查客户、列表、看看谁。
+            更新状态：已签约、已流失、改成某状态。
+            交日报：我的日报、今天干了、明天计划（提交）。
+            查库：跟进记录、用自然语言查表。
+            指令：同意/拒绝请假。
+            待办：今天有什么、待审批。
+            组织架构：部门树、谁负责（查接口，不是知识库）。
+            查阅日报：管理层看别人日报、按人汇总。
+            投诉工单：学生投诉、工单进度。
+            企业信息/新人指南：入职、打印机、健身房、IT故障、会议室、工牌、办公系统网址、事业部介绍长文。问简称不要走这里。
+            问答对：公司简称、划转哪家、主营有哪些、学费、报名账号、德国B1、新加坡2+2这类标准FAQ。
+            其他：闲聊或问你能做什么。
+          topics: []
+          classes:
+            - {id: class_lead_entry, name: 意向客户录入}
+            - {id: class_lead_query, name: 查询意向客户}
+            - {id: class_lead_update, name: 更新客户状态}
+            - {id: class_daily, name: 口述提交日报}
+            - {id: class_nl2sql, name: 自然语言查库}
+            - {id: class_command, name: 审批或业务指令}
+            - {id: class_brief, name: 今日待办}
+            - {id: class_org, name: 组织架构查询}
+            - {id: class_daily_query, name: 管理查阅日报}
+            - {id: class_ticket, name: 投诉工单跟进}
+            - {id: class_docs, name: 企业信息与新人指南}
+            - {id: class_faq, name: 常见问答对}
+            - {id: class_help, name: 其他}
+          model: {provider: '', name: '', mode: chat, completion_params: {temperature: 0.1}}
+          vision: {enabled: false}
+
+      - id: http_entry
+        type: custom
+        width: 244
+        height: 118
+        position: {x: 700, y: 40}
+        positionAbsolute: {x: 700, y: 40}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: http-request
+          title: 录入客户
+          selected: false
+          desc: POST /tools/lead-from-text
+          method: post
+          url: http://host.docker.internal:8001/api/v1/enterprise/tools/lead-from-text
+          authorization: {type: no-auth, config: null}
+          headers: "Content-Type:application/json\nX-Employee-Id:{{#start.employee_id#}}"
+          params: ''
+          body:
+            type: json
+            data: "{\"text\": \"{{#sys.query#}}\"}"
+          ssl_verify: true
+          retry_config: {enabled: true, max_retries: 2, retry_interval: 1000}
+          timeout: {connect: 10, max_connect_timeout: 10, read: 60, max_read_timeout: 60, write: 30, max_write_timeout: 30}
+          variables: []
+
+      - id: http_query
+        type: custom
+        width: 244
+        height: 118
+        position: {x: 700, y: 180}
+        positionAbsolute: {x: 700, y: 180}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: http-request
+          title: 查询客户
+          selected: false
+          desc: POST /tools/lead-query
+          method: post
+          url: http://host.docker.internal:8001/api/v1/enterprise/tools/lead-query
+          authorization: {type: no-auth, config: null}
+          headers: "Content-Type:application/json\nX-Employee-Id:{{#start.employee_id#}}"
+          params: ''
+          body:
+            type: json
+            data: "{\"text\": \"{{#sys.query#}}\"}"
+          ssl_verify: true
+          retry_config: {enabled: true, max_retries: 2, retry_interval: 1000}
+          timeout: {connect: 10, max_connect_timeout: 10, read: 60, max_read_timeout: 60, write: 30, max_write_timeout: 30}
+          variables: []
+
+      - id: http_update
+        type: custom
+        width: 244
+        height: 118
+        position: {x: 700, y: 320}
+        positionAbsolute: {x: 700, y: 320}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: http-request
+          title: 更新状态
+          selected: false
+          desc: POST /tools/lead-update
+          method: post
+          url: http://host.docker.internal:8001/api/v1/enterprise/tools/lead-update
+          authorization: {type: no-auth, config: null}
+          headers: "Content-Type:application/json\nX-Employee-Id:{{#start.employee_id#}}"
+          params: ''
+          body:
+            type: json
+            data: "{\"text\": \"{{#sys.query#}}\"}"
+          ssl_verify: true
+          retry_config: {enabled: true, max_retries: 2, retry_interval: 1000}
+          timeout: {connect: 10, max_connect_timeout: 10, read: 60, max_read_timeout: 60, write: 30, max_write_timeout: 30}
+          variables: []
+
+      - id: http_daily
+        type: custom
+        width: 244
+        height: 118
+        position: {x: 700, y: 460}
+        positionAbsolute: {x: 700, y: 460}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: http-request
+          title: 提交日报
+          selected: false
+          desc: POST /tools/daily-from-text
+          method: post
+          url: http://host.docker.internal:8001/api/v1/enterprise/tools/daily-from-text
+          authorization: {type: no-auth, config: null}
+          headers: "Content-Type:application/json\nX-Employee-Id:{{#start.employee_id#}}"
+          params: ''
+          body:
+            type: json
+            data: "{\"text\": \"{{#sys.query#}}\"}"
+          ssl_verify: true
+          retry_config: {enabled: true, max_retries: 2, retry_interval: 1000}
+          timeout: {connect: 10, max_connect_timeout: 10, read: 60, max_read_timeout: 60, write: 30, max_write_timeout: 30}
+          variables: []
+
+      - id: http_nl2sql
+        type: custom
+        width: 244
+        height: 118
+        position: {x: 700, y: 600}
+        positionAbsolute: {x: 700, y: 600}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: http-request
+          title: NL2SQL
+          selected: false
+          desc: POST /tools/nl2sql
+          method: post
+          url: http://host.docker.internal:8001/api/v1/enterprise/tools/nl2sql
+          authorization: {type: no-auth, config: null}
+          headers: "Content-Type:application/json\nX-Employee-Id:{{#start.employee_id#}}"
+          params: ''
+          body:
+            type: json
+            data: "{\"query\": \"{{#sys.query#}}\"}"
+          ssl_verify: true
+          retry_config: {enabled: true, max_retries: 2, retry_interval: 1000}
+          timeout: {connect: 10, max_connect_timeout: 10, read: 60, max_read_timeout: 60, write: 30, max_write_timeout: 30}
+          variables: []
+
+      - id: http_cmd
+        type: custom
+        width: 244
+        height: 118
+        position: {x: 700, y: 740}
+        positionAbsolute: {x: 700, y: 740}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: http-request
+          title: 执行指令
+          selected: false
+          desc: POST /tools/command
+          method: post
+          url: http://host.docker.internal:8001/api/v1/enterprise/tools/command
+          authorization: {type: no-auth, config: null}
+          headers: "Content-Type:application/json\nX-Employee-Id:{{#start.employee_id#}}"
+          params: ''
+          body:
+            type: json
+            data: "{\"text\": \"{{#sys.query#}}\"}"
+          ssl_verify: true
+          retry_config: {enabled: true, max_retries: 2, retry_interval: 1000}
+          timeout: {connect: 10, max_connect_timeout: 10, read: 60, max_read_timeout: 60, write: 30, max_write_timeout: 30}
+          variables: []
+
+      - id: http_brief
+        type: custom
+        width: 244
+        height: 118
+        position: {x: 700, y: 880}
+        positionAbsolute: {x: 700, y: 880}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: http-request
+          title: 今日待办
+          selected: false
+          desc: GET /brief
+          method: get
+          url: http://host.docker.internal:8001/api/v1/enterprise/brief
+          authorization: {type: no-auth, config: null}
+          headers: "X-Employee-Id:{{#start.employee_id#}}"
+          params: ''
+          body: {type: none, data: []}
+          ssl_verify: true
+          retry_config: {enabled: true, max_retries: 2, retry_interval: 1000}
+          timeout: {connect: 10, max_connect_timeout: 10, read: 60, max_read_timeout: 60, write: 30, max_write_timeout: 30}
+          variables: []
+
+      - id: http_org
+        type: custom
+        width: 244
+        height: 118
+        position: {x: 700, y: 1020}
+        positionAbsolute: {x: 700, y: 1020}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: http-request
+          title: 组织架构
+          selected: false
+          desc: GET /orgs
+          method: get
+          url: http://host.docker.internal:8001/api/v1/enterprise/orgs
+          authorization: {type: no-auth, config: null}
+          headers: "X-Employee-Id:{{#start.employee_id#}}"
+          params: ''
+          body: {type: none, data: []}
+          ssl_verify: true
+          retry_config: {enabled: true, max_retries: 2, retry_interval: 1000}
+          timeout: {connect: 10, max_connect_timeout: 10, read: 60, max_read_timeout: 60, write: 30, max_write_timeout: 30}
+          variables: []
+
+      - id: http_dailyq
+        type: custom
+        width: 244
+        height: 118
+        position: {x: 700, y: 1160}
+        positionAbsolute: {x: 700, y: 1160}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: http-request
+          title: 查阅日报
+          selected: false
+          desc: GET /dailies
+          method: get
+          url: http://host.docker.internal:8001/api/v1/enterprise/dailies
+          authorization: {type: no-auth, config: null}
+          headers: "X-Employee-Id:{{#start.employee_id#}}"
+          params: ''
+          body: {type: none, data: []}
+          ssl_verify: true
+          retry_config: {enabled: true, max_retries: 2, retry_interval: 1000}
+          timeout: {connect: 10, max_connect_timeout: 10, read: 60, max_read_timeout: 60, write: 30, max_write_timeout: 30}
+          variables: []
+
+      - id: http_ticket
+        type: custom
+        width: 244
+        height: 118
+        position: {x: 700, y: 1300}
+        positionAbsolute: {x: 700, y: 1300}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: http-request
+          title: 投诉工单
+          selected: false
+          desc: GET /tickets
+          method: get
+          url: http://host.docker.internal:8001/api/v1/enterprise/tickets
+          authorization: {type: no-auth, config: null}
+          headers: "X-Employee-Id:{{#start.employee_id#}}"
+          params: ''
+          body: {type: none, data: []}
+          ssl_verify: true
+          retry_config: {enabled: true, max_retries: 2, retry_interval: 1000}
+          timeout: {connect: 10, max_connect_timeout: 10, read: 60, max_read_timeout: 60, write: 30, max_write_timeout: 30}
+          variables: []
+
+      - id: kb_docs
+        type: custom
+        width: 244
+        height: 92
+        position: {x: 700, y: 1480}
+        positionAbsolute: {x: 700, y: 1480}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: knowledge-retrieval
+          title: 检索企业信息与新人指南
+          selected: false
+          desc: 导入后绑定知识库1：01-企业信息.md + 02-公司新人指南.md
+          dataset_ids: []
+          query_variable_selector: [start, sys.query]
+          retrieval_mode: multiple
+          metadata_filtering_mode: disabled
+          multiple_retrieval_config:
+            reranking_enable: false
+            reranking_mode: weighted_score
+            score_threshold: null
+            top_k: 8
+            weights:
+              keyword_setting: {keyword_weight: 0.5}
+              vector_setting: {embedding_model_name: '', embedding_provider_name: '', vector_weight: 0.5}
+              weight_type: customized
+
+      - id: kb_faq
+        type: custom
+        width: 244
+        height: 92
+        position: {x: 700, y: 1620}
+        positionAbsolute: {x: 700, y: 1620}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: knowledge-retrieval
+          title: 检索常见问答对
+          selected: false
+          desc: 导入后绑定知识库2：03-常见问答对.md
+          dataset_ids: []
+          query_variable_selector: [start, sys.query]
+          retrieval_mode: multiple
+          metadata_filtering_mode: disabled
+          multiple_retrieval_config:
+            reranking_enable: false
+            reranking_mode: weighted_score
+            score_threshold: null
+            top_k: 8
+            weights:
+              keyword_setting: {keyword_weight: 0.5}
+              vector_setting: {embedding_model_name: '', embedding_provider_name: '', vector_weight: 0.5}
+              weight_type: customized
+
+      - id: llm_entry
+        type: custom
+        width: 244
+        height: 90
+        position: {x: 1020, y: 40}
+        positionAbsolute: {x: 1020, y: 40}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: llm
+          title: 复述录入
+          selected: false
+          model: {provider: '', name: '', mode: chat, completion_params: {temperature: 0.2}}
+          prompt_template:
+            - role: system
+              text: |-
+                你是粤教企业助手。只根据接口 JSON 用中文回复员工。失败就说明原因。不要编造接口没有的字段。
+            - role: user
+              text: "{{#http_entry.body#}}"
+          context: {enabled: false, variable_selector: []}
+          vision: {enabled: false}
+          variables: []
+
+      - id: ans_entry
+        type: custom
+        width: 244
+        height: 80
+        position: {x: 1340, y: 40}
+        positionAbsolute: {x: 1340, y: 40}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: answer
+          title: 回答-录入
+          selected: false
+          answer: '{{#llm_entry.text#}}'
+          variables: []
+
+      - id: llm_query
+        type: custom
+        width: 244
+        height: 90
+        position: {x: 1020, y: 180}
+        positionAbsolute: {x: 1020, y: 180}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: llm
+          title: 复述查询
+          selected: false
+          model: {provider: '', name: '', mode: chat, completion_params: {temperature: 0.2}}
+          prompt_template:
+            - role: system
+              text: |-
+                你是粤教企业助手。只根据接口 JSON 用中文回复员工。失败就说明原因。不要编造接口没有的字段。
+            - role: user
+              text: "{{#http_query.body#}}"
+          context: {enabled: false, variable_selector: []}
+          vision: {enabled: false}
+          variables: []
+
+      - id: ans_query
+        type: custom
+        width: 244
+        height: 80
+        position: {x: 1340, y: 180}
+        positionAbsolute: {x: 1340, y: 180}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: answer
+          title: 回答-查询
+          selected: false
+          answer: '{{#llm_query.text#}}'
+          variables: []
+
+      - id: llm_update
+        type: custom
+        width: 244
+        height: 90
+        position: {x: 1020, y: 320}
+        positionAbsolute: {x: 1020, y: 320}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: llm
+          title: 复述状态
+          selected: false
+          model: {provider: '', name: '', mode: chat, completion_params: {temperature: 0.2}}
+          prompt_template:
+            - role: system
+              text: |-
+                你是粤教企业助手。只根据接口 JSON 用中文回复员工。失败就说明原因。不要编造接口没有的字段。
+            - role: user
+              text: "{{#http_update.body#}}"
+          context: {enabled: false, variable_selector: []}
+          vision: {enabled: false}
+          variables: []
+
+      - id: ans_update
+        type: custom
+        width: 244
+        height: 80
+        position: {x: 1340, y: 320}
+        positionAbsolute: {x: 1340, y: 320}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: answer
+          title: 回答-状态
+          selected: false
+          answer: '{{#llm_update.text#}}'
+          variables: []
+
+      - id: llm_daily
+        type: custom
+        width: 244
+        height: 90
+        position: {x: 1020, y: 460}
+        positionAbsolute: {x: 1020, y: 460}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: llm
+          title: 复述日报
+          selected: false
+          model: {provider: '', name: '', mode: chat, completion_params: {temperature: 0.2}}
+          prompt_template:
+            - role: system
+              text: |-
+                你是粤教企业助手。只根据接口 JSON 用中文回复员工。失败就说明原因。不要编造接口没有的字段。
+            - role: user
+              text: "{{#http_daily.body#}}"
+          context: {enabled: false, variable_selector: []}
+          vision: {enabled: false}
+          variables: []
+
+      - id: ans_daily
+        type: custom
+        width: 244
+        height: 80
+        position: {x: 1340, y: 460}
+        positionAbsolute: {x: 1340, y: 460}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: answer
+          title: 回答-日报
+          selected: false
+          answer: '{{#llm_daily.text#}}'
+          variables: []
+
+      - id: llm_nl2sql
+        type: custom
+        width: 244
+        height: 90
+        position: {x: 1020, y: 600}
+        positionAbsolute: {x: 1020, y: 600}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: llm
+          title: 复述查库
+          selected: false
+          model: {provider: '', name: '', mode: chat, completion_params: {temperature: 0.2}}
+          prompt_template:
+            - role: system
+              text: |-
+                你是粤教企业助手。只根据接口 JSON 用中文回复员工。失败就说明原因。不要编造接口没有的字段。
+            - role: user
+              text: "{{#http_nl2sql.body#}}"
+          context: {enabled: false, variable_selector: []}
+          vision: {enabled: false}
+          variables: []
+
+      - id: ans_nl2sql
+        type: custom
+        width: 244
+        height: 80
+        position: {x: 1340, y: 600}
+        positionAbsolute: {x: 1340, y: 600}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: answer
+          title: 回答-查库
+          selected: false
+          answer: '{{#llm_nl2sql.text#}}'
+          variables: []
+
+      - id: llm_cmd
+        type: custom
+        width: 244
+        height: 90
+        position: {x: 1020, y: 740}
+        positionAbsolute: {x: 1020, y: 740}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: llm
+          title: 复述指令
+          selected: false
+          model: {provider: '', name: '', mode: chat, completion_params: {temperature: 0.2}}
+          prompt_template:
+            - role: system
+              text: |-
+                你是粤教企业助手。只根据接口 JSON 用中文回复员工。失败就说明原因。不要编造接口没有的字段。
+            - role: user
+              text: "{{#http_cmd.body#}}"
+          context: {enabled: false, variable_selector: []}
+          vision: {enabled: false}
+          variables: []
+
+      - id: ans_cmd
+        type: custom
+        width: 244
+        height: 80
+        position: {x: 1340, y: 740}
+        positionAbsolute: {x: 1340, y: 740}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: answer
+          title: 回答-指令
+          selected: false
+          answer: '{{#llm_cmd.text#}}'
+          variables: []
+
+      - id: llm_brief
+        type: custom
+        width: 244
+        height: 90
+        position: {x: 1020, y: 880}
+        positionAbsolute: {x: 1020, y: 880}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: llm
+          title: 复述待办
+          selected: false
+          model: {provider: '', name: '', mode: chat, completion_params: {temperature: 0.2}}
+          prompt_template:
+            - role: system
+              text: |-
+                你是粤教企业助手。只根据接口 JSON 用中文回复员工。失败就说明原因。不要编造接口没有的字段。
+            - role: user
+              text: "{{#http_brief.body#}}"
+          context: {enabled: false, variable_selector: []}
+          vision: {enabled: false}
+          variables: []
+
+      - id: ans_brief
+        type: custom
+        width: 244
+        height: 80
+        position: {x: 1340, y: 880}
+        positionAbsolute: {x: 1340, y: 880}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: answer
+          title: 回答-待办
+          selected: false
+          answer: '{{#llm_brief.text#}}'
+          variables: []
+
+      - id: llm_org
+        type: custom
+        width: 244
+        height: 90
+        position: {x: 1020, y: 1020}
+        positionAbsolute: {x: 1020, y: 1020}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: llm
+          title: 复述组织
+          selected: false
+          model: {provider: '', name: '', mode: chat, completion_params: {temperature: 0.2}}
+          prompt_template:
+            - role: system
+              text: |-
+                你是粤教企业助手。只根据接口 JSON 用中文回复员工。失败就说明原因。不要编造接口没有的字段。
+            - role: user
+              text: "{{#http_org.body#}}"
+          context: {enabled: false, variable_selector: []}
+          vision: {enabled: false}
+          variables: []
+
+      - id: ans_org
+        type: custom
+        width: 244
+        height: 80
+        position: {x: 1340, y: 1020}
+        positionAbsolute: {x: 1340, y: 1020}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: answer
+          title: 回答-组织
+          selected: false
+          answer: '{{#llm_org.text#}}'
+          variables: []
+
+      - id: llm_dailyq
+        type: custom
+        width: 244
+        height: 90
+        position: {x: 1020, y: 1160}
+        positionAbsolute: {x: 1020, y: 1160}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: llm
+          title: 复述日报查阅
+          selected: false
+          model: {provider: '', name: '', mode: chat, completion_params: {temperature: 0.2}}
+          prompt_template:
+            - role: system
+              text: |-
+                你是粤教企业助手。只根据接口 JSON 用中文回复员工。失败就说明原因。不要编造接口没有的字段。
+            - role: user
+              text: "{{#http_dailyq.body#}}"
+          context: {enabled: false, variable_selector: []}
+          vision: {enabled: false}
+          variables: []
+
+      - id: ans_dailyq
+        type: custom
+        width: 244
+        height: 80
+        position: {x: 1340, y: 1160}
+        positionAbsolute: {x: 1340, y: 1160}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: answer
+          title: 回答-查阅
+          selected: false
+          answer: '{{#llm_dailyq.text#}}'
+          variables: []
+
+      - id: llm_ticket
+        type: custom
+        width: 244
+        height: 90
+        position: {x: 1020, y: 1300}
+        positionAbsolute: {x: 1020, y: 1300}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: llm
+          title: 复述工单
+          selected: false
+          model: {provider: '', name: '', mode: chat, completion_params: {temperature: 0.2}}
+          prompt_template:
+            - role: system
+              text: |-
+                你是粤教企业助手。只根据接口 JSON 用中文回复员工。失败就说明原因。不要编造接口没有的字段。
+            - role: user
+              text: "{{#http_ticket.body#}}"
+          context: {enabled: false, variable_selector: []}
+          vision: {enabled: false}
+          variables: []
+
+      - id: ans_ticket
+        type: custom
+        width: 244
+        height: 80
+        position: {x: 1340, y: 1300}
+        positionAbsolute: {x: 1340, y: 1300}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: answer
+          title: 回答-工单
+          selected: false
+          answer: '{{#llm_ticket.text#}}'
+          variables: []
+
+      - id: llm_docs
+        type: custom
+        width: 244
+        height: 90
+        position: {x: 1020, y: 1480}
+        positionAbsolute: {x: 1020, y: 1480}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: llm
+          title: 回答企业信息与新人指南
+          selected: false
+          model: {provider: '', name: '', mode: chat, completion_params: {temperature: 0.2}}
+          prompt_template:
+            - role: system
+              text: |-
+                你是粤教企业助手。根据《企业信息》《公司新人指南》回答入职、办公、IT、地址、事业部等问题。
+                《企业信息》写明：广东省教育服务有限公司，简称「粤教服务」。员工问简称/公司叫什么时，只要 context 出现「简称」或「粤教服务」就直接答，不要说库里没有。
+                <context>
+                {{#context#}}
+                </context>
+                有依据就具体回答并点出章节。context 完全对不上才说：当前企业信息/新人指南知识库里没有。不要编造分机号或价格。
+            - role: user
+              text: "{{#sys.query#}}"
+          context:
+            enabled: true
+            variable_selector: [kb_docs, result]
+          vision: {enabled: false}
+          variables: []
+
+      - id: ans_docs
+        type: custom
+        width: 244
+        height: 80
+        position: {x: 1340, y: 1480}
+        positionAbsolute: {x: 1340, y: 1480}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: answer
+          title: 回答-制度
+          selected: false
+          answer: '{{#llm_docs.text#}}'
+          variables: []
+
+      - id: llm_faq
+        type: custom
+        width: 244
+        height: 90
+        position: {x: 1020, y: 1620}
+        positionAbsolute: {x: 1020, y: 1620}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: llm
+          title: 回答问答对
+          selected: false
+          model: {provider: '', name: '', mode: chat, completion_params: {temperature: 0.2}}
+          prompt_template:
+            - role: system
+              text: |-
+                你是粤教企业助手。只根据「常见问答对」知识库回答。优先复述对应的答。
+                <context>
+                {{#context#}}
+                </context>
+                对不上就说：问答对里没有这条。不要编学费或账号。
+            - role: user
+              text: "{{#sys.query#}}"
+          context:
+            enabled: true
+            variable_selector: [kb_faq, result]
+          vision: {enabled: false}
+          variables: []
+
+      - id: ans_faq
+        type: custom
+        width: 244
+        height: 80
+        position: {x: 1340, y: 1620}
+        positionAbsolute: {x: 1340, y: 1620}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: answer
+          title: 回答-FAQ
+          selected: false
+          answer: '{{#llm_faq.text#}}'
+          variables: []
+
+      - id: llm_help
+        type: custom
+        width: 244
+        height: 90
+        position: {x: 700, y: 1760}
+        positionAbsolute: {x: 700, y: 1760}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: llm
+          title: 能力说明
+          selected: false
+          model: {provider: '', name: '', mode: chat, completion_params: {temperature: 0.2}}
+          prompt_template:
+            - role: system
+              text: |-
+                你是粤教企业助手。说明你能：录入/查询/改客户、日报、批请假、查组织、查工单；公司简称和项目 FAQ 走问答对库；入职办公走企业信息+新人指南库。给三个可复制例句。
+            - role: user
+              text: "{{#sys.query#}}"
+          context: {enabled: false, variable_selector: []}
+          vision: {enabled: false}
+          variables: []
+
+      - id: ans_help
+        type: custom
+        width: 244
+        height: 80
+        position: {x: 1020, y: 1760}
+        positionAbsolute: {x: 1020, y: 1760}
+        selected: false
+        sourcePosition: right
+        targetPosition: left
+        data:
+          type: answer
+          title: 回答-说明
+          selected: false
+          answer: '{{#llm_help.text#}}'
+          variables: []
+
