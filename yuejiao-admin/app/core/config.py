@@ -14,6 +14,9 @@ class Settings:
     mysql_user: str = os.getenv("MYSQL_USER", "root")
     mysql_password: str = os.getenv("MYSQL_PASSWORD", "123456")
     mysql_database: str = os.getenv("MYSQL_DATABASE", "yuejiao_db")
+    dify_api_base: str = os.getenv("DIFY_API_BASE", "http://127.0.0.1/v1")
+    dify_complaint_weekly_api_key: str = os.getenv("DIFY_COMPLAINT_WEEKLY_API_KEY", "")
+    dify_timeout_seconds: float = float(os.getenv("DIFY_TIMEOUT_SECONDS", "90"))
 
 
 settings = Settings()

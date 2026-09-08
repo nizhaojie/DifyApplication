@@ -75,7 +75,7 @@ onMounted(async () => {
     <header class="toolbar">
       <div>
         <h1>投诉处理周报</h1>
-        <p>选定周期后手动生成。数字来自工单表，洞察为固定说明。</p>
+        <p>选定周期后手动生成。数字来自工单表，叙述与建议来自洞察。</p>
       </div>
       <div class="actions">
         <el-date-picker

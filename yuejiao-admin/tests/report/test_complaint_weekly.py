@@ -30,6 +30,14 @@ def test_empty_period_yields_completed_empty_current_report(app):
     assert current.status == "completed"
 
 
+def test_empty_report_insight_narrates_no_new_complaints(app):
+    report = app.generate(KIND, WEEK_START)
+
+    assert report.status == "completed"
+    assert "本周无新增投诉" in report.content["insight"]["volume_narrative"]
+    assert report.content["insight"]["suggested_action"]
+
+
 def test_period_complaints_are_created_in_the_period_only(app, conn):
     insert_ticket(conn, student_id=LIN, created=_at(date(2025, 3, 11)))
     insert_ticket(conn, student_id=GAO, created=_at(date(2025, 3, 1)), status="pending")
@@ -251,4 +259,34 @@ def test_totals_stay_full_when_more_than_fifty_complaints(app, conn):
 
     assert report.content["numbers"]["period_complaint_count"] == 51
     assert len(report.content["numbers"]["handling"]["items"]) == 51
+
+
+def test_insight_payload_caps_detail_and_puts_open_complaints_first(conn):
+    recorder = _RecordingInsight()
+    app = ReportApplication(conn=conn, clock=FrozenClock(NOW), insight=recorder)
+    insert_ticket(conn, student_id=GAO, created=_at(date(2025, 3, 1)), status="pending")
+    for offset in range(51):
+        insert_ticket(
+            conn,
+            student_id=LIN,
+            created=_at(date(2025, 3, 11), 10) + timedelta(minutes=offset),
+        )
+
+    report = app.generate(KIND, WEEK_START)
+    detail = recorder.payload["insight_detail"]
+
+    assert report.status == "completed"
+    assert report.content["numbers"]["period_complaint_count"] == 51
+    assert len(detail) == 50
+    assert detail[0]["student_name"] == "高杰"
+    assert detail[0]["category"] == "签证办理"
+
+
+class _RecordingInsight:
+    def __init__(self):
+        self.payload = None
+
+    def narrate(self, kind: str, numbers: dict) -> dict:
+        self.payload = numbers
+        return FixedInsightAdapter().narrate(kind, numbers)
 
