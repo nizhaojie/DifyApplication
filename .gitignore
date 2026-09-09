@@ -24,3 +24,7 @@ bat/
 yuejiao-web/react-frontend/dist/
 yuejiao-admin/logs/backend-startup.log
 yuejiao-web/frontend-startup.log
+
+# Agent/test local artifacts (not committed to repo)
+.claude/
+.playwright-mcp/
