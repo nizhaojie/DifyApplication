@@ -7,7 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 
 KNOWLEDGE_DIR = (
-    Path(__file__).resolve().parents[4] / "dify" / "enterprise" / "knowledge"
+    Path(__file__).resolve().parents[5] / "dify" / "enterprise" / "knowledge"
 )
 
 _PUNCT = re.compile(r"[？?！!。，,、.\s；;：:（）()“”\"'`]+")
