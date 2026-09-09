@@ -16,53 +16,53 @@ def _at(day: date, hour: int = 15, minute: int = 0) -> datetime:
     return datetime(day.year, day.month, day.day, hour, minute, tzinfo=SHANGHAI)
 
 
-def test_empty_period_yields_completed_empty_current_report(app):
-    report = app.generate(KIND, WEEK_START)
+async def test_empty_period_yields_completed_empty_current_report(app):
+    report = await app.generate(KIND, WEEK_START)
 
     assert report.status == "completed"
     assert report.content["numbers"]["period_complaint_count"] == 0
     assert report.content["numbers"]["open_complaints"] == []
     assert report.content["numbers"]["wow"]["label"] == "样本不足"
 
-    current = app.current(KIND, WEEK_START)
+    current = await app.current(KIND, WEEK_START)
     assert current is not None
     assert current.id == report.id
     assert current.status == "completed"
 
 
-def test_empty_report_insight_narrates_no_new_complaints(app):
-    report = app.generate(KIND, WEEK_START)
+async def test_empty_report_insight_narrates_no_new_complaints(app):
+    report = await app.generate(KIND, WEEK_START)
 
     assert report.status == "completed"
     assert "本周无新增投诉" in report.content["insight"]["volume_narrative"]
     assert report.content["insight"]["suggested_action"]
 
 
-def test_period_complaints_are_created_in_the_period_only(app, conn):
-    insert_ticket(conn, student_id=LIN, created=_at(date(2025, 3, 11)))
-    insert_ticket(conn, student_id=GAO, created=_at(date(2025, 3, 1)), status="pending")
+async def test_period_complaints_are_created_in_the_period_only(app, db):
+    await insert_ticket(db, student_id=LIN, created=_at(date(2025, 3, 11)))
+    await insert_ticket(db, student_id=GAO, created=_at(date(2025, 3, 1)), status="pending")
 
-    report = app.generate(KIND, WEEK_START)
+    report = await app.generate(KIND, WEEK_START)
     numbers = report.content["numbers"]
 
     assert numbers["period_complaint_count"] == 1
     assert numbers["open_complaints"][0]["student_name"] == "高杰"
 
 
-def test_suggestion_and_consult_are_not_period_complaints(app, conn):
-    insert_ticket(conn, student_id=LIN, created=_at(date(2025, 3, 11)), ticket_type="suggestion")
-    insert_ticket(conn, student_id=GAO, created=_at(date(2025, 3, 11)), ticket_type="consult")
+async def test_suggestion_and_consult_are_not_period_complaints(app, db):
+    await insert_ticket(db, student_id=LIN, created=_at(date(2025, 3, 11)), ticket_type="suggestion")
+    await insert_ticket(db, student_id=GAO, created=_at(date(2025, 3, 11)), ticket_type="consult")
 
-    report = app.generate(KIND, WEEK_START)
+    report = await app.generate(KIND, WEEK_START)
 
     assert report.content["numbers"]["period_complaint_count"] == 0
 
 
-def test_open_alert_requires_more_than_three_days(app, conn):
-    insert_ticket(conn, student_id=LIN, created=_at(date(2025, 3, 9), 15), status="pending")
-    insert_ticket(conn, student_id=GAO, created=_at(date(2025, 3, 9), 14), status="pending")
+async def test_open_alert_requires_more_than_three_days(app, db):
+    await insert_ticket(db, student_id=LIN, created=_at(date(2025, 3, 9), 15), status="pending")
+    await insert_ticket(db, student_id=GAO, created=_at(date(2025, 3, 9), 14), status="pending")
 
-    report = app.generate(KIND, WEEK_START)
+    report = await app.generate(KIND, WEEK_START)
     names = [item["student_name"] for item in report.content["numbers"]["open_complaints"]]
 
     assert names == ["高杰"]
@@ -71,51 +71,51 @@ def test_open_alert_requires_more_than_three_days(app, conn):
     assert alert["elapsed_days"] == 3.04
 
 
-def test_empty_category_is_bucketed_as_other(app, conn):
-    insert_ticket(conn, student_id=LIN, created=_at(date(2025, 3, 11)), category=None)
-    insert_ticket(conn, student_id=GAO, created=_at(date(2025, 3, 11)), category="")
+async def test_empty_category_is_bucketed_as_other(app, db):
+    await insert_ticket(db, student_id=LIN, created=_at(date(2025, 3, 11)), category=None)
+    await insert_ticket(db, student_id=GAO, created=_at(date(2025, 3, 11)), category="")
 
-    report = app.generate(KIND, WEEK_START)
+    report = await app.generate(KIND, WEEK_START)
 
     assert report.content["numbers"]["categories"] == [{"name": "其他", "count": 2}]
 
 
-def test_closed_handling_uses_last_update_minus_created(app, conn):
+async def test_closed_handling_uses_last_update_minus_created(app, db):
     created = _at(date(2025, 3, 11), 10)
-    insert_ticket(
-        conn,
+    await insert_ticket(
+        db,
         student_id=LIN,
         created=created,
         updated=created + timedelta(hours=6),
         status="resolved",
     )
 
-    report = app.generate(KIND, WEEK_START)
+    report = await app.generate(KIND, WEEK_START)
     item = report.content["numbers"]["handling"]["items"][0]
 
     assert item["student_name"] == "林平磊"
     assert item["elapsed_days"] == 0.25
 
 
-def test_open_handling_uses_period_end_minus_created(app, conn):
-    insert_ticket(
-        conn,
+async def test_open_handling_uses_period_end_minus_created(app, db):
+    await insert_ticket(
+        db,
         student_id=LIN,
         created=_at(date(2025, 3, 11), 15),
         status="processing",
     )
 
-    report = app.generate(KIND, WEEK_START)
+    report = await app.generate(KIND, WEEK_START)
     item = report.content["numbers"]["handling"]["items"][0]
 
     assert item["elapsed_days"] == 1.0
 
 
-def test_no_ratings_is_unrated_not_zero(app, conn):
-    insert_ticket(conn, student_id=LIN, created=_at(date(2025, 3, 11)), satisfaction=None)
-    insert_ticket(conn, student_id=GAO, created=_at(date(2025, 3, 11)), satisfaction=None)
+async def test_no_ratings_is_unrated_not_zero(app, db):
+    await insert_ticket(db, student_id=LIN, created=_at(date(2025, 3, 11)), satisfaction=None)
+    await insert_ticket(db, student_id=GAO, created=_at(date(2025, 3, 11)), satisfaction=None)
 
-    report = app.generate(KIND, WEEK_START)
+    report = await app.generate(KIND, WEEK_START)
     satisfaction = report.content["numbers"]["satisfaction"]
 
     assert satisfaction["label"] == "暂无评价"
@@ -124,12 +124,12 @@ def test_no_ratings_is_unrated_not_zero(app, conn):
     assert satisfaction["rated_count"] == 0
 
 
-def test_satisfaction_averages_rated_only(app, conn):
-    insert_ticket(conn, student_id=LIN, created=_at(date(2025, 3, 11)), satisfaction=5)
-    insert_ticket(conn, student_id=GAO, created=_at(date(2025, 3, 11)), satisfaction=3)
-    insert_ticket(conn, student_id=HU, created=_at(date(2025, 3, 11)), satisfaction=None)
+async def test_satisfaction_averages_rated_only(app, db):
+    await insert_ticket(db, student_id=LIN, created=_at(date(2025, 3, 11)), satisfaction=5)
+    await insert_ticket(db, student_id=GAO, created=_at(date(2025, 3, 11)), satisfaction=3)
+    await insert_ticket(db, student_id=HU, created=_at(date(2025, 3, 11)), satisfaction=None)
 
-    report = app.generate(KIND, WEEK_START)
+    report = await app.generate(KIND, WEEK_START)
     satisfaction = report.content["numbers"]["satisfaction"]
 
     assert satisfaction["label"] is None
@@ -138,22 +138,22 @@ def test_satisfaction_averages_rated_only(app, conn):
     assert satisfaction["unrated_count"] == 1
 
 
-def test_wow_is_insufficient_when_prior_period_is_zero(app, conn):
-    insert_ticket(conn, student_id=LIN, created=_at(date(2025, 3, 11)))
+async def test_wow_is_insufficient_when_prior_period_is_zero(app, db):
+    await insert_ticket(db, student_id=LIN, created=_at(date(2025, 3, 11)))
 
-    report = app.generate(KIND, WEEK_START)
+    report = await app.generate(KIND, WEEK_START)
     wow = report.content["numbers"]["wow"]
 
     assert wow["label"] == "样本不足"
     assert wow["prior_count"] == 0
 
 
-def test_wow_compares_equal_length_prior_week(app, conn):
-    insert_ticket(conn, student_id=LIN, created=_at(date(2025, 3, 4)))
-    insert_ticket(conn, student_id=GAO, created=_at(date(2025, 3, 11)))
-    insert_ticket(conn, student_id=HU, created=_at(date(2025, 3, 11)))
+async def test_wow_compares_equal_length_prior_week(app, db):
+    await insert_ticket(db, student_id=LIN, created=_at(date(2025, 3, 4)))
+    await insert_ticket(db, student_id=GAO, created=_at(date(2025, 3, 11)))
+    await insert_ticket(db, student_id=HU, created=_at(date(2025, 3, 11)))
 
-    report = app.generate(KIND, WEEK_START)
+    report = await app.generate(KIND, WEEK_START)
     wow = report.content["numbers"]["wow"]
 
     assert wow["label"] is None
@@ -161,77 +161,78 @@ def test_wow_compares_equal_length_prior_week(app, conn):
     assert wow["delta"] == 1
 
 
-def test_yoy_is_insufficient_sample(app):
-    report = app.generate(KIND, WEEK_START)
+async def test_yoy_is_insufficient_sample(app):
+    report = await app.generate(KIND, WEEK_START)
 
     assert report.content["numbers"]["yoy"]["label"] == "样本不足"
 
 
-def test_in_progress_week_ends_today_not_sunday(app):
-    report = app.generate(KIND, WEEK_START)
+async def test_in_progress_week_ends_today_not_sunday(app):
+    report = await app.generate(KIND, WEEK_START)
 
     assert report.period_start == date(2025, 3, 10)
     assert report.period_end == date(2025, 3, 12)
 
 
-def test_historical_week_is_monday_through_sunday(app):
-    report = app.generate(KIND, date(2025, 3, 3))
+async def test_historical_week_is_monday_through_sunday(app):
+    report = await app.generate(KIND, date(2025, 3, 3))
 
     assert report.period_start == date(2025, 3, 3)
     assert report.period_end == date(2025, 3, 9)
 
 
-def test_second_generate_replaces_previous_success_in_history(app):
-    first = app.generate(KIND, WEEK_START)
-    second = app.generate(KIND, WEEK_START)
+async def test_second_generate_replaces_previous_success_in_history(app):
+    first = await app.generate(KIND, WEEK_START)
+    second = await app.generate(KIND, WEEK_START)
 
     assert first.id != second.id
-    current = app.current(KIND, WEEK_START)
+    current = await app.current(KIND, WEEK_START)
     assert current.id == second.id
-    history = app.history(KIND)
+    history = await app.history(KIND)
     same_period = [item for item in history if item.period_start == WEEK_START]
     assert [item.id for item in same_period] == [second.id]
     assert first.id not in [item.id for item in history]
 
 
-def test_insight_failure_does_not_replace_current_report(app, conn, insight):
-    first = app.generate(KIND, WEEK_START)
+async def test_insight_failure_does_not_replace_current_report(app, db, insight):
+    first = await app.generate(KIND, WEEK_START)
     failing = ReportApplication(
-        conn=conn,
+        db=db,
         clock=FrozenClock(NOW),
         insight=FailingInsightAdapter(),
     )
 
-    failed = failing.generate(KIND, WEEK_START)
+    failed = await failing.generate(KIND, WEEK_START)
 
     assert failed.status == "failed"
     assert failed.error_message
-    current = failing.current(KIND, WEEK_START)
+    current = await failing.current(KIND, WEEK_START)
     assert current.id == first.id
     assert current.status == "completed"
-    history_ids = [item.id for item in failing.history(KIND)]
+    history = await failing.history(KIND)
+    history_ids = [item.id for item in history]
     assert first.id in history_ids
     assert failed.id not in history_ids
 
 
-def test_history_keeps_newer_period_first_after_regenerating_older(app):
-    older = app.generate(KIND, date(2025, 3, 3))
-    app.generate(KIND, WEEK_START)
-    regenerated = app.generate(KIND, date(2025, 3, 3))
+async def test_history_keeps_newer_period_first_after_regenerating_older(app):
+    older = await app.generate(KIND, date(2025, 3, 3))
+    await app.generate(KIND, WEEK_START)
+    regenerated = await app.generate(KIND, date(2025, 3, 3))
 
-    history = app.history(KIND)
+    history = await app.history(KIND)
     period_starts = [item.period_start for item in history]
     assert period_starts.index(WEEK_START) < period_starts.index(date(2025, 3, 3))
     assert older.id not in [item.id for item in history]
     assert regenerated.id in [item.id for item in history]
 
 
-def test_history_can_open_an_older_period(app, conn):
-    insert_ticket(conn, student_id=LIN, created=_at(date(2025, 3, 4)))
-    older = app.generate(KIND, date(2025, 3, 3))
-    app.generate(KIND, WEEK_START)
+async def test_history_can_open_an_older_period(app, db):
+    await insert_ticket(db, student_id=LIN, created=_at(date(2025, 3, 4)))
+    older = await app.generate(KIND, date(2025, 3, 3))
+    await app.generate(KIND, WEEK_START)
 
-    history = app.history(KIND)
+    history = await app.history(KIND)
     assert older.id in [item.id for item in history]
     period_starts = [item.period_start for item in history]
     assert period_starts.index(WEEK_START) < period_starts.index(date(2025, 3, 3))
@@ -240,59 +241,59 @@ def test_history_can_open_an_older_period(app, conn):
     assert found.content["numbers"]["period_complaint_count"] == 1
 
 
-def test_current_still_finds_a_midweek_report_after_the_week_has_ended(conn, insight):
-    midweek = ReportApplication(conn=conn, clock=FrozenClock(NOW), insight=insight)
-    created = midweek.generate(KIND, WEEK_START)
+async def test_current_still_finds_a_midweek_report_after_the_week_has_ended(db, insight):
+    midweek = ReportApplication(db=db, clock=FrozenClock(NOW), insight=insight)
+    created = await midweek.generate(KIND, WEEK_START)
     later = ReportApplication(
-        conn=conn,
+        db=db,
         clock=FrozenClock(datetime(2025, 3, 17, 10, 0, tzinfo=SHANGHAI)),
         insight=insight,
     )
 
-    current = later.current(KIND, WEEK_START)
+    current = await later.current(KIND, WEEK_START)
 
     assert current is not None
     assert current.id == created.id
     assert current.period_end == date(2025, 3, 12)
 
 
-def test_insight_does_not_rewrite_counts(app, conn):
-    insert_ticket(conn, student_id=LIN, created=_at(date(2025, 3, 11)))
-    insert_ticket(conn, student_id=GAO, created=_at(date(2025, 3, 11)))
+async def test_insight_does_not_rewrite_counts(app, db):
+    await insert_ticket(db, student_id=LIN, created=_at(date(2025, 3, 11)))
+    await insert_ticket(db, student_id=GAO, created=_at(date(2025, 3, 11)))
 
-    report = app.generate(KIND, WEEK_START)
+    report = await app.generate(KIND, WEEK_START)
 
     assert report.content["numbers"]["period_complaint_count"] == 2
     assert "insight" in report.content
     assert report.content["insight"] == FixedInsightAdapter().narrate(KIND, {})
 
 
-def test_totals_stay_full_when_more_than_fifty_complaints(app, conn):
+async def test_totals_stay_full_when_more_than_fifty_complaints(app, db):
     for offset in range(51):
-        insert_ticket(
-            conn,
+        await insert_ticket(
+            db,
             student_id=LIN,
             created=_at(date(2025, 3, 11), 10) + timedelta(minutes=offset),
         )
 
-    report = app.generate(KIND, WEEK_START)
+    report = await app.generate(KIND, WEEK_START)
 
     assert report.content["numbers"]["period_complaint_count"] == 51
     assert len(report.content["numbers"]["handling"]["items"]) == 51
 
 
-def test_insight_payload_caps_detail_and_puts_open_complaints_first(conn):
+async def test_insight_payload_caps_detail_and_puts_open_complaints_first(db):
     recorder = _RecordingInsight()
-    app = ReportApplication(conn=conn, clock=FrozenClock(NOW), insight=recorder)
-    insert_ticket(conn, student_id=GAO, created=_at(date(2025, 3, 1)), status="pending")
+    app = ReportApplication(db=db, clock=FrozenClock(NOW), insight=recorder)
+    await insert_ticket(db, student_id=GAO, created=_at(date(2025, 3, 1)), status="pending")
     for offset in range(51):
-        insert_ticket(
-            conn,
+        await insert_ticket(
+            db,
             student_id=LIN,
             created=_at(date(2025, 3, 11), 10) + timedelta(minutes=offset),
         )
 
-    report = app.generate(KIND, WEEK_START)
+    report = await app.generate(KIND, WEEK_START)
     detail = recorder.payload["insight_detail"]
 
     assert report.status == "completed"
@@ -309,4 +310,3 @@ class _RecordingInsight:
     def narrate(self, kind: str, numbers: dict) -> dict:
         self.payload = numbers
         return FixedInsightAdapter().narrate(kind, numbers)
-

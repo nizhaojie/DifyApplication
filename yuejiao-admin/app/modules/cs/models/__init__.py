@@ -6,7 +6,6 @@ from app.modules.cs.models.models import (
     CourseProject,
     EventLecture,
     EventRegistration,
-    IntentConfig,
     KnowledgeBase,
 )
 
@@ -17,5 +16,4 @@ __all__ = [
     "EventLecture",
     "EventRegistration",
     "KnowledgeBase",
-    "IntentConfig",
 ]

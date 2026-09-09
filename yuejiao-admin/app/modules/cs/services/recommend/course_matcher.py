@@ -1,7 +1,9 @@
 """Intelligent course matching and study program recommendation engine."""
 
 from typing import Any, Dict, List, Optional
-from sqlalchemy.orm import Session
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.modules.cs.crud.crud import (
     bulk_create_course_projects,
     list_course_projects,
@@ -72,9 +74,9 @@ class CourseRecommendationService:
     """Course recommendation service based on rule scoring and budget filtering."""
 
     @staticmethod
-    def ensure_seed_courses(db: Session) -> int:
+    async def ensure_seed_courses(db: AsyncSession) -> int:
         """Seed default course projects into database if not present."""
-        return bulk_create_course_projects(db, DEFAULT_COURSE_PROJECTS)
+        return await bulk_create_course_projects(db, DEFAULT_COURSE_PROJECTS)
 
     @staticmethod
     def _matches_education_level(
@@ -124,12 +126,12 @@ class CourseRecommendationService:
             return "新加坡" in combined_text or "新" in combined_text
         return normalized_country in combined_text
 
-    def recommend(
-        self, db: Session, criteria: CourseRecommendRequest
+    async def recommend(
+        self, db: AsyncSession, criteria: CourseRecommendRequest
     ) -> CourseRecommendResponse:
         """Score, filter, and rank course projects matching customer profile."""
-        self.ensure_seed_courses(db)
-        all_courses = list_course_projects(db, is_active_only=True)
+        await self.ensure_seed_courses(db)
+        all_courses = await list_course_projects(db, is_active_only=True)
 
         if not all_courses:
             return CourseRecommendResponse(

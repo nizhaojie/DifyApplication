@@ -2,7 +2,9 @@
 
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
-from sqlalchemy.orm import Session
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.modules.cs.crud.crud import (
     bulk_create_events,
     create_event_registration,
@@ -60,16 +62,16 @@ class EventLectureService:
     """Service handling seminar exploration and closed-loop signups."""
 
     @staticmethod
-    def ensure_seed_events(db: Session) -> int:
+    async def ensure_seed_events(db: AsyncSession) -> int:
         """Seed initial seminar events into database if missing."""
-        return bulk_create_events(db, DEFAULT_EVENTS)
+        return await bulk_create_events(db, DEFAULT_EVENTS)
 
-    def list_active_events(
-        self, db: Session, status_filter: Optional[str] = None
+    async def list_active_events(
+        self, db: AsyncSession, status_filter: Optional[str] = None
     ) -> List[EventLectureItem]:
         """Fetch all upcoming or ongoing seminars."""
-        self.ensure_seed_events(db)
-        event_models = list_events(db, status_filter=status_filter)
+        await self.ensure_seed_events(db)
+        event_models = await list_events(db, status_filter=status_filter)
 
         items: List[EventLectureItem] = []
         for model in event_models:
@@ -94,11 +96,11 @@ class EventLectureService:
             )
         return items
 
-    def register(
-        self, db: Session, payload: EventRegisterRequest
+    async def register(
+        self, db: AsyncSession, payload: EventRegisterRequest
     ) -> EventRegisterResponse:
         """Process event registration with seat capacity verification and anti-duplication."""
-        event_model = get_event_by_id(db, payload.event_id)
+        event_model = await get_event_by_id(db, payload.event_id)
         if not event_model:
             return EventRegisterResponse(
                 is_success=False,
@@ -107,7 +109,7 @@ class EventLectureService:
             )
 
         # 1. Anti-duplicate verification
-        is_already_registered = has_user_registered_for_event(
+        is_already_registered = await has_user_registered_for_event(
             db=db,
             event_id=payload.event_id,
             contact_info=payload.contact_info.strip(),
@@ -137,7 +139,7 @@ class EventLectureService:
             )
 
         # 3. Create registration and update participant counter
-        registration_record = create_event_registration(
+        registration_record = await create_event_registration(
             db=db,
             event_id=payload.event_id,
             customer_name=payload.customer_name.strip(),
@@ -156,14 +158,14 @@ class EventLectureService:
             ),
         )
 
-    def query_user_registrations(
-        self, db: Session, contact_info: str
+    async def query_user_registrations(
+        self, db: AsyncSession, contact_info: str
     ) -> List[Dict[str, Any]]:
         """Query active event registrations for a given contact phone/email."""
-        records = list_event_registrations_by_contact(db, contact_info=contact_info)
+        records = await list_event_registrations_by_contact(db, contact_info=contact_info)
         results = []
         for reg in records:
-            event_obj = get_event_by_id(db, reg.event_id)
+            event_obj = await get_event_by_id(db, reg.event_id)
             results.append(
                 {
                     "registration_id": reg.id,

@@ -1,10 +1,16 @@
 """FAQ fast matching engine with string similarity and keyword scoring."""
 
+import logging
 import os
 import re
 from typing import List, Optional, Set
+
 from pydantic import BaseModel
+
+from app.core.config import get_app_settings
 from app.modules.cs.schemas.schemas import FaqMatchResult
+
+logger = logging.getLogger(__name__)
 
 
 class FaqItem(BaseModel):
@@ -22,6 +28,12 @@ class FaqEngine:
         self._faq_items: List[FaqItem] = []
         if faq_file_path and os.path.exists(faq_file_path):
             self.load_faqs_from_file(faq_file_path)
+        elif faq_file_path:
+            logger.warning(
+                "FAQ 素材文件不存在：%s（KB_RAW_MATERIALS_DIR 未配置或路径错误），"
+                "FAQ 引擎已加载 0 条，/cs/faq/match 与 /cs/faqs 将返回空目录。",
+                faq_file_path,
+            )
 
     @property
     def total_count(self) -> int:
@@ -183,6 +195,13 @@ class FaqEngine:
         return list(self._faq_items)
 
 
+def _default_faq_path() -> Optional[str]:
+    """FAQ 素材路径由 KB_RAW_MATERIALS_DIR 配置（<dir>/公司信息/问答对文本版.txt）。"""
+    configured = get_app_settings().kb_raw_materials_dir
+    if not configured:
+        return None
+    return os.path.join(configured, "公司信息", "问答对文本版.txt")
+
+
 # Default singleton instance
-DEFAULT_FAQ_PATH = r"c:\new\group-qukewei\docs\raw_materials\公司信息\问答对文本版.txt"
-faq_engine = FaqEngine(DEFAULT_FAQ_PATH)
+faq_engine = FaqEngine(_default_faq_path())

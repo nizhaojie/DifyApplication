@@ -68,6 +68,10 @@ class Settings(BaseSettings):
     # Dify YML directory (unified root for all dify/*.yml DSL and tool files)
     dify_yml_dir: str = Field(default_factory=_default_dify_yml_dir)
 
+    # 客服知识库原始素材目录（公司信息/公司业务/留学政策 下的 docx 与问答对 txt）。
+    # 素材不在仓库内，需通过 KB_RAW_MATERIALS_DIR 指定本地路径；缺失时启动仅告警不阻断。
+    kb_raw_materials_dir: str = ""
+
     # Enterprise Assistant Dify Integration
     dify_base_url: str = "http://localhost/v1"
     dify_enterprise_api_key: str = ""

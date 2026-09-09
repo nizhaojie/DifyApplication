@@ -46,24 +46,24 @@ def report_to_dict(report: Report) -> dict:
 
 
 @router.post("/generate")
-def generate(body: GenerateBody, app: ReportApplication = Depends(get_report_app)):
+async def generate(body: GenerateBody, app: ReportApplication = Depends(get_report_app)):
     if body.kind not in OPEN_KINDS:
         raise HTTPException(status_code=400, detail="该报告种类尚未开放")
-    report = app.generate(body.kind, body.period_start)
+    report = await app.generate(body.kind, body.period_start)
     return ok(report_to_dict(report))
 
 
 @router.get("/current")
-def current(
+async def current(
     kind: str = Query(...),
     period_start: date = Query(...),
     app: ReportApplication = Depends(get_report_app),
 ):
-    report = app.current(kind, period_start)
+    report = await app.current(kind, period_start)
     return ok(report_to_dict(report) if report else None)
 
 
 @router.get("/history")
-def history(kind: str = Query(...), app: ReportApplication = Depends(get_report_app)):
-    reports = app.history(kind)
+async def history(kind: str = Query(...), app: ReportApplication = Depends(get_report_app)):
+    reports = await app.history(kind)
     return ok([report_to_dict(item) for item in reports])
