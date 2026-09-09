@@ -169,27 +169,6 @@ def list_faqs_endpoint() -> UnifiedResponse[List[Dict[str, Any]]]:
 
 
 @router.get(
-    "/dify/tools/openapi.json",
-    summary="Download Dify OpenAPI 3.0 Custom Tool Schema",
-)
-def get_dify_tool_schema_endpoint() -> Dict[str, Any]:
-    """Provide OpenAPI 3.0 tool schema for direct import into Dify Custom Tools."""
-    from app.modules.cs.services.dify.dify_service import dify_service
-    return dify_service.get_openapi_tool_dict()
-
-
-@router.get(
-    "/dify/dsl",
-    summary="Download Dify Chatflow DSL Configuration",
-)
-def get_dify_workflow_dsl_endpoint() -> UnifiedResponse[Dict[str, Any]]:
-    """Retrieve Dify DSL configuration YAML string for workflow import."""
-    from app.modules.cs.services.dify.dify_service import dify_service
-    dsl_text = dify_service.get_workflow_dsl_content()
-    return make_success_response(payload={"dsl": dsl_text, "app_name": "cs-agent-main"})
-
-
-@router.get(
     "/dify/status",
     summary="Check Dify Integration Status",
 )

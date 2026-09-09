@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 import yaml
 from fastapi.testclient import TestClient
+from app.core.config import get_app_settings
 from app.db.session import SessionLocal
 from app.main import app
 from app.modules.cs.schemas.schemas import ChatRequest
@@ -29,7 +30,9 @@ def test_client():
 
 def test_dify_openapi_tool_validity():
     """Validate that OpenAPI 3.0 tool schema conforms to specifications and includes all tools."""
-    tool_schema = dify_service.get_openapi_tool_dict()
+    tool_path = Path(get_app_settings().dify_yml_dir) / "tools" / "cs_openapi_tool.json"
+    with open(tool_path, "r", encoding="utf-8") as file_stream:
+        tool_schema = json.load(file_stream)
     assert tool_schema["openapi"].startswith("3.0.")
     assert "info" in tool_schema
     assert "paths" in tool_schema
@@ -55,7 +58,8 @@ def test_dify_openapi_tool_validity():
 
 def test_dify_dsl_structure_validity():
     """Verify Dify Chatflow DSL contains the 7-class classifier, RAG, and anti-hallucination rules."""
-    dsl_text = dify_service.get_workflow_dsl_content()
+    dsl_path = Path(get_app_settings().dify_yml_dir) / "dsl" / "cs_agent_workflow.yml"
+    dsl_text = dsl_path.read_text(encoding="utf-8")
     assert dsl_text, "Dify DSL workflow content must not be empty"
 
     parsed_dsl = yaml.safe_load(dsl_text)
@@ -110,23 +114,8 @@ def test_dify_service_execution_and_local_fallback(db_session):
     assert outcome.response_time_ms >= 0
 
 
-def test_dify_api_endpoints_via_client(test_client):
-    """Test HTTP endpoints for downloading Dify OpenAPI schema, DSL, and status."""
-    # 1. OpenAPI schema
-    res_schema = test_client.get("/api/v1/cs/dify/tools/openapi.json")
-    assert res_schema.status_code == 200
-    schema_data = res_schema.json()
-    assert schema_data["openapi"].startswith("3.0.")
-    assert "/courses/recommend" in schema_data["paths"]
-
-    # 2. Workflow DSL
-    res_dsl = test_client.get("/api/v1/cs/dify/dsl")
-    assert res_dsl.status_code == 200
-    dsl_json = res_dsl.json()
-    assert dsl_json["code"] == 200
-    assert "cs-agent-main" in dsl_json["data"]["dsl"]
-
-    # 3. Dify Status
+def test_dify_status_endpoint_via_client(test_client):
+    """Test HTTP endpoint for checking Dify integration status."""
     res_status = test_client.get("/api/v1/cs/dify/status")
     assert res_status.status_code == 200
     status_json = res_status.json()
