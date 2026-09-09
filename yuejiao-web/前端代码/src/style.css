@@ -3,6 +3,7 @@ body,
 #app {
   height: 100%;
   margin: 0;
+  overflow: hidden;
 }
 
 :root {
@@ -25,6 +26,13 @@ body {
 
 .layout {
   height: 100%;
+  overflow: hidden;
+}
+
+.content-pane {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .aside {
@@ -130,7 +138,8 @@ body {
   padding: 0 12px;
   background: #fff;
   border-bottom: 1px solid #e4e7ed;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .tags .el-tag {
@@ -140,6 +149,8 @@ body {
 .main {
   padding: 16px 20px 32px;
   background: #f5f7fa;
+  min-height: 0;
+  overflow: auto;
 }
 
 .empty-module {

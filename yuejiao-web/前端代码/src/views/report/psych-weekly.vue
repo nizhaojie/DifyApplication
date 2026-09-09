@@ -8,6 +8,7 @@ import {
   type ReportRecord,
 } from '@/api/report'
 import CountChart from './CountChart.vue'
+import NameTable from './NameTable.vue'
 import { indexReportCharts } from './charts'
 import { periodRangeLabel, resolveWeekPeriod, shanghaiDate } from './period'
 
@@ -32,6 +33,33 @@ const periodLabel = computed(() => periodRangeLabel(resolvedPeriod.value))
 const numbers = computed(() => current.value?.content?.numbers as Record<string, any> | undefined)
 const insight = computed(() => current.value?.content?.insight as Record<string, string> | undefined)
 const charts = computed(() => indexReportCharts(KIND, numbers.value))
+const weekRiskRows = computed(() =>
+  (numbers.value?.week_risk_students ?? []).map(
+    (item: { student_name: string; risk_level: string; emotion_tag?: string }) => ({
+      student_name: item.student_name,
+      risk_level: riskLabel(item.risk_level),
+      emotion_tag: item.emotion_tag || '无标签',
+    }),
+  ),
+)
+const watchlistRows = computed(() =>
+  (numbers.value?.watchlist_students ?? []).map(
+    (item: { student_name: string; risk_level: string; emotion_tag?: string }) => ({
+      student_name: item.student_name,
+      risk_level: riskLabel(item.risk_level),
+      emotion_tag: item.emotion_tag || '无标签',
+    }),
+  ),
+)
+const approachingRows = computed(() =>
+  (numbers.value?.approaching_nodes ?? []).map(
+    (item: { student_name: string; title: string; deadline: string }) => ({
+      student_name: item.student_name,
+      title: item.title,
+      deadline: item.deadline,
+    }),
+  ),
+)
 
 function riskLabel(level: string) {
   return RISK_LABEL[level] || level
@@ -134,33 +162,44 @@ onMounted(async () => {
           <section class="chapter">
             <h3>本周风险学生</h3>
             <CountChart v-if="charts.weekRiskVsWatch" :chart="charts.weekRiskVsWatch" />
-            <ul v-if="numbers?.week_risk_students?.length" class="plain">
-              <li v-for="(item, index) in numbers.week_risk_students" :key="index">
-                {{ item.student_name }} · {{ riskLabel(item.risk_level) }} · {{ item.emotion_tag || '无标签' }}
-              </li>
-            </ul>
+            <NameTable
+              v-if="weekRiskRows.length"
+              :columns="[
+                { key: 'student_name', label: '姓名' },
+                { key: 'risk_level', label: '风险等级' },
+                { key: 'emotion_tag', label: '情绪标签' },
+              ]"
+              :rows="weekRiskRows"
+            />
             <p v-else>本周没有未解除的风险学生。</p>
             <p v-if="insight?.week_risk_narrative" class="narrative">{{ insight.week_risk_narrative }}</p>
           </section>
 
           <section class="chapter">
             <h3>持续关注</h3>
-            <ul v-if="numbers?.watchlist_students?.length" class="plain">
-              <li v-for="(item, index) in numbers.watchlist_students" :key="index">
-                {{ item.student_name }} · {{ riskLabel(item.risk_level) }} · {{ item.emotion_tag || '无标签' }}
-              </li>
-            </ul>
+            <NameTable
+              v-if="watchlistRows.length"
+              :columns="[
+                { key: 'student_name', label: '姓名' },
+                { key: 'risk_level', label: '风险等级' },
+                { key: 'emotion_tag', label: '情绪标签' },
+              ]"
+              :rows="watchlistRows"
+            />
             <p v-else>没有需要持续关注的学生。</p>
             <p v-if="insight?.watchlist_narrative" class="narrative">{{ insight.watchlist_narrative }}</p>
           </section>
 
-          <section v-if="numbers?.approaching_nodes?.length" class="chapter">
+          <section v-if="approachingRows.length" class="chapter">
             <h3>节点临近</h3>
-            <ul class="plain">
-              <li v-for="(item, index) in numbers.approaching_nodes" :key="index">
-                {{ item.student_name }} · {{ item.title }} · {{ item.deadline }}
-              </li>
-            </ul>
+            <NameTable
+              :columns="[
+                { key: 'student_name', label: '姓名' },
+                { key: 'title', label: '节点' },
+                { key: 'deadline', label: '截止日期' },
+              ]"
+              :rows="approachingRows"
+            />
             <p v-if="insight?.approaching_node_narrative" class="narrative">{{ insight.approaching_node_narrative }}</p>
           </section>
 
@@ -329,18 +368,6 @@ onMounted(async () => {
 
 .narrative {
   color: #606266;
-  font-size: 13px;
-}
-
-.plain {
-  margin: 0 0 8px;
-  padding: 0;
-  list-style: none;
-}
-
-.plain li {
-  padding: 6px 0;
-  border-bottom: 1px dashed #ebeef5;
   font-size: 13px;
 }
 

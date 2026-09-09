@@ -9,6 +9,7 @@ import {
   type ReportRecord,
 } from '@/api/report'
 import CountChart from './CountChart.vue'
+import NameTable from './NameTable.vue'
 import { indexReportCharts } from './charts'
 import {
   periodRangeLabel,
@@ -41,6 +42,11 @@ const submittedNames = computed(() => {
   const rows = coverage.value?.submitted as { name: string }[] | undefined
   if (!rows?.length) return []
   return [...new Set(rows.map((row) => row.name))]
+})
+const missingRows = computed(() => {
+  const rows = coverage.value?.missing as { name: string }[] | undefined
+  if (!rows?.length) return []
+  return rows.map((row) => ({ name: row.name }))
 })
 const charts = computed(() => indexReportCharts(kind.value, current.value?.content?.numbers))
 
@@ -153,7 +159,12 @@ onMounted(async () => {
           <section class="chapter">
             <h3>覆盖率</h3>
             <CountChart v-if="charts.coverage" :chart="charts.coverage" />
-            <p v-if="coverage?.missing?.length">未提交：{{ coverage.missing.map((item: { name: string }) => item.name).join('、') }}</p>
+            <p v-if="missingRows.length">未提交</p>
+            <NameTable
+              v-if="missingRows.length"
+              :columns="[{ key: 'name', label: '姓名' }]"
+              :rows="missingRows"
+            />
             <p v-else>没有未提交人员。</p>
             <p v-if="insight?.coverage_narrative" class="narrative">{{ insight.coverage_narrative }}</p>
           </section>
@@ -344,18 +355,6 @@ onMounted(async () => {
 
 .narrative {
   color: #606266;
-  font-size: 13px;
-}
-
-.plain {
-  margin: 0 0 8px;
-  padding: 0;
-  list-style: none;
-}
-
-.plain li {
-  padding: 6px 0;
-  border-bottom: 1px dashed #ebeef5;
   font-size: 13px;
 }
 

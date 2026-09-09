@@ -8,6 +8,7 @@ import {
   type ReportRecord,
 } from '@/api/report'
 import CountChart from './CountChart.vue'
+import NameTable from './NameTable.vue'
 import { indexReportCharts } from './charts'
 import { periodRangeLabel, resolveWeekPeriod, shanghaiDate } from './period'
 
@@ -26,6 +27,24 @@ const periodLabel = computed(() => periodRangeLabel(resolvedPeriod.value))
 const numbers = computed(() => current.value?.content?.numbers as Record<string, any> | undefined)
 const insight = computed(() => current.value?.content?.insight as Record<string, string> | undefined)
 const charts = computed(() => indexReportCharts(KIND, numbers.value))
+const handlingRows = computed(() =>
+  (numbers.value?.handling?.items ?? []).map(
+    (item: { student_name: string; status: string; elapsed_days: number }) => ({
+      student_name: item.student_name,
+      status: item.status,
+      elapsed_days: item.elapsed_days,
+    }),
+  ),
+)
+const openComplaintRows = computed(() =>
+  (numbers.value?.open_complaints ?? []).map(
+    (item: { student_name: string; category: string; elapsed_days: number }) => ({
+      student_name: item.student_name,
+      category: item.category,
+      elapsed_days: item.elapsed_days,
+    }),
+  ),
+)
 
 async function loadCurrent() {
   loading.value = true
@@ -132,21 +151,29 @@ onMounted(async () => {
           <section class="chapter">
             <h3>处理状态与时效</h3>
             <CountChart v-if="charts.handlingStatus" :chart="charts.handlingStatus" />
-            <ul v-if="numbers?.handling?.items?.length" class="plain">
-              <li v-for="(item, index) in numbers.handling.items" :key="index">
-                {{ item.student_name }} · {{ item.status }} · 已耗时 {{ item.elapsed_days }} 天
-              </li>
-            </ul>
+            <NameTable
+              v-if="handlingRows.length"
+              :columns="[
+                { key: 'student_name', label: '学生' },
+                { key: 'status', label: '处理状态' },
+                { key: 'elapsed_days', label: '已耗时（天）' },
+              ]"
+              :rows="handlingRows"
+            />
             <p v-if="insight?.handling_narrative" class="narrative">{{ insight.handling_narrative }}</p>
           </section>
 
           <section class="chapter">
             <h3>未决预警</h3>
-            <ul v-if="numbers?.open_complaints?.length" class="plain">
-              <li v-for="(item, index) in numbers.open_complaints" :key="index">
-                {{ item.student_name }} · {{ item.category }} · 已耗时 {{ item.elapsed_days }} 天
-              </li>
-            </ul>
+            <NameTable
+              v-if="openComplaintRows.length"
+              :columns="[
+                { key: 'student_name', label: '学生' },
+                { key: 'category', label: '投诉分类' },
+                { key: 'elapsed_days', label: '已耗时（天）' },
+              ]"
+              :rows="openComplaintRows"
+            />
             <p v-else>没有超过 3 天的未决投诉。</p>
             <p v-if="insight?.open_alert_narrative" class="narrative">{{ insight.open_alert_narrative }}</p>
           </section>
@@ -326,18 +353,6 @@ onMounted(async () => {
 
 .narrative {
   color: #606266;
-  font-size: 13px;
-}
-
-.plain {
-  margin: 0 0 8px;
-  padding: 0;
-  list-style: none;
-}
-
-.plain li {
-  padding: 6px 0;
-  border-bottom: 1px dashed #ebeef5;
   font-size: 13px;
 }
 
