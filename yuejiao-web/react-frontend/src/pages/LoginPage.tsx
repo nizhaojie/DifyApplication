@@ -58,7 +58,7 @@ export function LoginPage() {
             进入控制台
           </Button>
         </form>
-        <p className="hint">演示账号 emp01 / 123456(演示顾问)。后端地址:127.0.0.1:8002。</p>
+        <p className="hint">演示账号 emp01 / 123456（演示顾问）。后端地址：127.0.0.1:8002。</p>
       </section>
     </div>
   )

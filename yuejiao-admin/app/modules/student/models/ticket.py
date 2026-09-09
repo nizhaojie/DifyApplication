@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, DateTime, Integer, String, Text, SmallInteger, func
+from sqlalchemy import BigInteger, DateTime, Integer, String, Text, SmallInteger, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -19,6 +19,6 @@ class StudentFeedbackTicket(Base):
     assignee_id: Mapped[int | None] = mapped_column(BigInteger)
     solution: Mapped[str | None] = mapped_column(Text)
     satisfaction: Mapped[int | None] = mapped_column(SmallInteger)
-    is_notified: Mapped[int] = mapped_column(Integer, default=0)
+    is_notified: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
     create_time: Mapped[object] = mapped_column(DateTime, server_default=func.now())
     update_time: Mapped[object] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())

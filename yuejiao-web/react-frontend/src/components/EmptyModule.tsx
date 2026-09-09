@@ -6,7 +6,7 @@ export function EmptyModule({ title, hint }: { title: string; hint: string }) {
     <section className="empty-module">
       <h1>{title}</h1>
       <p className="hint">{hint}</p>
-      <Empty description="空白模版,还没有业务内容" />
+      <Empty description="空白模版，还没有业务内容" />
     </section>
   )
 }

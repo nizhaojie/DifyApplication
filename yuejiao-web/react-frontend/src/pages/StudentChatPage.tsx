@@ -39,24 +39,24 @@ const MODE_CONFIG: Record<AssistantMode, {
     subtitle: '为学生提供支持性回应、情绪陪伴和高风险分流引导。',
     placeholder: '写下你现在的感受',
     emptyTitle: '开启新的关怀对话',
-    opening: '你好,我是学生心理关怀助手。你可以放心说说最近的感受或困扰。',
-    quickPrompts: ['最近压力很大,怎么办?', '我总是睡不好。', '我担心申请材料来不及。'],
+    opening: '你好，我是学生心理关怀助手。你可以放心说说最近的感受或困扰。',
+    quickPrompts: ['最近压力很大，怎么办？', '我总是睡不好。', '我担心申请材料来不及。'],
   },
   life: {
     title: '海外生活支持助手',
     subtitle: '为留学生提供海外医疗、交通、住宿、安全和日常生活支持。',
-    placeholder: '例如:在英国感冒了应该怎么就医?',
+    placeholder: '例如：在英国感冒了应该怎么就医？',
     emptyTitle: '开启新的生活咨询',
-    opening: '你好,我可以协助解答医疗、交通、住宿、安全和日常生活问题。请告诉我所在国家或城市。',
-    quickPrompts: ['在英国感冒了应该怎么就医?', '曼彻斯特如何乘坐公交?', '遇到紧急情况该怎么办?'],
+    opening: '你好，我可以协助解答医疗、交通、住宿、安全和日常生活问题。请告诉我所在国家或城市。',
+    quickPrompts: ['在英国感冒了应该怎么就医？', '曼彻斯特如何乘坐公交？', '遇到紧急情况该怎么办？'],
   },
   program: {
     title: '学业提升咨询助手',
-    subtitle: '基于增值服务知识库,提供申请规划、科研和语言提升咨询。',
-    placeholder: '例如:我想咨询英国硕博申请规划',
+    subtitle: '基于增值服务知识库，提供申请规划、科研和语言提升咨询。',
+    placeholder: '例如：我想咨询英国硕博申请规划',
     emptyTitle: '开启新的项目咨询',
-    opening: '你好,我可以协助梳理申请规划、科研背景、学术英语和学历提升方向。',
-    quickPrompts: ['英国硕博申请要做哪些准备?', '我想提升科研背景。', '学术英语应该如何规划?'],
+    opening: '你好，我可以协助梳理申请规划、科研背景、学术英语和学历提升方向。',
+    quickPrompts: ['英国硕博申请要做哪些准备？', '我想提升科研背景。', '学术英语应该如何规划？'],
   },
 }
 
@@ -198,7 +198,7 @@ export function StudentChatPage({ mode }: { mode: AssistantMode }) {
       const fallback: ChatMessage = {
         id: Date.now() + 1,
         role: 'assistant',
-        content: '当前无法连接智能助手,请稍后重试或联系服务老师。',
+        content: '当前无法连接智能助手，请稍后重试或联系服务老师。',
         time: currentTime(),
       }
       patchSession(session.id, (item) => ({ ...item, messages: [...item.messages, fallback] }))

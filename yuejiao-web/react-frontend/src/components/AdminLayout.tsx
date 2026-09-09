@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Avatar, Badge, Button, Input, Menu } from 'antd'
 import type { MenuProps } from 'antd'
 import { create } from 'zustand'
@@ -85,6 +85,24 @@ const MENU_ITEMS: MenuProps['items'] = [
 // 折叠状态:Vue 中为布局内 ref,这里用模块级 store 等价承载
 const useCollapsedStore = create<{ collapsed: boolean }>(() => ({ collapsed: false }))
 
+// EP 的 el-menu 会自动展开选中项所在子菜单;antd 无此行为,按路由推导父级补齐
+const SUBMENU_OF: Record<string, string> = {
+  '/enterprise': 'enterprise',
+  '/enterprise/company': 'enterprise',
+  '/enterprise/guide': 'enterprise',
+  '/enterprise/board': 'enterprise',
+  '/enterprise/memory': 'enterprise',
+  '/student': 'student',
+  '/student/psych': 'student',
+  '/student/life': 'student',
+  '/student/program': 'student',
+  '/report': 'report',
+  '/report/customer-ops': 'report',
+  '/report/daily-summary': 'report',
+  '/report/psych-weekly': 'report',
+  '/report/complaint-weekly': 'report',
+}
+
 export function AdminLayout() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -95,6 +113,13 @@ export function AdminLayout() {
   const visited = useTagsStore((state) => state.visited)
   const displayName = useAuthStore(selectDisplayName)
   const logout = useAuthStore((state) => state.logout)
+
+  const [openKeys, setOpenKeys] = useState<string[]>(['enterprise'])
+  const activeSubmenu = useMemo(() => SUBMENU_OF[pathname], [pathname])
+  useEffect(() => {
+    if (!activeSubmenu) return
+    setOpenKeys((keys) => (keys.includes(activeSubmenu) ? keys : [...keys, activeSubmenu]))
+  }, [activeSubmenu])
 
   // 对齐 Vue watch(route.path, {immediate:true})
   useEffect(() => {
@@ -131,7 +156,8 @@ export function AdminLayout() {
           mode="inline"
           theme="dark"
           inlineCollapsed={collapsed}
-          defaultOpenKeys={['enterprise']}
+          openKeys={collapsed ? [] : openKeys}
+          onOpenChange={(keys) => setOpenKeys(keys as string[])}
           selectedKeys={[pathname]}
           items={MENU_ITEMS}
           onClick={onMenuClick}

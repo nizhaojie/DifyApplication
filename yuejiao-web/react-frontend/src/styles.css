@@ -12,6 +12,12 @@ body,
   overflow: hidden;
 }
 
+/* main.tsx 的 <AntApp> 在 #root 内包了一层 .ant-app;不补高度会打断
+   .login-page 等 min-height:100% 的父级高度链(Vue 的 #app 无此中间层) */
+.ant-app {
+  height: 100%;
+}
+
 :root {
   --el-color-primary: #c41e1e;
   --el-color-primary-light-3: #d95454;
@@ -190,19 +196,6 @@ body {
   gap: 12px;
   align-items: center;
   margin-bottom: 20px;
-}
-
-.login-card .brand .mark {
-  width: 28px;
-  height: 28px;
-  flex: 0 0 28px;
-  background: var(--el-color-primary);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  font-size: 14px;
-  border-radius: 4px;
 }
 
 .login-card h1 {
@@ -716,4 +709,35 @@ body {
   background: #c41e1e;
   color: #fff;
   flex: 0 0 28px;
+}
+
+/* 设置页(超集,Vue 视觉语言) */
+.settings-account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.settings-dl {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.settings-dl dt {
+  color: #909399;
+}
+
+.settings-dl dd {
+  margin: 0;
+  color: #303133;
 }

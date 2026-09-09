@@ -1,17 +1,121 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowRight, Building2, Mail, MapPin, Phone, RefreshCw } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { fetchCompany, fetchOrgs } from '@/api/enterprise'
+import { Button, Spin, Tag, Tree } from 'antd'
+import { fetchCompany, fetchOrgs, type OrgItem } from '@/api/enterprise'
 
-type Org = { id: number; org_name: string; parent_id: number | null; children?: Org[] }
-function tree(items: Org[]) { const map = new Map(items.map((item) => [item.id, { ...item, children: [] as Org[] }])); const roots: Org[] = []; items.forEach((item) => { const node = map.get(item.id); if (!node) return; if (item.parent_id && map.has(item.parent_id)) map.get(item.parent_id)!.children!.push(node); else roots.push(node) }); return roots }
-function OrgList({ nodes, level = 0 }: { nodes: Org[]; level?: number }) { return <div>{nodes.map((node) => <div key={node.id} className="org-node" style={{ paddingLeft: level * 20 }}><span className="org-dot" />{node.org_name}{node.children?.length ? <OrgList nodes={node.children} level={level + 1} /> : null}</div>)}</div> }
+// 等价迁移自 Vue 版 views/enterprise/company.vue(公司简介 + 组织架构树)。
+
+type OrgNode = { key: number; title: string; children: OrgNode[] }
+
+// EP el-tag effect="plain"(默认 type=info / danger)色值
+const TAG_PLAIN_INFO = { color: '#909399', background: '#fff', borderColor: '#d3d4d6' }
+const TAG_PLAIN_DANGER = { color: '#f56c6c', background: '#fff', borderColor: '#fab6b6' }
+
+/** Vue 的 computed orgTree:扁平建树(Map + roots,父不在列表中的当根) */
+function buildOrgTree(items: OrgItem[]): OrgNode[] {
+  const map = new Map<number, OrgNode>()
+  for (const item of items) {
+    map.set(item.id, { key: item.id, title: item.org_name, children: [] })
+  }
+  const roots: OrgNode[] = []
+  for (const item of items) {
+    const node = map.get(item.id)
+    if (!node) continue
+    const parent = item.parent_id ? map.get(item.parent_id) : undefined
+    if (parent) parent.children.push(node)
+    else roots.push(node)
+  }
+  return roots
+}
 
 export function EnterpriseCompanyPage() {
-  const navigate = useNavigate(); const [card, setCard] = useState<Record<string, unknown>>({}); const [orgs, setOrgs] = useState<Org[]>([]); const [loading, setLoading] = useState(true)
-  async function load() { setLoading(true); try { const [company, orgList] = await Promise.all([fetchCompany(), fetchOrgs()]); setCard(company); setOrgs(orgList as Org[]) } finally { setLoading(false) } }
-  useEffect(() => { void load() }, [])
-  const business = (card.business as string[]) || []; const departments = (card.departments as string[]) || []; const orgTree = useMemo(() => tree(orgs), [orgs])
-  return <section className="content-page"><header className="page-heading"><div><div className="eyebrow"><Building2 size={14} /> COMPANY PROFILE</div><h1>公司简介</h1><p>{String(card.full_name || '粤教服务')}（{String(card.short_name || '企业信息')}）</p></div><button className="ghost-button" onClick={() => navigate('/enterprise')}><ArrowRight size={16} />去对话里问</button></header><section className="company-hero panel-surface"><div className="company-seal"><Building2 size={28} /></div><div><span className="eyebrow">ABOUT US</span><h2>{String(card.intro || '广东省教育服务有限公司')}</h2><p>{String(card.transfer || '')}</p></div></section><div className="info-grid-react"><Info icon={<span>◎</span>} label="使命" value={String(card.mission || '—')} /><Info icon={<span>✦</span>} label="价值观" value={String(card.values || '—')} /><Info icon={<Phone size={15} />} label="电话" value={String(card.phone || '—')} extra={String(card.email || '')} /><Info icon={<MapPin size={15} />} label="地址" value={String(card.address || '—')} extra={String(card.site || '')} /></div><div className="company-columns"><section className="panel-surface content-card"><div className="section-title"><h2>主营业务</h2><span>{business.length} 项</span></div><div className="tag-cloud">{business.map((item) => <span key={item}>{item}</span>)}{!business.length && <span>暂无业务信息</span>}</div></section><section className="panel-surface content-card"><div className="section-title"><h2>组织架构</h2><span>{orgs.length} 个组织</span></div>{orgTree.length ? <OrgList nodes={orgTree} /> : <div className="tag-cloud">{departments.map((item) => <span key={item}>{item}</span>)}</div>}</section></div>{loading && <div className="loading-overlay"><RefreshCw size={18} className="spin" />正在加载</div>}</section>
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState(false)
+  const [card, setCard] = useState<Record<string, unknown>>({})
+  const [orgs, setOrgs] = useState<OrgItem[]>([])
+
+  const orgTree = useMemo(() => buildOrgTree(orgs), [orgs])
+
+  useEffect(() => {
+    void (async () => {
+      setLoading(true)
+      try {
+        const [company, orgList] = await Promise.all([fetchCompany(), fetchOrgs()])
+        setCard(company)
+        setOrgs(orgList)
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [])
+
+  const business = (card.business as string[]) || []
+  const departments = (card.departments as string[]) || []
+
+  return (
+    <Spin spinning={loading}>
+      <section className="ent-page">
+        <header className="ent-head">
+          <div>
+            <h1>公司简介</h1>
+            <p className="hint">
+              {String(card.full_name || '')}（{String(card.short_name || '')}）
+            </p>
+          </div>
+          <Button type="primary" onClick={() => navigate('/enterprise')}>
+            去对话里问
+          </Button>
+        </header>
+
+        <article className="intro-hero">
+          <p className="intro-body">{String(card.intro || '')}</p>
+          <p className="muted">{String(card.transfer || '')}</p>
+        </article>
+
+        <div className="info-grid">
+          <article className="info-card">
+            <small>使命</small>
+            <strong>{String(card.mission || '')}</strong>
+          </article>
+          <article className="info-card">
+            <small>价值观</small>
+            <strong>{String(card.values || '')}</strong>
+          </article>
+          <article className="info-card">
+            <small>电话</small>
+            <strong>{String(card.phone || '')}</strong>
+            <p className="muted">{String(card.email || '')}</p>
+          </article>
+          <article className="info-card">
+            <small>地址</small>
+            <strong>{String(card.address || '')}</strong>
+            <p className="muted">{String(card.site || '')}</p>
+          </article>
+        </div>
+
+        <div className="chart-row">
+          <div className="chart-card">
+            <h3>主营业务</h3>
+            {business.map((item) => (
+              <Tag key={item} className="chip-gap" style={TAG_PLAIN_INFO}>
+                {item}
+              </Tag>
+            ))}
+          </div>
+          <div className="chart-card">
+            <h3>组织架构</h3>
+            {orgTree.length ? (
+              <Tree blockNode selectable={false} defaultExpandAll treeData={orgTree} />
+            ) : (
+              departments.map((item) => (
+                <Tag key={item} className="chip-gap" style={TAG_PLAIN_DANGER}>
+                  {item}
+                </Tag>
+              ))
+            )}
+          </div>
+        </div>
+      </section>
+    </Spin>
+  )
 }
-function Info({ icon, label, value, extra }: { icon: React.ReactNode; label: string; value: string; extra?: string }) { return <article className="info-card-react"><div className="info-icon">{icon}</div><div><small>{label}</small><strong>{value}</strong>{extra && <span><Mail size={13} />{extra}</span>}</div></article> }

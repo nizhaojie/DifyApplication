@@ -21,13 +21,13 @@ export interface AppRouteConfig {
 /** AdminLayout 下的 18 条扁平 children(顺序与 Vue 一致) */
 export const LAYOUT_ROUTE_META: Record<string, RouteMeta> = {
   '/dashboard': { title: '工作台', hint: '空白工作台。接 FastAPI 后再放待办和数字。' },
-  '/profile': { title: '客户研判', hint: '文本 / PDF / Excel 客户画像研判,接入 Dify 工作流。' },
+  '/profile': { title: '客户研判', hint: '文本 / PDF / Excel 客户画像研判，接入 Dify 工作流。' },
   '/cs': { title: '客服 Agent', hint: '空白模版。以后接咨询问答、荐课、活动报名。' },
   '/enterprise': { title: '企业助手', hint: '口述录入、查询、日报、请假审批。' },
   '/enterprise/company': { title: '公司简介', hint: '粤教服务企业信息。' },
   '/enterprise/guide': { title: '新人指南', hint: '入职办公与 IT 指引。' },
   '/enterprise/board': { title: '客户看板', hint: '线索漏斗与意向国家。' },
-  '/enterprise/memory': { title: '对话记忆', hint: '企业助手会话历史,刷新仍在。' },
+  '/enterprise/memory': { title: '对话记忆', hint: '企业助手会话历史，刷新仍在。' },
   '/student': { title: '学生助手', hint: '空白模版。以后接请假、心理、投诉、考务、进度。' },
   '/student/psych': { title: '心理关怀', assistantMode: 'psych' },
   '/student/life': { title: '海外生活支持', assistantMode: 'life' },

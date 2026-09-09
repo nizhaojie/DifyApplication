@@ -1,89 +1,475 @@
-import { useEffect, useState } from 'react'
-import { AlertCircle, CheckCircle2, FileUp, LoaderCircle, Search, UploadCloud, X } from 'lucide-react'
-import { assessByFile, assessByText, fetchProfileDetail, fetchProfiles, type AssessResult, type ProfileAssessment, type ProfileRecord } from '@/api/profile'
+import { useCallback, useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
+import {
+  Button,
+  Card,
+  Divider,
+  Drawer,
+  Input,
+  Pagination,
+  Progress,
+  Select,
+  Spin,
+  Table,
+  Tabs,
+  Tag,
+  Upload,
+} from 'antd'
+import type { TableColumnsType } from 'antd'
+import type { UploadFile } from 'antd'
+import { UploadFilled } from '@/components/elementIcons'
+import { toast } from '@/components/feedback'
+import {
+  assessByFile,
+  assessByText,
+  fetchProfileDetail,
+  fetchProfiles,
+  type AssessResult,
+  type ProfileAssessment,
+  type ProfileRecord,
+} from '@/api/profile'
+import './ProfilePage.css'
 
-const resultLabels: Record<string, { label: string; className: string }> = {
-  matched: { label: '匹配', className: 'status-green' },
-  partial: { label: '部分匹配', className: 'status-amber' },
-  not_matched: { label: '不匹配', className: 'status-gray' },
+// 等价迁移自 Vue 版 前端代码/src/views/profile/index.vue(405 行)。
+
+const PAGE_SIZE = 10
+
+// ---------- 研判工作台:结果元信息(与 Vue RESULT_META 一致) ----------
+const RESULT_META: Record<string, { label: string; type: 'success' | 'warning' | 'danger' }> = {
+  matched: { label: '匹配', type: 'success' },
+  partial: { label: '部分匹配', type: 'warning' },
+  not_matched: { label: '不匹配', type: 'danger' },
 }
 
-function resultBadge(value?: string | null) {
-  const meta = resultLabels[value || ''] || { label: value || '未判定', className: 'status-gray' }
-  return <span className={`status-badge ${meta.className}`}><i />{meta.label}</span>
+function resultMeta(v?: string | null) {
+  return (v && RESULT_META[v]) || { label: v || '-', type: 'info' as const }
 }
 
-function score(value?: number | null) { return value == null ? '—' : `${Number(value).toFixed(1)} 分` }
-
-function AssessmentRows({ items }: { items: ProfileAssessment[] }) {
-  return <div className="assessment-list">{items.map((item) => <article className="assessment-row" key={`${item.product_line}-${item.rule_name}`}><div className="assessment-row-head"><strong>{item.product_line}</strong>{resultBadge(item.match_result)}<span>{score(item.match_score)}</span></div><small>{item.rule_name || '当前规则'}</small><div className="assessment-tags">{item.matched_labels?.map((label) => <span key={label}>{label}</span>)}{!item.matched_labels?.length && <em>无命中标签</em>}</div>{item.candidate_programs?.map((candidate, index) => <p key={`${candidate.category}-${index}`}><b>{candidate.category || '候选项目'}：</b>{candidate.programs?.join('、') || '暂无'}</p>)}</article>)}</div>
+// el-tag type(默认=info)的 Element Plus 默认配色(light-8 边框 / light-9 底色),内联对齐 EP 色值
+const EP_TAG_LIGHT: Record<'success' | 'warning' | 'danger' | 'info', CSSProperties> = {
+  success: { color: '#67c23a', background: '#f0f9eb', borderColor: '#e1f3d8' },
+  warning: { color: '#e6a23c', background: '#fdf6ec', borderColor: '#faecd8' },
+  danger: { color: '#f56c6c', background: '#fef0f0', borderColor: '#fde2e2' },
+  info: { color: '#909399', background: '#f4f4f5', borderColor: '#e9e9eb' },
 }
+
+// el-tag type="success" effect="plain"(白底 + light-8 边框)
+const EP_TAG_PLAIN_SUCCESS: CSSProperties = { color: '#67c23a', background: '#ffffff', borderColor: '#e1f3d8' }
+
+/** el-tag 的配色等价物(匹配/部分匹配/不匹配) */
+function ResultTag({ value, small }: { value?: string | null; small?: boolean }) {
+  const meta = resultMeta(value)
+  return (
+    <Tag style={EP_TAG_LIGHT[meta.type]} className={small ? 'ep-tag-sm' : undefined}>
+      {meta.label}
+    </Tag>
+  )
+}
+
+function fmtScore(v?: number | null): string {
+  return v == null ? '-' : `${Number(v).toFixed(1)} 分`
+}
+
+/** 命中规则项列(Vue: 命中标签,没有则显示「无」) */
+function MatchedLabelsCell({ labels }: { labels: string[] }) {
+  return (
+    <>
+      {labels?.map((l) => (
+        <Tag key={l} style={EP_TAG_LIGHT.info} className="ep-tag-sm hit-tag">
+          {l}
+        </Tag>
+      ))}
+      {!labels?.length && <span className="muted">无</span>}
+    </>
+  )
+}
+
+// ---------- 研判结果表格(Vue: 产品线/规则/结果/得分/命中规则项/候选专业项目) ----------
+const assessmentColumns: TableColumnsType<ProfileAssessment> = [
+  { title: '产品线', dataIndex: 'product_line', minWidth: 150 },
+  { title: '规则', dataIndex: 'rule_name', minWidth: 150, ellipsis: true },
+  { title: '结果', dataIndex: 'match_result', width: 100, render: (_, row) => <ResultTag value={row.match_result} small /> },
+  { title: '得分', dataIndex: 'match_score', width: 90, render: (_, row) => fmtScore(row.match_score) },
+  {
+    title: '命中规则项',
+    key: 'matched_labels',
+    minWidth: 180,
+    render: (_, row) => <MatchedLabelsCell labels={row.matched_labels} />,
+  },
+  {
+    title: '候选专业/项目',
+    key: 'candidate_programs',
+    minWidth: 200,
+    render: (_, row) => (
+      <>
+        {row.candidate_programs?.map((c, index) => (
+          <div className="cand-block" key={`${c.category}-${index}`}>
+            <span className="cand-cat">{c.category}：</span>
+            {(c.programs ?? []).join('、')}
+          </div>
+        ))}
+        {!row.candidate_programs?.length && <span className="muted">无</span>}
+      </>
+    ),
+  },
+]
+
+// ---------- 详情抽屉里的重算表格(Vue: 产品线/结果/得分/命中规则项) ----------
+const detailColumns: TableColumnsType<ProfileAssessment> = [
+  { title: '产品线', dataIndex: 'product_line', minWidth: 150 },
+  { title: '结果', dataIndex: 'match_result', width: 100, render: (_, row) => <ResultTag value={row.match_result} small /> },
+  { title: '得分', dataIndex: 'match_score', width: 90, render: (_, row) => fmtScore(row.match_score) },
+  {
+    title: '命中规则项',
+    key: 'matched_labels',
+    minWidth: 200,
+    render: (_, row) => <MatchedLabelsCell labels={row.matched_labels} />,
+  },
+]
 
 export function ProfilePage() {
-  const [mode, setMode] = useState<'text' | 'file'>('text')
-  const [text, setText] = useState('')
-  const [file, setFile] = useState<File | null>(null)
+  // ---------- 研判工作台 ----------
+  const [activeTab, setActiveTab] = useState<'text' | 'file'>('text')
+  const [inputText, setInputText] = useState('')
+  const [fileList, setFileList] = useState<UploadFile[]>([])
+  const [pickedFile, setPickedFile] = useState<File | null>(null)
+  const [assessing, setAssessing] = useState(false)
   const [result, setResult] = useState<AssessResult | null>(null)
+
+  // ---------- 研判记录 ----------
   const [records, setRecords] = useState<ProfileRecord[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [filter, setFilter] = useState('')
-  const [assessing, setAssessing] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [matchResult, setMatchResult] = useState('')
+  const [loadingRecords, setLoadingRecords] = useState(false)
+
+  const loadRecords = useCallback(async () => {
+    setLoadingRecords(true)
+    try {
+      const resp = await fetchProfiles({
+        limit: PAGE_SIZE,
+        offset: (page - 1) * PAGE_SIZE,
+        match_result: matchResult || undefined,
+      })
+      setRecords(resp.items)
+      // Vue: resp.total ?? records.value.length(react api 层把 null 归一成 0,用 || 复现同样回退)
+      setTotal(resp.total || resp.items.length)
+    } catch {
+      // http 拦截器已弹错误提示
+    } finally {
+      setLoadingRecords(false)
+    }
+  }, [page, matchResult])
+
+  useEffect(() => {
+    void loadRecords()
+  }, [loadRecords])
+
+  // ---------- 详情抽屉 ----------
+  const [detailVisible, setDetailVisible] = useState(false)
   const [detail, setDetail] = useState<AssessResult | null>(null)
-  const pageSize = 8
+  const [detailLoading, setDetailLoading] = useState(false)
 
-  async function loadRecords() {
-    setLoading(true)
+  async function openDetail(row: ProfileRecord) {
+    setDetailVisible(true)
+    setDetailLoading(true)
+    setDetail(null)
     try {
-      const data = await fetchProfiles({ limit: pageSize, offset: (page - 1) * pageSize, match_result: filter || undefined })
-      setRecords(data.items)
-      setTotal(data.total)
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : '研判记录加载失败')
-    } finally { setLoading(false) }
+      setDetail(await fetchProfileDetail(row.id))
+    } catch {
+      // http 拦截器已弹错误提示
+    } finally {
+      setDetailLoading(false)
+    }
   }
 
-  useEffect(() => { void loadRecords() }, [page, filter])
+  function onFileChange(info: { file: UploadFile; fileList: UploadFile[] }) {
+    // 对齐 Vue `:limit="1"`:已有文件时忽略新的选择(antd maxCount=1 默认会替换)
+    if (pickedFile && info.file.uid !== fileList[0]?.uid) return
+    const entry = info.fileList.find((item) => item.uid === info.file.uid)
+    setFileList(info.fileList)
+    setPickedFile((entry?.originFileObj ?? (info.file as unknown)) as File | null)
+  }
 
-  async function submit() {
-    if (mode === 'text' && !text.trim()) { setError('请先粘贴客户信息文本'); return }
-    if (mode === 'file' && !file) { setError('请选择 PDF 简历或 Excel 文件'); return }
-    setAssessing(true); setError(''); setResult(null)
+  function onFileRemove() {
+    setFileList([])
+    setPickedFile(null)
+  }
+
+  async function submitAssess() {
+    if (activeTab === 'text' && !inputText.trim()) {
+      toast.warning('请粘贴客户信息文本')
+      return
+    }
+    if (activeTab === 'file' && !pickedFile) {
+      toast.warning('请选择 PDF 简历或 Excel 文件')
+      return
+    }
+    setAssessing(true)
+    setResult(null)
     try {
-      setResult(mode === 'text' ? await assessByText(text.trim()) : await assessByFile(file!))
-      await loadRecords()
-    } catch (cause) { setError(cause instanceof Error ? cause.message : '研判失败') }
-    finally { setAssessing(false) }
+      setResult(activeTab === 'text' ? await assessByText(inputText.trim()) : await assessByFile(pickedFile!))
+      toast.success('研判完成')
+      void loadRecords()
+    } catch {
+      // http 拦截器已弹错误提示
+    } finally {
+      setAssessing(false)
+    }
   }
 
-  async function openDetail(id: number) {
-    setDetail(null); setError('')
-    try { setDetail(await fetchProfileDetail(id)) }
-    catch (cause) { setError(cause instanceof Error ? cause.message : '研判详情加载失败') }
-  }
+  // ---------- 研判记录表格列 ----------
+  const recordColumns: TableColumnsType<ProfileRecord> = [
+    { title: 'ID', dataIndex: 'id', width: 60 },
+    { title: '客户', dataIndex: 'customer_name', width: 120, render: (_, row) => row.customer_name || '（未识别）' },
+    { title: '匹配结果', dataIndex: 'match_result', width: 100, render: (_, row) => <ResultTag value={row.match_result} small /> },
+    { title: '匹配产品线', dataIndex: 'matched_product', minWidth: 170 },
+    { title: '匹配度', dataIndex: 'match_score', width: 90, render: (_, row) => fmtScore(row.match_score) },
+    { title: '研判时间', dataIndex: 'create_time', minWidth: 160, ellipsis: true },
+    {
+      title: '操作',
+      key: 'action',
+      width: 80,
+      fixed: 'right',
+      render: (_, row) => (
+        <Button type="link" size="small" onClick={() => void openDetail(row)}>
+          详情
+        </Button>
+      ),
+    },
+  ]
 
-  const pages = Math.max(1, Math.ceil(total / pageSize))
-  return <section className="profile-page-react">
-    <header className="page-heading"><div><div className="eyebrow"><Search size={14} /> CUSTOMER ASSESSMENT</div><h1>客户研判</h1><p>输入客户背景，判断产品线匹配度，并沉淀可回看的研判记录。</p></div></header>
-    {error && <div className="alert-banner"><AlertCircle size={16} /><span>{error}</span><button onClick={() => setError('')} aria-label="关闭提示"><X size={15} /></button></div>}
-    <section className="panel-surface assessment-workbench">
-      <div className="panel-heading"><div className="heading-icon blue"><Search size={18} /></div><div><h2>研判工作台</h2><p>支持文本输入、PDF 简历和 Excel 客户表格</p></div></div>
-      <div className="assessment-tabs"><button className={mode === 'text' ? 'active' : ''} onClick={() => setMode('text')}>文本输入</button><button className={mode === 'file' ? 'active' : ''} onClick={() => setMode('file')}><FileUp size={14} />文件上传</button></div>
-      <div className="assessment-input-area">{mode === 'text' ? <textarea value={text} onChange={(event) => setText(event.target.value)} placeholder="例如：王某，22岁，大专毕业，英语四级，家庭年收入 30-50 万，想去新加坡读专升本……" maxLength={8000} rows={7} /> : <label className="file-drop"><UploadCloud size={28} /><strong>{file ? file.name : '选择 PDF 简历或 Excel 文件'}</strong><span>支持 .pdf、.xlsx、.xls</span><input type="file" accept=".pdf,.xlsx,.xls" onChange={(event) => setFile(event.target.files?.[0] || null)} /></label>}</div>
-      <div className="assessment-actions"><span>{mode === 'text' ? `${text.length} / 8000` : file ? '已选择 1 个文件' : '尚未选择文件'}</span><button className="primary-button" onClick={() => void submit()} disabled={assessing}>{assessing ? <><LoaderCircle size={15} className="spin" />研判中</> : <><Search size={15} />开始研判</>}</button></div>
-      {result && <AssessmentResult result={result} />}
-    </section>
-    <section className="panel-surface profile-records">
-      <div className="section-title"><div><div className="eyebrow">ASSESSMENT HISTORY</div><h2>研判记录</h2></div><select value={filter} onChange={(event) => { setPage(1); setFilter(event.target.value) }}><option value="">全部结果</option><option value="matched">匹配</option><option value="partial">部分匹配</option><option value="not_matched">不匹配</option></select></div>
-      <div className="table-scroll"><table className="data-table profile-table"><thead><tr><th>ID</th><th>客户</th><th>结果</th><th>产品线</th><th>匹配度</th><th>研判时间</th><th>操作</th></tr></thead><tbody>{records.map((record) => <tr key={record.id}><td>{record.id}</td><td><strong>{record.customer_name || '未识别姓名'}</strong></td><td>{resultBadge(record.match_result)}</td><td>{record.matched_product || '—'}</td><td>{score(record.match_score)}</td><td>{record.create_time?.replace('T', ' ').slice(0, 16) || '—'}</td><td><button className="text-button" onClick={() => void openDetail(record.id)}>查看详情</button></td></tr>)}{!records.length && <tr><td colSpan={7}><div className="empty-cell">{loading ? '正在加载研判记录…' : '还没有研判记录'}</div></td></tr>}</tbody></table></div>
-      <div className="pagination"><span>共 {total} 条</span><button className="small-button" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}>上一页</button><b>{page} / {pages}</b><button className="small-button" disabled={page >= pages} onClick={() => setPage((value) => value + 1)}>下一页</button></div>
-    </section>
-    {detail && <div className="drawer-backdrop" onClick={() => setDetail(null)}><aside className="detail-drawer profile-drawer" onClick={(event) => event.stopPropagation()}><div className="drawer-header"><div><span className="eyebrow">ASSESSMENT DETAIL</span><h2>{detail.customer_name || '研判详情'}</h2></div><button className="icon-button" onClick={() => setDetail(null)} aria-label="关闭"><X size={18} /></button></div><div className="detail-summary"><div><small>匹配结果</small>{resultBadge(detail.match_result)}</div><div><small>匹配产品线</small><strong>{detail.matched_product || '—'}</strong></div><div><small>匹配度</small><strong>{score(detail.match_score)}</strong></div></div>{detail.match_reason && <div className="drawer-section"><h3>研判依据</h3><p className="drawer-copy">{detail.match_reason}</p></div>}{detail.recommended_programs?.length ? <div className="drawer-section"><h3>推荐专业 / 项目</h3><div className="assessment-tags">{detail.recommended_programs.map((item) => <span key={item}>{item}</span>)}</div></div> : null}<div className="drawer-section"><h3>产品线评估</h3><AssessmentRows items={detail.assessments || []} /></div></aside></div>}
-  </section>
-}
+  const scorePercent = result ? Math.min(100, Math.round(result.match_score ?? 0)) : 0
 
-function AssessmentResult({ result }: { result: AssessResult }) {
-  return <div className="assessment-result"><div className="result-summary"><div><small>客户</small><strong>{result.customer_name || '未识别姓名'}</strong></div><div><small>匹配结果</small>{resultBadge(result.match_result)}</div><div><small>匹配产品线</small><strong>{result.matched_product || '—'}</strong></div><div><small>匹配度</small><strong>{score(result.match_score)}</strong></div></div>{result.match_reason && <div className="result-copy"><span>研判依据</span><p>{result.match_reason}</p></div>}{result.recommended_programs?.length ? <div className="result-copy"><span>推荐专业 / 项目</span><div className="assessment-tags">{result.recommended_programs.map((item) => <span key={item}>{item}</span>)}</div></div> : null}<div className="result-section-heading"><CheckCircle2 size={15} />产品线评估</div><AssessmentRows items={result.assessments || []} /></div>
+  return (
+    <div className="profile-page">
+      {/* 研判工作台 */}
+      <Card
+        className="panel"
+        title={<span className="panel-title">客户研判工作台</span>}
+        extra={
+          <span className="panel-sub">
+            判断客户是否符合「中德精英人才共建计划 / 新加坡国际本硕升学计划」画像并给出专业推荐
+          </span>
+        }
+        styles={{ header: { padding: '18px 20px' }, body: { padding: 20 } }}
+      >
+        <Tabs
+          activeKey={activeTab}
+          onChange={(key) => setActiveTab(key as 'text' | 'file')}
+          items={[
+            {
+              key: 'text',
+              label: '文本输入',
+              children: (
+                <Input.TextArea
+                  rows={6}
+                  maxLength={8000}
+                  showCount
+                  value={inputText}
+                  onChange={(event) => setInputText(event.target.value)}
+                  placeholder="粘贴客户信息文本，例如：王某，22岁，大专毕业，家庭年收入30-50万，英语四级，想去新加坡读专升本…"
+                />
+              ),
+            },
+            {
+              key: 'file',
+              label: '文件上传',
+              children: (
+                <Upload.Dragger
+                  className="profile-upload"
+                  accept=".pdf,.xlsx,.xls"
+                  multiple={false}
+                  maxCount={1}
+                  beforeUpload={() => false}
+                  fileList={fileList}
+                  onChange={onFileChange}
+                  onRemove={onFileRemove}
+                >
+                  <p className="ant-upload-drag-icon">
+                    <UploadFilled size={67} />
+                  </p>
+                  <p className="ant-upload-text">
+                    拖拽 PDF 简历 / Excel 到此处，或<em>点击选择</em>
+                  </p>
+                  <p className="ant-upload-hint">支持 PDF 简历与 Excel（首行为表头，一行一个客户）</p>
+                </Upload.Dragger>
+              ),
+            },
+          ]}
+        />
+
+        <div className="submit-row">
+          <Button type="primary" loading={assessing} onClick={() => void submitAssess()}>
+            开始研判
+          </Button>
+        </div>
+
+        {/* 研判结果 */}
+        {result && (
+          <>
+            <Divider titlePlacement="left">研判结果</Divider>
+            <div className="result-grid">
+              <div className="result-item">
+                <span className="result-label">客户</span>
+                <span>{result.customer_name || '（未识别姓名）'}</span>
+              </div>
+              <div className="result-item">
+                <span className="result-label">匹配结果</span>
+                <ResultTag value={result.match_result} />
+              </div>
+              <div className="result-item">
+                <span className="result-label">匹配产品线</span>
+                <span>{result.matched_product || '-'}</span>
+              </div>
+              <div className="result-item">
+                <span className="result-label">匹配度</span>
+                <Progress
+                  className="score-bar"
+                  percent={scorePercent}
+                  strokeWidth={6}
+                  status={result.match_result === 'matched' ? 'success' : result.match_result === 'not_matched' ? 'exception' : 'normal'}
+                />
+              </div>
+            </div>
+
+            {result.match_reason && (
+              <div className="reason-block">
+                <span className="result-label">研判依据</span>
+                <p>{result.match_reason}</p>
+              </div>
+            )}
+
+            {result.recommended_programs?.length ? (
+              <div className="reason-block">
+                <span className="result-label">推荐专业/项目</span>
+                <div>
+                  {result.recommended_programs.map((p) => (
+                    <Tag key={p} style={EP_TAG_PLAIN_SUCCESS} className="prog-tag">
+                      {p}
+                    </Tag>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {result.assessments?.length ? (
+              <Table
+                className="assess-table"
+                size="small"
+                bordered
+                rowKey={(row) => `${row.product_line}-${row.rule_name ?? ''}`}
+                columns={assessmentColumns}
+                dataSource={result.assessments}
+                pagination={false}
+              />
+            ) : null}
+          </>
+        )}
+      </Card>
+
+      {/* 研判记录 */}
+      <Card
+        className="panel"
+        title={<span className="panel-title">研判记录</span>}
+        extra={
+          <Select
+            value={matchResult || undefined}
+            placeholder="全部结果"
+            allowClear
+            style={{ width: 140 }}
+            options={[
+              { label: '匹配', value: 'matched' },
+              { label: '部分匹配', value: 'partial' },
+              { label: '不匹配', value: 'not_matched' },
+            ]}
+            onChange={(value) => {
+              setPage(1)
+              setMatchResult(value ?? '')
+            }}
+          />
+        }
+        styles={{ header: { padding: '18px 20px' }, body: { padding: 20 } }}
+      >
+        <Table
+          size="small"
+          bordered
+          rowKey="id"
+          columns={recordColumns}
+          dataSource={records}
+          loading={loadingRecords}
+          pagination={false}
+        />
+        <Pagination
+          className="pager"
+          current={page}
+          pageSize={PAGE_SIZE}
+          total={total}
+          showSizeChanger={false}
+          showTotal={(count) => `共 ${count} 条`}
+          onChange={(next) => setPage(next)}
+        />
+      </Card>
+
+      {/* 详情抽屉 */}
+      <Drawer
+        open={detailVisible}
+        title="研判详情"
+        width="55%"
+        onClose={() => setDetailVisible(false)}
+      >
+        <Spin spinning={detailLoading}>
+          {detail && (
+            <>
+              <div className="result-grid">
+                <div className="result-item">
+                  <span className="result-label">客户</span>
+                  <span>{detail.customer_name || '（未识别）'}</span>
+                </div>
+                <div className="result-item">
+                  <span className="result-label">匹配结果</span>
+                  <ResultTag value={detail.match_result} />
+                </div>
+                <div className="result-item">
+                  <span className="result-label">匹配产品线</span>
+                  <span>{detail.matched_product || '-'}</span>
+                </div>
+                <div className="result-item">
+                  <span className="result-label">匹配度</span>
+                  <span>{fmtScore(detail.match_score)}</span>
+                </div>
+              </div>
+              {detail.match_reason && (
+                <div className="reason-block">
+                  <span className="result-label">研判依据</span>
+                  <p>{detail.match_reason}</p>
+                </div>
+              )}
+              {detail.recommended_programs?.length ? (
+                <div className="reason-block">
+                  <span className="result-label">推荐专业/项目</span>
+                  <div>
+                    {detail.recommended_programs.map((p) => (
+                      <Tag key={p} style={EP_TAG_PLAIN_SUCCESS} className="prog-tag">
+                        {p}
+                      </Tag>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              <Divider titlePlacement="left">按当前规则重算的产品线评估</Divider>
+              <Table
+                size="small"
+                bordered
+                rowKey={(row, index) => `${row.product_line}-${index ?? 0}`}
+                columns={detailColumns}
+                dataSource={detail.assessments ?? []}
+                pagination={false}
+              />
+            </>
+          )}
+        </Spin>
+      </Drawer>
+    </div>
+  )
 }

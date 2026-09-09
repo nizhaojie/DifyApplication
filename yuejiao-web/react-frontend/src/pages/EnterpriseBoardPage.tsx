@@ -1,17 +1,108 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowUpRight, BarChart3, RefreshCw } from 'lucide-react'
+import { Empty, Spin, Table } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
+import { FunnelChart } from '@/components/FunnelChart'
+import { BarList } from '@/components/BarList'
 import { fetchFunnel, fetchLeads, type LeadItem } from '@/api/enterprise'
 
-const labels: Record<string, string> = { new: '新线索', contacting: '跟进中', qualified: '已合格', signed: '已签约', lost: '已流失' }
-const colors: Record<string, string> = { new: '#2f80ed', contacting: '#d8913d', qualified: '#7856c7', signed: '#2e9d68', lost: '#98a2b3' }
+// 等价迁移自 Vue 版 views/enterprise/board.vue(客户看板:漏斗 + 意向国家 + 意向客户表)。
 
 export function EnterpriseBoardPage() {
+  const [loading, setLoading] = useState(false)
   const [funnel, setFunnel] = useState<Record<string, number>>({})
   const [leads, setLeads] = useState<LeadItem[]>([])
-  const [loading, setLoading] = useState(true)
-  async function load() { setLoading(true); try { const [funnelData, leadData] = await Promise.all([fetchFunnel(), fetchLeads()]); setFunnel(funnelData); setLeads(leadData.items) } finally { setLoading(false) } }
-  useEffect(() => { void load() }, [])
-  const countryItems = useMemo(() => Object.entries(leads.reduce<Record<string, number>>((acc, item) => { const country = item.intended_country || '未填写'; acc[country] = (acc[country] || 0) + 1; return acc }, {})).sort((a, b) => b[1] - a[1]), [leads])
-  const maxCountry = Math.max(1, ...countryItems.map(([, value]) => value))
-  return <section className="content-page"><header className="page-heading"><div><div className="eyebrow"><BarChart3 size={14} /> CUSTOMER BOARD</div><h1>客户看板</h1><p>用一眼看清当前线索状态和意向分布。</p></div><button className="ghost-button" onClick={() => void load()}><RefreshCw size={16} className={loading ? 'spin' : ''} />刷新</button></header><div className="board-metrics"><div><span>客户总数</span><strong>{leads.length}</strong></div><div><span>已签约</span><strong>{funnel.signed || 0}</strong></div><div><span>签约占比</span><strong>{leads.length ? `${Math.round(((funnel.signed || 0) / leads.length) * 100)}%` : '0%'}</strong></div></div><div className="board-grid"><section className="panel-surface board-card"><div className="panel-heading"><div><div className="eyebrow">FUNNEL</div><h2>线索漏斗</h2></div><ArrowUpRight size={17} /></div><div className="funnel-chart">{Object.entries(labels).map(([key, label]) => { const value = funnel[key] || 0; const max = Math.max(1, ...Object.keys(labels).map((item) => funnel[item] || 0)); return <div className="funnel-row" key={key}><div className="funnel-row-label"><span>{label}</span><b>{value}</b></div><div className="funnel-track"><i style={{ width: `${Math.max(value ? 8 : 0, (value / max) * 100)}%`, background: colors[key] }} /></div></div> })}</div></section><section className="panel-surface board-card"><div className="panel-heading"><div><div className="eyebrow">COUNTRY MIX</div><h2>意向国家</h2></div><ArrowUpRight size={17} /></div><div className="bar-list">{countryItems.map(([label, value]) => <div className="bar-item" key={label}><div><span>{label}</span><b>{value}</b></div><div className="bar-track"><i style={{ width: `${(value / maxCountry) * 100}%` }} /></div></div>)}{!countryItems.length && <div className="empty-inline">还没有客户意向</div>}</div></section></div><section className="panel-surface board-table"><div className="section-title"><div><div className="eyebrow">LEADS</div><h2>意向客户</h2></div><span>{leads.length} 条</span></div><div className="table-scroll"><table className="data-table"><thead><tr><th>客户</th><th>联系方式</th><th>意向国家</th><th>学历</th><th>状态</th><th>负责人</th></tr></thead><tbody>{leads.map((lead) => <tr key={lead.id}><td><strong>{lead.customer_name}</strong></td><td>{lead.contact_info || '—'}</td><td>{lead.intended_country || '—'}</td><td>{lead.education_level || '—'}</td><td><span className="status-badge"><i />{lead.status_text}</span></td><td>{lead.owner_name || '—'}</td></tr>)}{!leads.length && <tr><td colSpan={6}><div className="empty-cell">没有客户数据</div></td></tr>}</tbody></table></div></section></section>
+
+  const funnelItems = useMemo(
+    () => [
+      { label: '新线索', value: funnel.new ?? 0, color: '#c41e1e' },
+      { label: '跟进中', value: funnel.contacting ?? 0, color: '#d95454' },
+      { label: '已合格', value: funnel.qualified ?? 0, color: '#1d1e1f' },
+      { label: '已签约', value: funnel.signed ?? 0, color: '#9d1818' },
+      { label: '已流失', value: funnel.lost ?? 0, color: '#909399' },
+    ],
+    [funnel],
+  )
+
+  const countryItems = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const item of leads) {
+      const key = item.intended_country || '未填'
+      counts[key] = (counts[key] || 0) + 1
+    }
+    return Object.entries(counts)
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value)
+  }, [leads])
+
+  const signedRate = useMemo(() => {
+    const total = leads.length
+    if (!total) return '0%'
+    const signed = leads.filter((item) => item.status === 'signed').length
+    return `${Math.round((signed / total) * 100)}%`
+  }, [leads])
+
+  useEffect(() => {
+    void (async () => {
+      setLoading(true)
+      try {
+        const [funnelData, leadData] = await Promise.all([fetchFunnel(), fetchLeads({})])
+        setFunnel(funnelData)
+        setLeads(leadData.items)
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [])
+
+  const columns: ColumnsType<LeadItem> = [
+    { title: '客户', dataIndex: 'customer_name', width: 120 },
+    { title: '电话', dataIndex: 'contact_info', width: 140 },
+    { title: '意向国家', dataIndex: 'intended_country', width: 120 },
+    { title: '学历', dataIndex: 'education_level', width: 100 },
+    { title: '状态', dataIndex: 'status_text', width: 100 },
+    { title: '负责人', dataIndex: 'owner_name' },
+  ]
+
+  return (
+    <Spin spinning={loading}>
+      <section className="ent-page">
+        <header className="ent-head">
+          <div>
+            <h1>客户看板</h1>
+            <p className="hint">漏斗和意向国家来自当前库里的意向客户。</p>
+          </div>
+          <div className="stat-row compact">
+            <article className="stat-card">
+              <small>客户总数</small>
+              <strong>{leads.length}</strong>
+            </article>
+            <article className="stat-card">
+              <small>签约占比</small>
+              <strong>{signedRate}</strong>
+            </article>
+          </div>
+        </header>
+
+        <div className="chart-row">
+          <div className="chart-card">
+            <h3>线索漏斗</h3>
+            <FunnelChart items={funnelItems} />
+          </div>
+          <div className="chart-card">
+            <h3>意向国家分布</h3>
+            {countryItems.length ? (
+              <BarList items={countryItems} />
+            ) : (
+              <Empty description="还没有客户意向" styles={{ image: { height: 72 } }} />
+            )}
+          </div>
+        </div>
+
+        <div className="chart-card">
+          <h3>意向客户</h3>
+          <Table rowKey="id" size="small" columns={columns} dataSource={leads} pagination={false} />
+        </div>
+      </section>
+    </Spin>
+  )
 }
