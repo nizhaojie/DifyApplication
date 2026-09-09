@@ -142,29 +142,29 @@ export const useCsChatStore = defineStore('cs_chat', () => {
     is_replying.value = true
 
     if (is_dify_chat_enabled()) {
-      let assistant_message: ChatMessage | null = null
+      const msg_box = { current: null as ChatMessage | null }
       try {
         const chat_result = await request_dify_chat(
           user_text,
           session.value.session_id,
           session.value.dify_conversation_id,
           (chunk_text) => {
-            if (!assistant_message) {
-              assistant_message = create_message('assistant', '')
-              session.value.messages.push(assistant_message)
+            if (!msg_box.current) {
+              msg_box.current = create_message('assistant', '')
+              session.value.messages.push(msg_box.current)
             }
-            assistant_message.content += chunk_text
+            msg_box.current.content += chunk_text
           },
         )
-        if (assistant_message) {
-          assistant_message.content = chat_result.assistant_text
+        if (msg_box.current) {
+          msg_box.current.content = chat_result.assistant_text
         } else {
           session.value.messages.push(create_message('assistant', chat_result.assistant_text))
         }
         session.value.dify_conversation_id = chat_result.conversation_id
       } catch {
-        if (assistant_message) {
-          assistant_message.content = DIFY_ERROR_TEXT
+        if (msg_box.current) {
+          msg_box.current.content = DIFY_ERROR_TEXT
         } else {
           session.value.messages.push(create_message('assistant', DIFY_ERROR_TEXT))
         }

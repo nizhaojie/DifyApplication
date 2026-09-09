@@ -28,12 +28,12 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
 
     # Database settings (MySQL 8.0)
-    database_url: str = "mysql+asyncmy://root:123456@127.0.0.1:3306/yuejiao_service?charset=utf8mb4"
+    database_url: str = "mysql+asyncmy://root:123456@127.0.0.1:3306/yuejiao_db?charset=utf8mb4"
     db_host: str = "127.0.0.1"
     db_port: int = 3306
     db_user: str = "root"
     db_password: str = "123456"
-    db_name: str = "yuejiao_service"
+    db_name: str = "yuejiao_db"
     db_charset: str = "utf8mb4"
 
     # JWT Authentication settings
@@ -107,7 +107,7 @@ class Settings(BaseSettings):
         if not self.mysql_password:
             self.mysql_password = self.db_password or unquote(parsed.password or "")
         if not self.mysql_database:
-            self.mysql_database = self.db_name or (parsed.path or "/yuejiao_service").lstrip("/")
+            self.mysql_database = self.db_name or (parsed.path or "/yuejiao_db").lstrip("/")
         if not self.dify_api_base:
             self.dify_api_base = self.dify_base_url or self.dify_api_base_url
         return self
