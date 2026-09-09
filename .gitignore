@@ -21,5 +21,6 @@ yanyingying/
 
 # Local startup helpers and generated runtime files
 bat/
+yuejiao-web/react-frontend/dist/
 yuejiao-admin/logs/backend-startup.log
 yuejiao-web/frontend-startup.log

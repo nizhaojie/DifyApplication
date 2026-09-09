@@ -1,0 +1,142 @@
+import http, { type Envelope } from './http'
+
+export interface LeadItem {
+  id: number
+  customer_name: string
+  contact_info: string | null
+  intended_country: string | null
+  intended_major: string | null
+  education_level: string | null
+  status: string
+  status_text: string
+  owner_name: string | null
+  remark: string | null
+  last_contact_time: string | null
+  create_time: string
+}
+
+export interface FollowUpItem {
+  id: number
+  lead_id: number
+  employee_id: number
+  follow_type: string | null
+  content: string
+  next_plan: string | null
+  create_time: string
+}
+
+export interface ChatResult {
+  reply: string
+  conversation_id: string | null
+  source: string
+  intent?: string
+  citation?: string
+  title?: string
+  data?: Record<string, unknown>
+  dify_fallback?: string
+}
+
+export interface MemoryMessage {
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  source?: string | null
+  intent?: string | null
+  create_time?: string
+}
+
+export interface MemorySnapshot {
+  session_id: string
+  conversation_id: string | null
+  last_person: string | null
+  preferred_name: string | null
+  total: number
+  messages: MemoryMessage[]
+}
+
+export async function chat(query: string, conversationId?: string | null) {
+  const { data } = await http.post<Envelope<ChatResult>>('/api/v1/enterprise/chat', {
+    query,
+    conversation_id: conversationId || undefined,
+  }, { timeout: 120000 })
+  return data.data
+}
+
+export async function fetchBrief() {
+  const { data } = await http.get<Envelope<Record<string, unknown>>>('/api/v1/enterprise/brief')
+  return data.data
+}
+
+export async function fetchFunnel() {
+  const { data } = await http.get<Envelope<Record<string, number>>>('/api/v1/enterprise/funnel')
+  return data.data
+}
+
+export async function fetchLeads(params: { keyword?: string; status?: string } = {}) {
+  const { data } = await http.get<Envelope<LeadItem[]>>('/api/v1/enterprise/leads', { params })
+  return { items: data.data || [], total: data.total || 0 }
+}
+
+export async function fetchLeadDetail(id: number) {
+  const { data } = await http.get<Envelope<{ lead: LeadItem; follow_ups: FollowUpItem[] }>>(`/api/v1/enterprise/leads/${id}`)
+  return data.data
+}
+
+export async function addFollowUp(id: number, content: string, nextPlan?: string) {
+  const { data } = await http.post<Envelope<FollowUpItem>>(`/api/v1/enterprise/leads/${id}/follow-ups`, {
+    content,
+    follow_type: 'other',
+    next_plan: nextPlan,
+  })
+  return data.data
+}
+
+export async function updateLeadStatus(id: number, status: string, lostReason?: string) {
+  const { data } = await http.put<Envelope<LeadItem>>(`/api/v1/enterprise/leads/${id}/status`, {
+    status,
+    lost_reason: lostReason,
+  })
+  return data.data
+}
+
+export async function fetchDailies() {
+  const { data } = await http.get<Envelope<Record<string, unknown>[]>>('/api/v1/enterprise/dailies')
+  return { items: data.data || [], total: data.total || 0 }
+}
+
+export async function fetchLeaves(status = 'pending') {
+  const { data } = await http.get<Envelope<Record<string, unknown>[]>>('/api/v1/enterprise/leaves', { params: { status } })
+  return { items: data.data || [], total: data.total || 0 }
+}
+
+export async function approveLeave(id: number, action: 'approved' | 'rejected', comment?: string) {
+  const { data } = await http.post<Envelope<Record<string, unknown>>>(`/api/v1/enterprise/leaves/${id}/approve`, {
+    action,
+    approval_comment: comment,
+  })
+  return data.data
+}
+
+export async function fetchCompany() {
+  const { data } = await http.get<Envelope<Record<string, unknown>>>('/api/v1/enterprise/company')
+  return data.data
+}
+
+export async function fetchOrgs() {
+  const { data } = await http.get<Envelope<Record<string, unknown>[]>>('/api/v1/enterprise/orgs')
+  return data.data || []
+}
+
+export async function fetchGuideCatalog() {
+  const { data } = await http.get<Envelope<{ title: string; excerpt: string; content?: string }[]>>('/api/v1/enterprise/guide-catalog')
+  return data.data || []
+}
+
+export async function fetchMemory() {
+  const { data } = await http.get<Envelope<MemorySnapshot>>('/api/v1/enterprise/memory')
+  return data.data
+}
+
+export async function clearMemory() {
+  const { data } = await http.delete<Envelope<{ cleared: boolean }>>('/api/v1/enterprise/memory')
+  return data.data
+}
