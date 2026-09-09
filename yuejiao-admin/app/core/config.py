@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import List
 from urllib.parse import unquote, urlparse
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,9 +20,9 @@ class Settings(BaseSettings):
     app_name: str = "Yuejiao Education Service Admin"
     app_env: str = "development"
     app_host: str = "0.0.0.0"
-    app_port: int = 8000
+    app_port: int = 8002
     server_host: str = "0.0.0.0"
-    server_port: int = 8000
+    server_port: int = 8002
     debug: bool = True
     is_debug: bool = True
     api_v1_prefix: str = "/api/v1"
@@ -42,8 +42,10 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 720
 
     # CORS settings
-    cors_origins: str = "http://127.0.0.1:4173,http://localhost:4173,http://127.0.0.1:5173,http://localhost:5173"
+    cors_origins: str = "http://127.0.0.1:5174,http://localhost:5174"
     cors_allowed_origins: List[str] = [
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:4173",
@@ -61,6 +63,21 @@ class Settings(BaseSettings):
     dify_base_url: str = "http://localhost/v1"
     dify_enterprise_api_key: str = ""
     dify_tool_token: str = ""
+
+    # Student Assistant Dify Integration
+    dify_student_psych_base_url: str = ""
+    dify_student_psych_api_key: str = ""
+    dify_student_life_base_url: str = ""
+    dify_student_life_api_key: str = ""
+    dify_student_program_base_url: str = ""
+    dify_student_program_api_key: str = ""
+    # Original student module environment variable names.
+    dify_psych_base_url: str = ""
+    dify_psych_api_key: str = ""
+    dify_life_base_url: str = ""
+    dify_life_api_key: str = ""
+    dify_program_base_url: str = ""
+    dify_program_api_key: str = ""
 
     # Report Module Dify Integration
     mysql_host: str = ""
@@ -81,6 +98,17 @@ class Settings(BaseSettings):
     dify_narrate_api_key: str = ""
     # Dify 不可达兜底：off | heuristic
     pf_llm_fallback: str = "heuristic"
+
+    @field_validator("debug", "is_debug", mode="before")
+    @classmethod
+    def parse_debug_flag(cls, value):
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"release", "production", "prod", "false", "0", "no", "off"}:
+                return False
+            if normalized in {"development", "dev", "true", "1", "yes", "on"}:
+                return True
+        return value
 
     @property
     def cors_origin_list(self) -> list[str]:

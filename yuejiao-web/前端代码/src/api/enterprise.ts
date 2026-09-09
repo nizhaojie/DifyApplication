@@ -122,6 +122,10 @@ export async function approveLeave(id: number, action: 'approved' | 'rejected', 
   })
   return data.data
 }
+export async function fetchStudentProgress(stage?: string) { const { data } = await http.get<Envelope<Record<string, unknown>[]>>('/api/v1/enterprise/student-progress', { params: stage ? { stage } : undefined }); return data.data || [] }
+export async function updateStudentProgress(id: number, status: string, content: string, next_plan: string) { const { data } = await http.put<Envelope<Record<string, unknown>>>(`/api/v1/enterprise/student-progress/${id}`, { status, content, next_plan }); return data.data }
+export async function fetchStudentTickets(status?: string) { const { data } = await http.get<Envelope<Record<string, unknown>[]>>('/api/v1/enterprise/tickets', { params: status ? { status } : undefined }); return data.data || [] }
+export async function handleStudentTicket(id: number, action: string, solution: string) { const { data } = await http.post<Envelope<Record<string, unknown>>>(`/api/v1/enterprise/tickets/${id}/handle`, { action, solution }); return data.data }
 
 export async function fetchCompany() {
   const { data } = await http.get<Envelope<Record<string, unknown>>>('/api/v1/enterprise/company')

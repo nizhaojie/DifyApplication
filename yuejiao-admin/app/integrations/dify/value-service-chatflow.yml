@@ -1,0 +1,181 @@
+app:
+  description: 为学生提供学历提升、科研背景、语言能力和申请规划相关的增值服务咨询。
+  icon: chart_with_upwards_trend
+  icon_background: '#DCFCE7'
+  mode: advanced-chat
+  name: 学业提升咨询助手
+  use_icon_as_answer_icon: false
+dependencies: []
+kind: app
+version: 0.3.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      enabled: false
+    opening_statement: 你好，我可以协助梳理申请规划、科研背景、学术英语和学历提升方向。
+    retriever_resource:
+      enabled: false
+    sensitive_word_avoidance:
+      enabled: false
+    suggested_questions:
+      - 英国硕博申请要做哪些准备？
+      - 我想提升科研背景。
+      - 学术英语应该如何规划？
+    speech_to_text:
+      enabled: false
+    text_to_speech:
+      enabled: false
+  graph:
+    edges:
+      - data:
+          isInLoop: false
+          sourceType: start
+          targetType: knowledge-retrieval
+        id: start-to-program-knowledge
+        source: start
+        sourceHandle: source
+        target: program_knowledge
+        targetHandle: target
+        type: custom
+        zIndex: 0
+      - data:
+          isInLoop: false
+          sourceType: knowledge-retrieval
+          targetType: llm
+        id: program-knowledge-to-llm
+        source: program_knowledge
+        sourceHandle: source
+        target: program_llm
+        targetHandle: target
+        type: custom
+        zIndex: 0
+      - data:
+          isInLoop: false
+          sourceType: llm
+          targetType: answer
+        id: program-llm-to-answer
+        source: program_llm
+        sourceHandle: source
+        target: answer
+        targetHandle: target
+        type: custom
+        zIndex: 0
+    nodes:
+      - data:
+          desc: 接收学生咨询。
+          selected: false
+          title: 开始
+          type: start
+          variables: []
+        height: 54
+        id: start
+        position:
+          x: 80
+          y: 280
+        positionAbsolute:
+          x: 80
+          y: 280
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244
+      - data:
+          dataset_ids: []
+          desc: 检索已上架的增值服务项目资料；导入后需在 Dify 中绑定增值服务知识库。
+          isInIteration: false
+          isInLoop: false
+          multiple_retrieval_config:
+            reranking_enable: false
+            reranking_mode: reranking_model
+            reranking_model:
+              model: ''
+              provider: ''
+            top_k: 4
+          query_variable_selector:
+            - sys
+            - query
+          retrieval_mode: multiple
+          selected: false
+          title: 增值服务知识检索
+          type: knowledge-retrieval
+        height: 98
+        id: program_knowledge
+        position:
+          x: 400
+          y: 258
+        positionAbsolute:
+          x: 400
+          y: 258
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244
+      - data:
+          context:
+            enabled: true
+            variable_selector:
+              - program_knowledge
+              - result
+          desc: 基于知识检索结果提供克制的项目建议。
+          memory:
+            query_prompt_template: '当前用户问题：{{#sys.query#}}'
+            role_prefix:
+              assistant: 助手
+              user: 学生
+            window:
+              enabled: true
+              size: 10
+          model:
+            completion_params:
+              temperature: 0.4
+            mode: chat
+            name: gpt-4o-mini
+            provider: openai
+          prompt_template:
+            - id: program-system-prompt
+              role: system
+              text: |
+                你是教育服务平台的学业提升咨询助手。帮助学生梳理留学申请、硕博规划、科研背景、学术英语和职业发展方向。
+
+                先了解目标国家或院校、专业、当前申请阶段和最希望提升的能力。回答应给出可执行的准备建议，并在信息不足时提出不超过两个澄清问题。
+
+                仅在学生明确表达咨询意向时，才介绍检索上下文中存在的服务项目。所有项目名称、服务内容、周期、价格和适用条件必须以检索上下文为准；检索上下文未命中相关项目时，明确回复“暂未找到匹配的已上架项目”，并建议人工咨询，不能编造推荐或承诺录取、保分、签证结果、就业结果。心理高风险、投诉处理中或学生明确拒绝营销时，不推荐任何增值服务，转为提供必要支持或人工服务渠道。
+          selected: false
+          title: 增值咨询回应
+          type: llm
+          variables: []
+          vision:
+            enabled: false
+        height: 98
+        id: program_llm
+        position:
+          x: 720
+          y: 258
+        positionAbsolute:
+          x: 720
+          y: 258
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244
+      - data:
+          answer: '{{#program_llm.text#}}'
+          desc: 返回增值服务咨询回复。
+          selected: false
+          title: 回复
+          type: answer
+          variables: []
+        height: 104
+        id: answer
+        position:
+          x: 1040
+          y: 255
+        positionAbsolute:
+          x: 1040
+          y: 255
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244

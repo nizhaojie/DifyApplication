@@ -1,0 +1,142 @@
+app:
+  description: 面向留学生的心理关怀对话，提供支持性回应、风险分流与人工求助引导。
+  icon: heart
+  icon_background: '#FFE4E6'
+  mode: advanced-chat
+  name: 学生心理关怀助手
+  use_icon_as_answer_icon: false
+dependencies: []
+kind: app
+version: 0.3.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      enabled: false
+    opening_statement: 你好，我是学生心理关怀助手。你可以放心说说最近的感受或困扰。
+    retriever_resource:
+      enabled: false
+    sensitive_word_avoidance:
+      enabled: false
+    suggested_questions:
+      - 最近压力很大，怎么办？
+      - 我总是睡不好。
+      - 我担心申请材料来不及。
+    speech_to_text:
+      enabled: false
+    text_to_speech:
+      enabled: false
+  graph:
+    edges:
+      - data:
+          isInLoop: false
+          sourceType: start
+          targetType: llm
+        id: start-to-psych-llm
+        source: start
+        sourceHandle: source
+        target: psych_llm
+        targetHandle: target
+        type: custom
+        zIndex: 0
+      - data:
+          isInLoop: false
+          sourceType: llm
+          targetType: answer
+        id: psych-llm-to-answer
+        source: psych_llm
+        sourceHandle: source
+        target: answer
+        targetHandle: target
+        type: custom
+        zIndex: 0
+    nodes:
+      - data:
+          desc: 接收学生消息。
+          selected: false
+          title: 开始
+          type: start
+          variables: []
+        height: 54
+        id: start
+        position:
+          x: 80
+          y: 280
+        positionAbsolute:
+          x: 80
+          y: 280
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244
+      - data:
+          context:
+            enabled: false
+            variable_selector: []
+          desc: 提供支持性回应并执行高风险分流。
+          memory:
+            query_prompt_template: '当前用户问题：{{#sys.query#}}'
+            role_prefix:
+              assistant: 助手
+              user: 学生
+            window:
+              enabled: true
+              size: 10
+          model:
+            completion_params:
+              temperature: 0.4
+            mode: chat
+            name: gpt-4o-mini
+            provider: openai
+          prompt_template:
+            - id: psych-system-prompt
+              role: system
+              text: |
+                你是教育服务平台的学生心理关怀助手。用温和、尊重、简洁的中文回应，先共情，再提供一两个可执行的小步骤。你不是医生，不作心理或医学诊断，不承诺保密范围以外的事情。
+
+                若学生表达自杀、自伤、伤害他人、无法保证当下安全、严重绝望等即时高风险信号：
+                1. 明确、平静地确认对方当下安全最重要；
+                2. 建议立刻联系身边可信任的人、学校心理服务或当地紧急服务；
+                3. 鼓励不要独处，并询问是否能先联系一个人；
+                4. 不提供任何自伤方法或细节；
+                5. 在回复最后单独输出“风险提示：建议人工关怀跟进”。
+
+                对一般压力、焦虑、失眠、适应困难，避免夸大风险。不要把增值课程或营销内容带入心理关怀对话。
+          selected: false
+          title: 心理关怀回应
+          type: llm
+          variables: []
+          vision:
+            enabled: false
+        height: 98
+        id: psych_llm
+        position:
+          x: 400
+          y: 258
+        positionAbsolute:
+          x: 400
+          y: 258
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244
+      - data:
+          answer: '{{#psych_llm.text#}}'
+          desc: 返回心理关怀回复。
+          selected: false
+          title: 回复
+          type: answer
+          variables: []
+        height: 104
+        id: answer
+        position:
+          x: 720
+          y: 255
+        positionAbsolute:
+          x: 720
+          y: 255
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244

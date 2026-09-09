@@ -47,7 +47,7 @@ async function submit() {
         </el-form-item>
         <el-button type="primary" :loading="loading" style="width: 100%" native-type="submit">进入控制台</el-button>
       </el-form>
-      <p class="hint">演示账号 emp01 / 123456（李顾问）。接上 FastAPI :8001 后再进。</p>
+      <p class="hint">演示账号 emp01 / 123456（演示顾问）。后端地址：127.0.0.1:8002。</p>
     </section>
   </div>
 </template>

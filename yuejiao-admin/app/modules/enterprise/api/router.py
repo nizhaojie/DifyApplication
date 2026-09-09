@@ -365,6 +365,18 @@ async def list_leaves(status: str | None = "pending", db: AsyncSession = Depends
     return ok(items, total=len(items))
 
 
+@router.get("/student-progress")
+async def list_student_progress(stage: str | None = None, db: AsyncSession = Depends(get_db), _: SysUser = Depends(get_actor)):
+    items = await student_ops.list_progress(db, stage)
+    return ok(items, total=len(items))
+
+
+@router.put("/student-progress/{progress_id}")
+async def update_student_progress(progress_id: int, body: LeadIn, db: AsyncSession = Depends(get_db), user: SysUser = Depends(get_actor)):
+    data = await student_ops.update_progress(db, progress_id, body.status or "under_review", body.content, body.next_plan, user)
+    return ok(data, message="申请进度已更新")
+
+
 @router.post("/leaves/{service_id}/approve")
 async def approve_leave(
     service_id: int,

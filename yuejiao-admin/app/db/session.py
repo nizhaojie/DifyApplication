@@ -50,6 +50,8 @@ def _get_async_database_url() -> str:
         if importlib.util.find_spec("aiosqlite") is not None:
             return url.replace("sqlite://", "sqlite+aiosqlite://", 1)
         return url
+    if url.startswith("mysql+pymysql://"):
+        url = url.replace("mysql+pymysql://", "mysql+asyncmy://", 1)
     if importlib.util.find_spec("asyncmy") is not None:
         return url
     if importlib.util.find_spec("aiomysql") is not None:

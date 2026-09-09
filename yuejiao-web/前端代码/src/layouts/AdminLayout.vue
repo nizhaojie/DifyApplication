@@ -17,7 +17,6 @@ import {
   TrendCharts,
   User,
 } from '@element-plus/icons-vue'
-import CsFloatWidget from '@/components/cs-widget/CsFloatWidget.vue'
 import { useTagsStore } from '@/stores/tags'
 import { useUserStore } from '@/stores/user'
 
@@ -114,10 +113,16 @@ function closeTag(path: string) {
             <span>对话记忆</span>
           </el-menu-item>
         </el-sub-menu>
-        <el-menu-item index="/student">
-          <el-icon><User /></el-icon>
-          <span>学生助手</span>
-        </el-menu-item>
+        <el-sub-menu index="student">
+          <template #title>
+            <el-icon><User /></el-icon>
+            <span>学生助手</span>
+          </template>
+          <el-menu-item index="/student"><el-icon><Reading /></el-icon><span>学生服务总览</span></el-menu-item>
+          <el-menu-item index="/student/psych"><el-icon><ChatDotRound /></el-icon><span>心理关怀</span></el-menu-item>
+          <el-menu-item index="/student/life"><el-icon><Odometer /></el-icon><span>海外生活支持</span></el-menu-item>
+          <el-menu-item index="/student/program"><el-icon><TrendCharts /></el-icon><span>升学项目咨询</span></el-menu-item>
+        </el-sub-menu>
         <el-sub-menu index="report">
           <template #title>
             <el-icon><Document /></el-icon>
@@ -146,7 +151,7 @@ function closeTag(path: string) {
         </el-menu-item>
       </el-menu>
     </el-aside>
-    <el-container class="content-pane">
+    <el-container>
       <el-header class="header" height="56px">
         <el-button text @click="collapsed = !collapsed">
           <el-icon :size="18">
@@ -185,5 +190,4 @@ function closeTag(path: string) {
       </el-main>
     </el-container>
   </el-container>
-  <CsFloatWidget />
 </template>

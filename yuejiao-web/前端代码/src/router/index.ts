@@ -70,6 +70,24 @@ const router = createRouter({
           meta: { title: '学生助手', hint: '空白模版。以后接请假、心理、投诉、考务、进度。' },
         },
         {
+          path: 'student/psych',
+          name: 'student-psych',
+          component: () => import('@/views/student/chat.vue'),
+          meta: { title: '心理关怀', assistantMode: 'psych' },
+        },
+        {
+          path: 'student/life',
+          name: 'student-life',
+          component: () => import('@/views/student/chat.vue'),
+          meta: { title: '海外生活支持', assistantMode: 'life' },
+        },
+        {
+          path: 'student/program',
+          name: 'student-program',
+          component: () => import('@/views/student/chat.vue'),
+          meta: { title: '升学项目咨询', assistantMode: 'program' },
+        },
+        {
           path: 'report',
           name: 'report',
           component: () => import('@/views/report/index.vue'),

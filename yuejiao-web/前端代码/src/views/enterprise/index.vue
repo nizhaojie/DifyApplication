@@ -14,6 +14,10 @@ import {
   fetchLeadDetail,
   fetchLeads,
   fetchLeaves,
+  fetchStudentProgress,
+  updateStudentProgress,
+  fetchStudentTickets,
+  handleStudentTicket,
   fetchMemory,
   updateLeadStatus,
   type FollowUpItem,
@@ -42,6 +46,10 @@ const brief = ref<Record<string, unknown>>({})
 const leads = ref<LeadItem[]>([])
 const dailies = ref<Record<string, unknown>[]>([])
 const leaves = ref<Record<string, unknown>[]>([])
+const studentProgress = ref<Record<string, unknown>[]>([])
+const progressStage = ref('')
+const studentTickets = ref<Record<string, unknown>[]>([])
+const ticketStatus = ref('')
 const logEl = ref<HTMLElement | null>(null)
 const messages = reactive<ChatMsg[]>([])
 const drawer = ref(false)
@@ -100,16 +108,20 @@ async function scrollLog() {
 async function reload() {
   loading.value = true
   try {
-    const [briefData, leadData, dailyData, leaveData] = await Promise.all([
+    const [briefData, leadData, dailyData, leaveData, progressData, ticketData] = await Promise.all([
       fetchBrief(),
       fetchLeads({ keyword: keyword.value || undefined, status: statusFilter.value || undefined }),
       fetchDailies(),
       fetchLeaves('pending'),
+      fetchStudentProgress(progressStage.value || undefined),
+      fetchStudentTickets(ticketStatus.value || undefined),
     ])
     brief.value = briefData
     leads.value = leadData.items
     dailies.value = dailyData.items
     leaves.value = leaveData.items
+    studentProgress.value = progressData
+    studentTickets.value = ticketData
   } finally {
     loading.value = false
   }
@@ -214,6 +226,26 @@ async function openLead(row: LeadItem) {
   const detail = await fetchLeadDetail(row.id)
   currentLead.value = detail.lead
   follows.value = detail.follow_ups || []
+}
+
+async function updateProgressRow(row: Record<string, unknown>, stage: string) {
+  try {
+    const { value } = await ElMessageBox.prompt('填写处理反馈', '更新申请进度', { inputValue: String(row.progress_detail || '') })
+    await updateStudentProgress(Number(row.id), stage, String(value || '').trim(), String(row.next_action || '等待后续通知'))
+    ElMessage.success('申请进度已更新')
+    await reload()
+  } catch { /* cancel */ }
+}
+
+async function handleTicketRow(row: Record<string, unknown>, action: string) {
+  try {
+    const { value } = await ElMessageBox.prompt(action === 'resolved' ? '填写解决方案' : '填写受理备注', action === 'resolved' ? '解决投诉' : '受理投诉', { inputValue: String(row.solution || '') })
+    const solution = String(value || '').trim()
+    if (action === 'resolved' && !solution) { ElMessage.warning('解决投诉必须填写解决方案'); return }
+    await handleStudentTicket(Number(row.id), action, solution)
+    ElMessage.success(action === 'resolved' ? '投诉已解决' : '投诉已受理')
+    await reload()
+  } catch { /* cancel */ }
 }
 
 async function saveFollow() {
@@ -407,6 +439,8 @@ onMounted(async () => {
               </el-table-column>
             </el-table>
           </el-tab-pane>
+          <el-tab-pane label="学生申请" name="progress"><div class="toolbar"><el-select v-model="progressStage" clearable placeholder="申请阶段" style="width: 150px" @change="reload"><el-option label="已提交" value="submitted" /><el-option label="材料准备" value="document_prep" /><el-option label="院校审核中" value="under_review" /><el-option label="已录取" value="offer_received" /><el-option label="签证办理中" value="visa_processing" /></el-select><el-button @click="reload">刷新</el-button></div><el-table :data="studentProgress" size="small" height="480"><el-table-column prop="student_name" label="学生" width="90" /><el-table-column prop="target_school" label="目标院校" min-width="140" /><el-table-column prop="target_major" label="专业" min-width="110" /><el-table-column prop="stage" label="阶段" width="120" /><el-table-column prop="progress_detail" label="进度说明" min-width="180" show-overflow-tooltip /><el-table-column label="操作" width="190"><template #default="{ row }"><el-button link type="primary" @click="updateProgressRow(row, 'under_review')">受理</el-button><el-button link type="success" @click="updateProgressRow(row, 'offer_received')">录取</el-button><el-button link type="warning" @click="updateProgressRow(row, 'visa_processing')">签证</el-button></template></el-table-column></el-table></el-tab-pane>
+          <el-tab-pane label="投诉反馈" name="tickets"><div class="toolbar"><el-select v-model="ticketStatus" clearable placeholder="工单状态" style="width: 150px" @change="reload"><el-option label="待处理" value="pending" /><el-option label="处理中" value="processing" /><el-option label="已解决" value="resolved" /></el-select><el-button @click="reload">刷新</el-button></div><el-table :data="studentTickets" size="small" height="480"><el-table-column prop="student_name" label="学生" width="90" /><el-table-column prop="title" label="标题" min-width="160" /><el-table-column prop="category" label="分类" width="100" /><el-table-column prop="status_text" label="状态" width="90" /><el-table-column prop="content" label="问题描述" min-width="180" show-overflow-tooltip /><el-table-column label="操作" width="190"><template #default="{ row }"><el-button v-if="row.status === 'pending'" link type="primary" @click="handleTicketRow(row, 'processing')">受理</el-button><el-button v-if="row.status === 'pending' || row.status === 'processing'" link type="success" @click="handleTicketRow(row, 'resolved')">解决</el-button></template></el-table-column></el-table></el-tab-pane>
         </el-tabs>
       </div>
     </div>

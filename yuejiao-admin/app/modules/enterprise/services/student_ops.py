@@ -9,6 +9,7 @@ from app.modules.enterprise.services.lead.extract import extract_person_name
 from app.modules.student.models.admin import StudentAdminService
 from app.modules.student.models.info import StudentInfo
 from app.modules.student.models.ticket import StudentFeedbackTicket
+from app.modules.student.models.assistant import ApplicationProgress
 from app.modules.system.models.user import SysUser
 from app.utils.serialize import row_to_dict
 
@@ -72,6 +73,35 @@ async def list_leaves(db: AsyncSession, status: str | None = None) -> list[dict]
 
 async def list_tickets(db: AsyncSession, status: str | None = None) -> list[dict]:
     return [enrich_ticket(item) for item in await ops_crud.list_tickets(db, status=_filter_status(status))]
+
+
+async def list_progress(db: AsyncSession, stage: str | None = None) -> list[dict]:
+    query = select(ApplicationProgress).order_by(ApplicationProgress.update_time.desc())
+    if stage:
+        query = query.where(ApplicationProgress.stage == stage)
+    rows = (await db.execute(query)).scalars().all()
+    result = []
+    for item in rows:
+        data = row_to_dict(item)
+        data["student_name"] = await _student_name(db, int(item.student_id))
+        result.append(data)
+    return result
+
+
+async def update_progress(db: AsyncSession, progress_id: int, stage: str, detail: str | None, next_action: str | None, owner: SysUser) -> dict:
+    item = await db.get(ApplicationProgress, progress_id)
+    if item is None:
+        raise BizError("申请进度不存在", code=404)
+    item.stage = stage
+    item.progress_detail = detail or item.progress_detail
+    item.next_action = next_action or item.next_action
+    item.handler_id = owner.id
+    item.update_time = datetime.now()
+    await db.commit()
+    await db.refresh(item)
+    data = row_to_dict(item)
+    data["student_name"] = await _student_name(db, int(item.student_id))
+    return data
 
 
 async def overview(db: AsyncSession) -> dict:
