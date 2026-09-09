@@ -7,6 +7,8 @@ import {
   generateReport,
   type ReportRecord,
 } from '@/api/report'
+import CountChart from './CountChart.vue'
+import { indexReportCharts } from './charts'
 import { periodRangeLabel, resolveWeekPeriod, shanghaiDate } from './period'
 
 const KIND = 'complaint_weekly' as const
@@ -23,6 +25,7 @@ const periodStart = computed(() => resolvedPeriod.value.start)
 const periodLabel = computed(() => periodRangeLabel(resolvedPeriod.value))
 const numbers = computed(() => current.value?.content?.numbers as Record<string, any> | undefined)
 const insight = computed(() => current.value?.content?.insight as Record<string, string> | undefined)
+const charts = computed(() => indexReportCharts(KIND, numbers.value))
 
 async function loadCurrent() {
   loading.value = true
@@ -110,24 +113,25 @@ onMounted(async () => {
 
           <section class="chapter">
             <h3>本期新建总量与环比</h3>
-            <p class="lead">本期投诉 {{ numbers?.period_complaint_count ?? 0 }} 件</p>
-            <p>环比：{{ numbers?.wow?.label === '样本不足' ? '样本不足' : `较上期 ${numbers?.wow?.delta}（上期 ${numbers?.wow?.prior_count}）` }}</p>
+            <CountChart v-if="charts.complaintWow" :chart="charts.complaintWow" />
+            <template v-else>
+              <p class="lead">本期投诉 {{ numbers?.period_complaint_count ?? 0 }} 件</p>
+              <p>环比：{{ numbers?.wow?.label === '样本不足' ? '样本不足' : `较上期 ${numbers?.wow?.delta}（上期 ${numbers?.wow?.prior_count}）` }}</p>
+            </template>
             <p>同比：{{ numbers?.yoy?.label === '样本不足' ? '样本不足' : numbers?.yoy?.label }}</p>
             <p v-if="insight?.volume_narrative" class="narrative">{{ insight.volume_narrative }}</p>
           </section>
 
           <section class="chapter">
             <h3>分类</h3>
-            <ul v-if="numbers?.categories?.length" class="plain">
-              <li v-for="item in numbers.categories" :key="item.name">{{ item.name }} {{ item.count }}</li>
-            </ul>
+            <CountChart v-if="charts.complaintCategories" :chart="charts.complaintCategories" />
             <p v-else>本期无分类可计。</p>
             <p v-if="insight?.category_narrative" class="narrative">{{ insight.category_narrative }}</p>
           </section>
 
           <section class="chapter">
             <h3>处理状态与时效</h3>
-            <p>已解决/已关闭 {{ numbers?.handling?.resolved_or_closed_count ?? 0 }}，未决 {{ numbers?.handling?.open_count ?? 0 }}</p>
+            <CountChart v-if="charts.handlingStatus" :chart="charts.handlingStatus" />
             <ul v-if="numbers?.handling?.items?.length" class="plain">
               <li v-for="(item, index) in numbers.handling.items" :key="index">
                 {{ item.student_name }} · {{ item.status }} · 已耗时 {{ item.elapsed_days }} 天
@@ -150,9 +154,10 @@ onMounted(async () => {
           <section class="chapter">
             <h3>满意度</h3>
             <p v-if="numbers?.satisfaction?.label === '暂无评价'">暂无评价</p>
-            <p v-else>
-              已评价平均 {{ numbers?.satisfaction?.average }} 分；未评价 {{ numbers?.satisfaction?.unrated_count }} 条
-            </p>
+            <template v-else>
+              <CountChart v-if="charts.ratedVsUnrated" :chart="charts.ratedVsUnrated" />
+              <p>已评价平均 {{ numbers?.satisfaction?.average }} 分</p>
+            </template>
             <p v-if="insight?.satisfaction_narrative" class="narrative">{{ insight.satisfaction_narrative }}</p>
           </section>
 

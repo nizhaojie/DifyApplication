@@ -8,6 +8,8 @@ import {
   type ReportKind,
   type ReportRecord,
 } from '@/api/report'
+import CountChart from './CountChart.vue'
+import { indexReportCharts } from './charts'
 import {
   periodRangeLabel,
   resolveDayPeriod,
@@ -40,6 +42,7 @@ const submittedNames = computed(() => {
   if (!rows?.length) return []
   return [...new Set(rows.map((row) => row.name))]
 })
+const charts = computed(() => indexReportCharts(kind.value, current.value?.content?.numbers))
 
 async function loadCurrent() {
   loading.value = true
@@ -149,10 +152,7 @@ onMounted(async () => {
 
           <section class="chapter">
             <h3>覆盖率</h3>
-            <p class="lead">
-              应提交 {{ coverage?.expected_count ?? 0 }} 人，已提交 {{ coverage?.submitted_count ?? 0 }} 人，未提交
-              {{ coverage?.missing_count ?? 0 }} 人
-            </p>
+            <CountChart v-if="charts.coverage" :chart="charts.coverage" />
             <p v-if="coverage?.missing?.length">未提交：{{ coverage.missing.map((item: { name: string }) => item.name).join('、') }}</p>
             <p v-else>没有未提交人员。</p>
             <p v-if="insight?.coverage_narrative" class="narrative">{{ insight.coverage_narrative }}</p>

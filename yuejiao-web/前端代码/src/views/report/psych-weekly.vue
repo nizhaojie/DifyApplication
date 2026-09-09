@@ -7,6 +7,8 @@ import {
   generateReport,
   type ReportRecord,
 } from '@/api/report'
+import CountChart from './CountChart.vue'
+import { indexReportCharts } from './charts'
 import { periodRangeLabel, resolveWeekPeriod, shanghaiDate } from './period'
 
 const KIND = 'psych_weekly' as const
@@ -29,6 +31,7 @@ const periodStart = computed(() => resolvedPeriod.value.start)
 const periodLabel = computed(() => periodRangeLabel(resolvedPeriod.value))
 const numbers = computed(() => current.value?.content?.numbers as Record<string, any> | undefined)
 const insight = computed(() => current.value?.content?.insight as Record<string, string> | undefined)
+const charts = computed(() => indexReportCharts(KIND, numbers.value))
 
 function riskLabel(level: string) {
   return RISK_LABEL[level] || level
@@ -123,16 +126,14 @@ onMounted(async () => {
             <p class="lead">本周有心理记录 {{ numbers?.recorded_student_count ?? 0 }} 人</p>
             <p v-if="numbers?.average_emotion_score != null">平均情绪分 {{ numbers.average_emotion_score }}</p>
             <p v-else>暂无情绪分可计。</p>
-            <ul v-if="numbers?.emotion_tags?.length" class="plain">
-              <li v-for="item in numbers.emotion_tags" :key="item.name">{{ item.name }} {{ item.count }}</li>
-            </ul>
+            <CountChart v-if="charts.emotionTags" :chart="charts.emotionTags" />
             <p v-else>本期无情绪标签可计。</p>
             <p v-if="insight?.overview_narrative" class="narrative">{{ insight.overview_narrative }}</p>
           </section>
 
           <section class="chapter">
             <h3>本周风险学生</h3>
-            <p>本周新建且未解除 {{ numbers?.week_risk_count ?? 0 }} 人</p>
+            <CountChart v-if="charts.weekRiskVsWatch" :chart="charts.weekRiskVsWatch" />
             <ul v-if="numbers?.week_risk_students?.length" class="plain">
               <li v-for="(item, index) in numbers.week_risk_students" :key="index">
                 {{ item.student_name }} · {{ riskLabel(item.risk_level) }} · {{ item.emotion_tag || '无标签' }}
@@ -144,7 +145,6 @@ onMounted(async () => {
 
           <section class="chapter">
             <h3>持续关注</h3>
-            <p>画像中/高风险 {{ numbers?.watchlist_count ?? 0 }} 人</p>
             <ul v-if="numbers?.watchlist_students?.length" class="plain">
               <li v-for="(item, index) in numbers.watchlist_students" :key="index">
                 {{ item.student_name }} · {{ riskLabel(item.risk_level) }} · {{ item.emotion_tag || '无标签' }}

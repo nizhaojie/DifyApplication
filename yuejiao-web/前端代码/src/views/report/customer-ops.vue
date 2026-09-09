@@ -7,6 +7,8 @@ import {
   generateReport,
   type ReportRecord,
 } from '@/api/report'
+import CountChart from './CountChart.vue'
+import { indexReportCharts } from './charts'
 import { periodRangeLabel, resolveWeekPeriod, shanghaiDate } from './period'
 
 const KIND = 'customer_ops' as const
@@ -34,6 +36,7 @@ const insight = computed(() => current.value?.content?.insight as Record<string,
 const intent = computed(() => numbers.value?.intent as Record<string, any> | undefined)
 const signed = computed(() => numbers.value?.signed as Record<string, any> | undefined)
 const lost = computed(() => numbers.value?.lost as Record<string, any> | undefined)
+const charts = computed(() => indexReportCharts(KIND, numbers.value))
 
 function statusLabel(status: string) {
   return STATUS_LABEL[status] || status
@@ -131,9 +134,12 @@ onMounted(async () => {
 
           <section class="chapter">
             <h3>总览</h3>
-            <p class="lead">意向 {{ numbers?.intent_count ?? 0 }} · 成交 {{ numbers?.signed_count ?? 0 }} · 流失 {{ numbers?.lost_count ?? 0 }}</p>
-            <p>新增意向 {{ numbers?.new_intent_count ?? 0 }} 人</p>
-            <p>环比：{{ wowText() }}</p>
+            <CountChart v-if="charts.periodEndStock" :chart="charts.periodEndStock" />
+            <CountChart v-if="charts.newIntentWow" :chart="charts.newIntentWow" />
+            <template v-else>
+              <p>新增意向 {{ numbers?.new_intent_count ?? 0 }} 人</p>
+              <p>环比：{{ wowText() }}</p>
+            </template>
             <p>同比：{{ numbers?.yoy?.label === '样本不足' ? '样本不足' : numbers?.yoy?.label }}</p>
             <p v-if="insight?.overview_narrative" class="narrative">{{ insight.overview_narrative }}</p>
           </section>
@@ -148,27 +154,21 @@ onMounted(async () => {
             </ul>
             <p v-else>本周期没有新增意向。</p>
             <p>特征分组</p>
-            <p class="sub">意向国家</p>
-            <ul v-if="intent?.feature_groups?.intended_country?.length" class="plain">
-              <li v-for="item in intent.feature_groups.intended_country" :key="'ic-' + item.name">
-                {{ item.name }} {{ item.count }}
-              </li>
-            </ul>
-            <p v-else>暂无意向国家可分组。</p>
-            <p class="sub">学历</p>
-            <ul v-if="intent?.feature_groups?.education_level?.length" class="plain">
-              <li v-for="item in intent.feature_groups.education_level" :key="'ed-' + item.name">
-                {{ item.name }} {{ item.count }}
-              </li>
-            </ul>
-            <p v-else>暂无学历可分组。</p>
-            <p class="sub">来源渠道</p>
-            <ul v-if="intent?.feature_groups?.source_channel?.length" class="plain">
-              <li v-for="item in intent.feature_groups.source_channel" :key="'ch-' + item.name">
-                {{ item.name }} {{ item.count }}
-              </li>
-            </ul>
-            <p v-else>暂无来源渠道可分组。</p>
+            <CountChart v-if="charts.intentCountry" :chart="charts.intentCountry" />
+            <template v-else>
+              <p class="sub">意向国家</p>
+              <p>暂无意向国家可分组。</p>
+            </template>
+            <CountChart v-if="charts.intentEducation" :chart="charts.intentEducation" />
+            <template v-else>
+              <p class="sub">学历</p>
+              <p>暂无学历可分组。</p>
+            </template>
+            <CountChart v-if="charts.intentChannel" :chart="charts.intentChannel" />
+            <template v-else>
+              <p class="sub">来源渠道</p>
+              <p>暂无来源渠道可分组。</p>
+            </template>
             <p>流失预警（跟进停滞满 14 天）</p>
             <ul v-if="intent?.churn_warnings?.length" class="plain">
               <li v-for="(item, index) in intent.churn_warnings" :key="'warn-' + index">
@@ -181,7 +181,6 @@ onMounted(async () => {
 
           <section class="chapter">
             <h3>成交</h3>
-            <p>期末存量 {{ numbers?.signed_count ?? 0 }} 人</p>
             <ul v-if="signed?.customers?.length" class="plain">
               <li v-for="(item, index) in signed.customers" :key="'signed-' + index">
                 {{ item.name }} · {{ statusLabel(item.status) }}
@@ -201,33 +200,26 @@ onMounted(async () => {
               </li>
             </ul>
             <p>高价值特征</p>
-            <p class="sub">意向国家</p>
-            <ul v-if="signed?.feature_groups?.intended_country?.length" class="plain">
-              <li v-for="item in signed.feature_groups.intended_country" :key="'sic-' + item.name">
-                {{ item.name }} {{ item.count }}
-              </li>
-            </ul>
-            <p v-else>成交样本不足以按意向国家归纳。</p>
-            <p class="sub">学历</p>
-            <ul v-if="signed?.feature_groups?.education_level?.length" class="plain">
-              <li v-for="item in signed.feature_groups.education_level" :key="'sed-' + item.name">
-                {{ item.name }} {{ item.count }}
-              </li>
-            </ul>
-            <p v-else>成交样本不足以按学历归纳。</p>
-            <p class="sub">来源渠道</p>
-            <ul v-if="signed?.feature_groups?.source_channel?.length" class="plain">
-              <li v-for="item in signed.feature_groups.source_channel" :key="'sch-' + item.name">
-                {{ item.name }} {{ item.count }}
-              </li>
-            </ul>
-            <p v-else>成交样本不足以按来源渠道归纳。</p>
+            <CountChart v-if="charts.signedCountry" :chart="charts.signedCountry" />
+            <template v-else>
+              <p class="sub">意向国家</p>
+              <p>成交样本不足以按意向国家归纳。</p>
+            </template>
+            <CountChart v-if="charts.signedEducation" :chart="charts.signedEducation" />
+            <template v-else>
+              <p class="sub">学历</p>
+              <p>成交样本不足以按学历归纳。</p>
+            </template>
+            <CountChart v-if="charts.signedChannel" :chart="charts.signedChannel" />
+            <template v-else>
+              <p class="sub">来源渠道</p>
+              <p>成交样本不足以按来源渠道归纳。</p>
+            </template>
             <p v-if="insight?.signed_narrative" class="narrative">{{ insight.signed_narrative }}</p>
           </section>
 
           <section class="chapter">
             <h3>流失</h3>
-            <p>期末存量 {{ numbers?.lost_count ?? 0 }} 人</p>
             <ul v-if="lost?.customers?.length" class="plain">
               <li v-for="(item, index) in lost.customers" :key="'lost-' + index">
                 {{ item.name }} · {{ item.lost_reason || '原因未记录' }}
