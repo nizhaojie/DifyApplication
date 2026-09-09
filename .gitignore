@@ -9,3 +9,7 @@ node_modules/
 .DS_Store
 .idea/
 *.sqlite3
+
+# 本地个人文件，不提交
+yanyingying/
+.cursor/skills/edu-git-convention/

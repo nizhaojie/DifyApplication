@@ -13,6 +13,7 @@ import {
   Setting,
   User,
 } from '@element-plus/icons-vue'
+import CsFloatWidget from '@/components/cs-widget/CsFloatWidget.vue'
 import { useTagsStore } from '@/stores/tags'
 
 const route = useRoute()
@@ -131,4 +132,5 @@ function closeTag(path: string) {
       </el-main>
     </el-container>
   </el-container>
+  <CsFloatWidget />
 </template>
