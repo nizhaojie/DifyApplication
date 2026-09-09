@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 # 导入 pf-extract / pf-narrate 两个工作流 + 签发 API Key + 写入项目 .env
 #
-# 用法：  bash dify/setup_workflows.sh
+# 用法：  bash dify/tools/pf_setup_workflows.sh
 # 前置：  docker compose up（Dify 全栈在跑），容器名默认 docker-api-1。
 # 可逆：  在 Dify 控制台删除对应应用即可；重复运行会复用同名应用、只新增 Key。
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CTR="${DIFY_API_CONTAINER:-docker-api-1}"
 
-for f in extract_workflow.yml narrate_workflow.yml setup_workflows.py; do
-  [ -f "$DIR/$f" ] || { echo "missing $DIR/$f" >&2; exit 1; }
+for f in "$DIR/../dsl/pf_extract_workflow.yml" "$DIR/../dsl/pf_narrate_workflow.yml" "$DIR/pf_setup_workflows.py"; do
+  [ -f "$f" ] || { echo "missing $f" >&2; exit 1; }
 done
 
 echo ">> copying DSL + setup script into $CTR:/tmp/"
-docker cp "$DIR/extract_workflow.yml" "$CTR:/tmp/pf-extract-workflow.yml"
-docker cp "$DIR/narrate_workflow.yml" "$CTR:/tmp/pf-narrate-workflow.yml"
-docker cp "$DIR/setup_workflows.py"  "$CTR:/tmp/setup_workflows.py"
+docker cp "$DIR/../dsl/pf_extract_workflow.yml" "$CTR:/tmp/pf-extract-workflow.yml"
+docker cp "$DIR/../dsl/pf_narrate_workflow.yml" "$CTR:/tmp/pf-narrate-workflow.yml"
+docker cp "$DIR/pf_setup_workflows.py"  "$CTR:/tmp/setup_workflows.py"
 
 echo ">> importing workflows + minting keys (in-container, real AppDslService)"
 JSON="$(docker exec -i "$CTR" python /tmp/setup_workflows.py)"
@@ -28,8 +28,8 @@ for k, v in d.items():
     print(f'{k}: app_id={v["app_id"]} key={key[:8]}…{key[-4:]} created={v["created"]}')
 PY
 
-# 写入项目根 .env（ROOT = 脚本目录上一级 = customer-profiling/）
-ENV_FILE="$DIR/../.env"
+# 写入项目根 .env（ROOT = 脚本目录上两级 = 仓库根）
+ENV_FILE="$DIR/../../.env"
 SETUP_JSON="$JSON" python3 - "$ENV_FILE" <<'PY'
 import json, os, sys, pathlib
 env_path = pathlib.Path(sys.argv[1])

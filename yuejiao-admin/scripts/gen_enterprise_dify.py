@@ -1,8 +1,14 @@
 # -*- coding: utf-8 -*-
 """Generate enterprise Dify DSL with two knowledge bases + HTTP tools."""
+import os
+import sys
 from pathlib import Path
 
-OUT = Path(__file__).resolve().parents[1] / "dify" / "enterprise" / "企业智能助手.yml"
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from app.core.config import settings
+
+OUT = Path(settings.dify_yml_dir) / "enterprise" / "企业智能助手.yml"
 API = "http://host.docker.internal:8001/api/v1/enterprise"
 
 

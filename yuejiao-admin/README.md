@@ -5,7 +5,7 @@
 
 Dify 想、FastAPI 做、MySQL 记。前端走 `POST /api/v1/enterprise/chat`；没配 Dify Key 时用本地口语解析，演示链路也能走通。
 
-接入步骤与注意点：`dify/enterprise/dify的接入前后端.md`。
+接入步骤与注意点：`../dify/enterprise/dify的接入前后端.md`。
 
 ## 启动
 
@@ -48,4 +48,4 @@ uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 
 返回信封：`{code, message, data, total}`，成功 `code=200`。
 
-Dify HTTP 节点请打 `/api/v1/enterprise/tools/*`。导入说明见 `dify/enterprise/README.md`。
+Dify HTTP 节点请打 `/api/v1/enterprise/tools/*`。导入说明见 `../dify/enterprise/README.md`。

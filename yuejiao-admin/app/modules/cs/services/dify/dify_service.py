@@ -6,10 +6,8 @@ Manages bidirectional communication with Dify APIs, including:
 - Automatic failover / dual-engine routing between Dify and local dialog engine.
 """
 
-import json
 import logging
 import os
-from pathlib import Path
 import re
 from typing import Any, Dict, List, Optional
 import uuid
@@ -49,36 +47,6 @@ class DifyIntegrationService:
         """Check if Dify API endpoint and key are properly configured."""
         current_key = self.api_key
         return bool(current_key and len(current_key) > 5)
-
-    def get_openapi_tool_dict(self) -> Dict[str, Any]:
-        """Load and return the OpenAPI 3.0 tool schema dictionary."""
-        candidate_paths = [
-            Path(__file__).parent.parent.parent / "dify" / "tools" / "cs_openapi_tool.json",
-            Path(r"c:\new\group-qukewei\dify\tools\cs_openapi_tool.json"),
-        ]
-        for path_item in candidate_paths:
-            if path_item.exists():
-                with open(path_item, "r", encoding="utf-8") as file_stream:
-                    return json.load(file_stream)
-
-        # Fallback inline schema summary if file not found
-        return {
-            "openapi": "3.0.0",
-            "info": {"title": "Yuejiao CS Tools", "version": "1.0.0"},
-            "paths": {},
-        }
-
-    def get_workflow_dsl_content(self) -> str:
-        """Read and return the Dify Chatflow DSL YAML configuration string."""
-        candidate_paths = [
-            Path(r"c:\new\group-qukewei\dify\dsl\cs_agent_workflow.yml"),
-            Path(__file__).parent.parent.parent / "dify" / "dsl" / "cs_agent_workflow.yml",
-        ]
-        for path_item in candidate_paths:
-            if path_item.exists():
-                with open(path_item, "r", encoding="utf-8") as file_stream:
-                    return file_stream.read()
-        return ""
 
     def execute_chat_flow(
         self,
