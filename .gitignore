@@ -15,3 +15,7 @@ node_modules/
 ~$*
 docs/raw_materials/
 docs/客服Agent模块·阶段交付文档*.md
+
+# 本地个人文件，不提交
+yanyingying/
+.cursor/skills/edu-git-convention/

@@ -17,6 +17,7 @@ import {
   TrendCharts,
   User,
 } from '@element-plus/icons-vue'
+import CsFloatWidget from '@/components/cs-widget/CsFloatWidget.vue'
 import { useTagsStore } from '@/stores/tags'
 import { useUserStore } from '@/stores/user'
 
@@ -184,4 +185,5 @@ function closeTag(path: string) {
       </el-main>
     </el-container>
   </el-container>
+  <CsFloatWidget />
 </template>
