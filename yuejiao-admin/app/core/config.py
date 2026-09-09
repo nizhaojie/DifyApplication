@@ -1,10 +1,16 @@
 """Application configuration module."""
 
 from functools import lru_cache
+from pathlib import Path
 from typing import List
 from urllib.parse import unquote, urlparse
-from pydantic import field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _default_dify_yml_dir() -> str:
+    """Repo-root ``dify/`` dir, resolved from this file's location (not cwd)."""
+    return str(Path(__file__).resolve().parents[3] / "dify")
 
 
 class Settings(BaseSettings):
@@ -59,6 +65,9 @@ class Settings(BaseSettings):
     dify_api_base_url: str = "http://127.0.0.1:8080/v1"
     dify_api_key: str = ""
 
+    # Dify YML directory (unified root for all dify/*.yml DSL and tool files)
+    dify_yml_dir: str = Field(default_factory=_default_dify_yml_dir)
+
     # Enterprise Assistant Dify Integration
     dify_base_url: str = "http://localhost/v1"
     dify_enterprise_api_key: str = ""
@@ -98,6 +107,11 @@ class Settings(BaseSettings):
     dify_narrate_api_key: str = ""
     # Dify 不可达兜底：off | heuristic
     pf_llm_fallback: str = "heuristic"
+
+    @field_validator("dify_yml_dir", mode="after")
+    @classmethod
+    def resolve_dify_yml_dir(cls, value: str) -> str:
+        return str(Path(value).resolve())
 
     @field_validator("debug", "is_debug", mode="before")
     @classmethod
