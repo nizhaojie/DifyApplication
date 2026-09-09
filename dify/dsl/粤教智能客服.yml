@@ -1,0 +1,248 @@
+app:
+  description: ''
+  icon: 🤖
+  icon_background: '#FFEAD5'
+  icon_type: emoji
+  mode: advanced-chat
+  name: 粤教智能客服
+  use_icon_as_answer_icon: true
+dependencies:
+- current_identifier: null
+  type: marketplace
+  value:
+    marketplace_plugin_unique_identifier: langgenius/deepseek:0.0.21@5873fe73395aeb49ba26035059eb4e0ec5af01bb66d0545b031f8917b12e8c29
+    version: null
+kind: app
+version: 0.7.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      allowed_file_extensions:
+      - .JPG
+      - .JPEG
+      - .PNG
+      - .GIF
+      - .WEBP
+      - .SVG
+      allowed_file_types:
+      - image
+      allowed_file_upload_methods:
+      - local_file
+      - remote_url
+      enabled: false
+      fileUploadConfig:
+        attachment_image_file_size_limit: 2
+        audio_file_size_limit: 50
+        batch_count_limit: 5
+        file_size_limit: 15
+        file_upload_limit: 20
+        image_file_batch_limit: 10
+        image_file_size_limit: 10
+        knowledge_file_size_limit: 15
+        single_chunk_attachment_limit: 10
+        skill_file_size_limit: 50
+        video_file_size_limit: 100
+        workflow_file_upload_limit: 10
+      image:
+        enabled: false
+        number_limits: 3
+        transfer_methods:
+        - local_file
+        - remote_url
+      number_limits: 3
+    opening_statement: 同学你好呀！我是粤教服务的专属客服小粤 🎓，关于中德双元制、新加坡本硕升学、留学签证或近期讲座，有什么我可以帮你的吗？😊
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: answer
+      id: llm-answer
+      source: llm
+      sourceHandle: source
+      target: answer
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: start
+        targetType: knowledge-retrieval
+      id: 1788861022716-source-1788866695075-target
+      source: '1788861022716'
+      sourceHandle: source
+      target: '1788866695075'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: knowledge-retrieval
+        targetType: llm
+      id: 1788866695075-source-llm-target
+      source: '1788866695075'
+      sourceHandle: source
+      target: llm
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    nodes:
+    - data:
+        selected: false
+        title: 用户输入
+        type: start
+        variables: []
+      height: 72
+      id: '1788861022716'
+      position:
+        x: 133.42390182810996
+        y: 221.41476267681315
+      positionAbsolute:
+        x: 133.42390182810996
+        y: 221.41476267681315
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+      zIndex: 0
+    - data:
+        context:
+          enabled: true
+          variable_selector:
+          - '1788866695075'
+          - result
+        memory:
+          query_prompt_template: '{{#sys.query#}}
+
+
+            {{#sys.files#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: true
+            size: 20
+        model:
+          completion_params:
+            temperature: 0.7
+          mode: chat
+          name: deepseek-v4-flash
+          provider: langgenius/deepseek/deepseek
+        prompt_config:
+          jinja2_variables: []
+        prompt_template:
+        - edition_type: basic
+          id: 9f7ac8a6-10ed-4d7b-a17c-4ee868eb7bbd
+          role: system
+          text: "你叫“小粤”，是广东省教育服务有限公司（粤教服务 / 粤教国际）官方唯一认证的专属智能升学顾问。\n你的性格阳光、亲切、专业、真诚，充满年轻活力，善于运用恰当的表情符号（\U0001F60A\
+            、\U0001F393、✈️、✨）提升交谈温度。\n# 核心业务底座（必须 100% 严格依照以下权威事实及 {{#context#}}资料回答）\n\
+            1. 【公司资质与背景】：\n   - 广东教育国际交流服务中心有限公司（简称“粤教服务”），深耕国际教育40余年，省属国企背景平台。校区分布于广州天河、黄埔、白云及佛山南海。\n\
+            2. 【官方对公银行账户（铁律，绝对不可篡改）】：\n   - 账户名称：广东省教育服务有限公司\n   - 账号：9550889900011455492\n\
+            \   - 开户行：广发银行广州华夏路支行\n   - 安全警示：郑重提醒客户，严禁向任何个人微信、支付宝私下转账！一切缴费必须汇入官方对公账户，确保资金安全。\n\
+            3. 【中德精英人才共建计划（德国双元制）】：\n   - 免大学学费，采用“校企双元培养”模式（每周3天在企业实训，2天在职业学校理论学习）。\n\
+            \   - 每月享受德国企业发放的带薪实训津贴，国家承担学校开支。\n   - 语言要求：德语欧标B1。毕业颁发全德及欧盟通用的IHK/HWK职业资格证书，在德工作满2年可申请德国永居。专业涵盖医疗护理、精密机械、自动化、汽车服务等。\n\
+            4. 【新加坡国际本硕升学计划】：\n   - 初中起点2+2、高中起点0.5/1+2定向国际本科直通车；专升本仅需1~1.5年，本升硕仅需1年。\n\
+            \   - 学历经中国教育部留学服务中心（中留服）正式认证，毕业生享受一线城市落户政策与归国留学生创业补贴。\n5. 【退费政策规范】：\n\
+            \   - 严格遵循双方协议，因不可抗力或未达签证申请门槛提出退费的，扣除已发生的官方申请成本及合理管理费用后合规退回。\n\n# 交互与回复铁律（防幻觉与合规准则）\n\
+            1. 事实第一：涉及对公银行账户、公司资质、收费标准、退费政策时，必须严格依照上述事实输出，严禁擅自变造任何数字或账号！\n2. 政策免责：回答签证办理与海外移民政策时，文末友好声明：“\U0001F4A1\
+            \ 小贴士：各国留学与签证政策具有时效性，以上供参考，请以使领馆最新官方发布为准哦。”\n3. 活动与报名引导：当用户咨询近期讲座活动或表达想要了解/报名时，热情介绍近期精彩宣讲会，并贴心引导用户留下姓名与联系方式，以便提前预留名额。\n\
+            4. 边界严谨：若参考【上下文】资料中确实未收录用户询问的超纲冷门细节，请礼貌回应：“该具体细节小粤建议您留下联系方式，稍后由我们资深的专属留学顾问老师为您一对一量身规划与解答哦~”，绝不胡编乱造。"
+        - id: fd7fd4d4-dbfc-4ea2-9129-80a4f4e5225c
+          role: user
+          text: ''
+        retry_config:
+          max_retries: 3
+          retry_enabled: false
+          retry_interval: 1000
+        selected: true
+        title: LLM
+        type: llm
+        vision:
+          enabled: false
+      height: 87
+      id: llm
+      position:
+        x: 543.6189809358387
+        y: 432.6267135908682
+      positionAbsolute:
+        x: 543.6189809358387
+        y: 432.6267135908682
+      selected: true
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+      zIndex: 0
+    - data:
+        answer: '{{#llm.text#}}'
+        selected: false
+        title: 直接回复
+        type: answer
+        variables: []
+      height: 101
+      id: answer
+      position:
+        x: 543.6189809358387
+        y: 229.21968356908422
+      positionAbsolute:
+        x: 543.6189809358387
+        y: 229.21968356908422
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+      zIndex: 0
+    - data:
+        dataset_ids:
+        - 4dd6pASZOpLs/VrMFJqOFlOlYxEg+JCst5MtwleS+h/3Gu7Wi30oXacFNHnkQ3yk
+        multiple_retrieval_config:
+          reranking_enable: false
+          reranking_mode: reranking_model
+          top_k: 4
+        query_attachment_selector: []
+        query_variable_selector:
+        - '1788861022716'
+        - sys.query
+        retrieval_mode: multiple
+        selected: false
+        title: 知识检索
+        type: knowledge-retrieval
+      height: 89
+      id: '1788866695075'
+      position:
+        x: 133.42390182810996
+        y: 432.6267135908682
+      positionAbsolute:
+        x: 133.42390182810996
+        y: 432.6267135908682
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+      zIndex: 0
+    viewport:
+      x: 87.69192923077304
+      y: 13.012120817646334
+      zoom: 0.757858283255199
+  rag_pipeline_variables: []
