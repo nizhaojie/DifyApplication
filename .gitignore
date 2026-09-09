@@ -18,3 +18,8 @@ docs/
 # 本地个人文件，不提交
 yanyingying/
 .cursor/skills/edu-git-convention/
+
+# Local startup helpers and generated runtime files
+bat/
+yuejiao-admin/logs/backend-startup.log
+yuejiao-web/frontend-startup.log
