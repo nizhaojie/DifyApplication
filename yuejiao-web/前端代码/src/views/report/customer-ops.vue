@@ -7,6 +7,10 @@ import {
   generateReport,
   type ReportRecord,
 } from '@/api/report'
+import CountChart from './CountChart.vue'
+import NameTable from './NameTable.vue'
+import { indexReportCharts } from './charts'
+import { periodRangeLabel, resolveWeekPeriod, shanghaiDate } from './period'
 
 const KIND = 'customer_ops' as const
 
@@ -18,19 +22,6 @@ const STATUS_LABEL: Record<string, string> = {
   lost: '已流失',
 }
 
-function shanghaiIsoDate(when = new Date()) {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Shanghai',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(when)
-}
-
-function shanghaiDate(when = new Date()) {
-  return new Date(`${shanghaiIsoDate(when)}T00:00:00+08:00`)
-}
-
 const weekDate = ref(shanghaiDate())
 const isGenerating = ref(false)
 const isLoading = ref(false)
@@ -38,12 +29,53 @@ const failure = ref('')
 const current = ref<ReportRecord | null>(null)
 const history = ref<ReportRecord[]>([])
 
-const periodStart = computed(() => shanghaiIsoDate(weekDate.value))
+const resolvedPeriod = computed(() => resolveWeekPeriod(weekDate.value))
+const periodStart = computed(() => resolvedPeriod.value.start)
+const periodLabel = computed(() => periodRangeLabel(resolvedPeriod.value))
 const numbers = computed(() => current.value?.content?.numbers as Record<string, any> | undefined)
 const insight = computed(() => current.value?.content?.insight as Record<string, string> | undefined)
 const intent = computed(() => numbers.value?.intent as Record<string, any> | undefined)
 const signed = computed(() => numbers.value?.signed as Record<string, any> | undefined)
 const lost = computed(() => numbers.value?.lost as Record<string, any> | undefined)
+const charts = computed(() => indexReportCharts(KIND, numbers.value))
+const newIntentRows = computed(() =>
+  (intent.value?.new_intent ?? []).map((item: { name: string; entered_on: string }) => ({
+    name: item.name,
+    entered_on: item.entered_on,
+  })),
+)
+const churnWarningRows = computed(() =>
+  (intent.value?.churn_warnings ?? []).map(
+    (item: { name: string; last_contact_on: string; stalled_days: number }) => ({
+      name: item.name,
+      last_contact_on: item.last_contact_on,
+      stalled_days: item.stalled_days,
+    }),
+  ),
+)
+const signedRows = computed(() =>
+  (signed.value?.customers ?? []).map((item: { name: string; status: string }) => ({
+    name: item.name,
+    status: statusLabel(item.status),
+  })),
+)
+const conversionRows = computed(() =>
+  (signed.value?.conversion_paths ?? []).map(
+    (path: { name: string; status: string; follow_ups?: { at: string; content: string }[] }) => ({
+      name: path.name,
+      status: statusLabel(path.status),
+      timeline: path.follow_ups?.length
+        ? path.follow_ups.map((step) => `${step.at} · ${step.content}`).join('\n')
+        : '没有跟进记录，仅有当前状态。',
+    }),
+  ),
+)
+const lostRows = computed(() =>
+  (lost.value?.customers ?? []).map((item: { name: string; lost_reason?: string }) => ({
+    name: item.name,
+    lost_reason: item.lost_reason || '原因未记录',
+  })),
+)
 
 function statusLabel(status: string) {
   return STATUS_LABEL[status] || status
@@ -105,14 +137,18 @@ onMounted(async () => {
         <p>选定周期后手动生成。人数是期末存量，洞察只写分组共性、路径、归因与建议，不改写人数。报告出客户姓名，不跳转详情。</p>
       </div>
       <div class="actions">
-        <el-date-picker
-          v-model="weekDate"
-          type="week"
-          format="YYYY 第 ww 周"
-          placeholder="选择周期"
-          :clearable="false"
-          @change="loadCurrent"
-        />
+        <div class="period-control">
+          <span class="period-range">{{ periodLabel }}</span>
+          <el-date-picker
+            v-model="weekDate"
+            class="period-picker"
+            type="week"
+            :first-day-of-week="1"
+            placeholder="选择周期"
+            :clearable="false"
+            @change="loadCurrent"
+          />
+        </div>
         <el-button type="primary" :loading="isGenerating" @click="onGenerate">手动生成</el-button>
       </div>
     </header>
@@ -137,9 +173,12 @@ onMounted(async () => {
 
           <section class="chapter">
             <h3>总览</h3>
-            <p class="lead">意向 {{ numbers?.intent_count ?? 0 }} · 成交 {{ numbers?.signed_count ?? 0 }} · 流失 {{ numbers?.lost_count ?? 0 }}</p>
-            <p>新增意向 {{ numbers?.new_intent_count ?? 0 }} 人</p>
-            <p>环比：{{ wowText() }}</p>
+            <CountChart v-if="charts.periodEndStock" :chart="charts.periodEndStock" />
+            <CountChart v-if="charts.newIntentWow" :chart="charts.newIntentWow" />
+            <template v-else>
+              <p>新增意向 {{ numbers?.new_intent_count ?? 0 }} 人</p>
+              <p>环比：{{ wowText() }}</p>
+            </template>
             <p>同比：{{ numbers?.yoy?.label === '样本不足' ? '样本不足' : numbers?.yoy?.label }}</p>
             <p v-if="insight?.overview_narrative" class="narrative">{{ insight.overview_narrative }}</p>
           </section>
@@ -147,98 +186,95 @@ onMounted(async () => {
           <section class="chapter">
             <h3>意向</h3>
             <p>新增进入漏斗</p>
-            <ul v-if="intent?.new_intent?.length" class="plain">
-              <li v-for="(item, index) in intent.new_intent" :key="'new-' + index">
-                {{ item.name }} · {{ item.entered_on }}
-              </li>
-            </ul>
+            <NameTable
+              v-if="newIntentRows.length"
+              :columns="[
+                { key: 'name', label: '姓名' },
+                { key: 'entered_on', label: '进入漏斗' },
+              ]"
+              :rows="newIntentRows"
+            />
             <p v-else>本周期没有新增意向。</p>
             <p>特征分组</p>
-            <p class="sub">意向国家</p>
-            <ul v-if="intent?.feature_groups?.intended_country?.length" class="plain">
-              <li v-for="item in intent.feature_groups.intended_country" :key="'ic-' + item.name">
-                {{ item.name }} {{ item.count }}
-              </li>
-            </ul>
-            <p v-else>暂无意向国家可分组。</p>
-            <p class="sub">学历</p>
-            <ul v-if="intent?.feature_groups?.education_level?.length" class="plain">
-              <li v-for="item in intent.feature_groups.education_level" :key="'ed-' + item.name">
-                {{ item.name }} {{ item.count }}
-              </li>
-            </ul>
-            <p v-else>暂无学历可分组。</p>
-            <p class="sub">来源渠道</p>
-            <ul v-if="intent?.feature_groups?.source_channel?.length" class="plain">
-              <li v-for="item in intent.feature_groups.source_channel" :key="'ch-' + item.name">
-                {{ item.name }} {{ item.count }}
-              </li>
-            </ul>
-            <p v-else>暂无来源渠道可分组。</p>
+            <CountChart v-if="charts.intentCountry" :chart="charts.intentCountry" />
+            <template v-else>
+              <p class="sub">意向国家</p>
+              <p>暂无意向国家可分组。</p>
+            </template>
+            <CountChart v-if="charts.intentEducation" :chart="charts.intentEducation" />
+            <template v-else>
+              <p class="sub">学历</p>
+              <p>暂无学历可分组。</p>
+            </template>
+            <CountChart v-if="charts.intentChannel" :chart="charts.intentChannel" />
+            <template v-else>
+              <p class="sub">来源渠道</p>
+              <p>暂无来源渠道可分组。</p>
+            </template>
             <p>流失预警（跟进停滞满 14 天）</p>
-            <ul v-if="intent?.churn_warnings?.length" class="plain">
-              <li v-for="(item, index) in intent.churn_warnings" :key="'warn-' + index">
-                {{ item.name }} · 最近联系 {{ item.last_contact_on }} · 已停滞 {{ item.stalled_days }} 天
-              </li>
-            </ul>
+            <NameTable
+              v-if="churnWarningRows.length"
+              :columns="[
+                { key: 'name', label: '姓名' },
+                { key: 'last_contact_on', label: '最近联系' },
+                { key: 'stalled_days', label: '停滞天数' },
+              ]"
+              :rows="churnWarningRows"
+            />
             <p v-else>没有跟进停滞满 14 天的意向客户。</p>
             <p v-if="insight?.intent_narrative" class="narrative">{{ insight.intent_narrative }}</p>
           </section>
 
           <section class="chapter">
             <h3>成交</h3>
-            <p>期末存量 {{ numbers?.signed_count ?? 0 }} 人</p>
-            <ul v-if="signed?.customers?.length" class="plain">
-              <li v-for="(item, index) in signed.customers" :key="'signed-' + index">
-                {{ item.name }} · {{ statusLabel(item.status) }}
-              </li>
-            </ul>
+            <NameTable
+              v-if="signedRows.length"
+              :columns="[
+                { key: 'name', label: '姓名' },
+                { key: 'status', label: '当前状态' },
+              ]"
+              :rows="signedRows"
+            />
             <p v-else>没有成交客户。</p>
             <p>转化路径</p>
-            <ul v-if="signed?.conversion_paths?.length" class="paths">
-              <li v-for="(path, index) in signed.conversion_paths" :key="'path-' + index">
-                <strong>{{ path.name }} · {{ statusLabel(path.status) }}</strong>
-                <ul v-if="path.follow_ups?.length" class="plain nested">
-                  <li v-for="(step, stepIndex) in path.follow_ups" :key="stepIndex">
-                    {{ step.at }} · {{ step.content }}
-                  </li>
-                </ul>
-                <p v-else class="hint-inline">没有跟进记录，仅有当前状态。</p>
-              </li>
-            </ul>
+            <NameTable
+              v-if="conversionRows.length"
+              :columns="[
+                { key: 'name', label: '姓名' },
+                { key: 'status', label: '当前状态' },
+                { key: 'timeline', label: '跟进时间线' },
+              ]"
+              :rows="conversionRows"
+            />
             <p>高价值特征</p>
-            <p class="sub">意向国家</p>
-            <ul v-if="signed?.feature_groups?.intended_country?.length" class="plain">
-              <li v-for="item in signed.feature_groups.intended_country" :key="'sic-' + item.name">
-                {{ item.name }} {{ item.count }}
-              </li>
-            </ul>
-            <p v-else>成交样本不足以按意向国家归纳。</p>
-            <p class="sub">学历</p>
-            <ul v-if="signed?.feature_groups?.education_level?.length" class="plain">
-              <li v-for="item in signed.feature_groups.education_level" :key="'sed-' + item.name">
-                {{ item.name }} {{ item.count }}
-              </li>
-            </ul>
-            <p v-else>成交样本不足以按学历归纳。</p>
-            <p class="sub">来源渠道</p>
-            <ul v-if="signed?.feature_groups?.source_channel?.length" class="plain">
-              <li v-for="item in signed.feature_groups.source_channel" :key="'sch-' + item.name">
-                {{ item.name }} {{ item.count }}
-              </li>
-            </ul>
-            <p v-else>成交样本不足以按来源渠道归纳。</p>
+            <CountChart v-if="charts.signedCountry" :chart="charts.signedCountry" />
+            <template v-else>
+              <p class="sub">意向国家</p>
+              <p>成交样本不足以按意向国家归纳。</p>
+            </template>
+            <CountChart v-if="charts.signedEducation" :chart="charts.signedEducation" />
+            <template v-else>
+              <p class="sub">学历</p>
+              <p>成交样本不足以按学历归纳。</p>
+            </template>
+            <CountChart v-if="charts.signedChannel" :chart="charts.signedChannel" />
+            <template v-else>
+              <p class="sub">来源渠道</p>
+              <p>成交样本不足以按来源渠道归纳。</p>
+            </template>
             <p v-if="insight?.signed_narrative" class="narrative">{{ insight.signed_narrative }}</p>
           </section>
 
           <section class="chapter">
             <h3>流失</h3>
-            <p>期末存量 {{ numbers?.lost_count ?? 0 }} 人</p>
-            <ul v-if="lost?.customers?.length" class="plain">
-              <li v-for="(item, index) in lost.customers" :key="'lost-' + index">
-                {{ item.name }} · {{ item.lost_reason || '原因未记录' }}
-              </li>
-            </ul>
+            <NameTable
+              v-if="lostRows.length"
+              :columns="[
+                { key: 'name', label: '姓名' },
+                { key: 'lost_reason', label: '流失原因' },
+              ]"
+              :rows="lostRows"
+            />
             <p v-else>没有流失客户。</p>
             <p v-if="insight?.lost_narrative" class="narrative">{{ insight.lost_narrative }}</p>
           </section>
@@ -306,6 +342,34 @@ onMounted(async () => {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.period-control {
+  position: relative;
+  min-width: 240px;
+  height: 32px;
+  overflow: hidden;
+}
+
+.period-range {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 14px;
+  color: #606266;
+}
+
+.period-control :deep(.el-date-editor) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .fail {
@@ -387,43 +451,6 @@ onMounted(async () => {
 .narrative {
   color: #606266;
   font-size: 13px;
-}
-
-.plain {
-  margin: 0 0 8px;
-  padding: 0;
-  list-style: none;
-}
-
-.plain li {
-  padding: 6px 0;
-  border-bottom: 1px dashed #ebeef5;
-  font-size: 13px;
-}
-
-.paths {
-  margin: 0 0 8px;
-  padding: 0;
-  list-style: none;
-}
-
-.paths > li {
-  margin-bottom: 10px;
-}
-
-.paths strong {
-  font-size: 13px;
-}
-
-.nested {
-  margin-top: 4px;
-  padding-left: 12px;
-}
-
-.hint-inline {
-  margin: 4px 0 0;
-  color: #909399;
-  font-size: 12px;
 }
 
 .history {

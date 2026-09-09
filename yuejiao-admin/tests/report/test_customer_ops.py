@@ -332,16 +332,17 @@ def test_lost_attribution_uses_recorded_reason(app, conn):
     assert report.content["insight"]["suggested_action"]
 
 
-def test_second_generate_appends_and_current_is_the_new_success(app):
+def test_second_generate_replaces_previous_success_in_history(app):
     first = app.generate(KIND, WEEK_START)
     second = app.generate(KIND, WEEK_START)
 
     assert first.id != second.id
     current = app.current(KIND, WEEK_START)
     assert current.id == second.id
-    history_ids = [item.id for item in app.history(KIND)]
-    assert first.id in history_ids
-    assert second.id in history_ids
+    history = app.history(KIND)
+    same_period = [item for item in history if item.period_start == WEEK_START]
+    assert [item.id for item in same_period] == [second.id]
+    assert first.id not in [item.id for item in history]
 
 
 def test_insight_failure_does_not_replace_current_report(app, conn):

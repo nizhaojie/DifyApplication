@@ -7,6 +7,10 @@ import {
   generateReport,
   type ReportRecord,
 } from '@/api/report'
+import CountChart from './CountChart.vue'
+import NameTable from './NameTable.vue'
+import { indexReportCharts } from './charts'
+import { periodRangeLabel, resolveWeekPeriod, shanghaiDate } from './period'
 
 const KIND = 'psych_weekly' as const
 
@@ -16,19 +20,6 @@ const RISK_LABEL: Record<string, string> = {
   low: '低',
 }
 
-function shanghaiIsoDate(when = new Date()) {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Shanghai',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(when)
-}
-
-function shanghaiDate(when = new Date()) {
-  return new Date(`${shanghaiIsoDate(when)}T00:00:00+08:00`)
-}
-
 const weekDate = ref(shanghaiDate())
 const isGenerating = ref(false)
 const isLoading = ref(false)
@@ -36,9 +27,39 @@ const failure = ref('')
 const current = ref<ReportRecord | null>(null)
 const history = ref<ReportRecord[]>([])
 
-const periodStart = computed(() => shanghaiIsoDate(weekDate.value))
+const resolvedPeriod = computed(() => resolveWeekPeriod(weekDate.value))
+const periodStart = computed(() => resolvedPeriod.value.start)
+const periodLabel = computed(() => periodRangeLabel(resolvedPeriod.value))
 const numbers = computed(() => current.value?.content?.numbers as Record<string, any> | undefined)
 const insight = computed(() => current.value?.content?.insight as Record<string, string> | undefined)
+const charts = computed(() => indexReportCharts(KIND, numbers.value))
+const weekRiskRows = computed(() =>
+  (numbers.value?.week_risk_students ?? []).map(
+    (item: { student_name: string; risk_level: string; emotion_tag?: string }) => ({
+      student_name: item.student_name,
+      risk_level: riskLabel(item.risk_level),
+      emotion_tag: item.emotion_tag || '无标签',
+    }),
+  ),
+)
+const watchlistRows = computed(() =>
+  (numbers.value?.watchlist_students ?? []).map(
+    (item: { student_name: string; risk_level: string; emotion_tag?: string }) => ({
+      student_name: item.student_name,
+      risk_level: riskLabel(item.risk_level),
+      emotion_tag: item.emotion_tag || '无标签',
+    }),
+  ),
+)
+const approachingRows = computed(() =>
+  (numbers.value?.approaching_nodes ?? []).map(
+    (item: { student_name: string; title: string; deadline: string }) => ({
+      student_name: item.student_name,
+      title: item.title,
+      deadline: item.deadline,
+    }),
+  ),
+)
 
 function riskLabel(level: string) {
   return RISK_LABEL[level] || level
@@ -94,14 +115,18 @@ onMounted(async () => {
         <p>选定周期后手动生成。数字来自心理记录与预警，叙述与疏导建议来自洞察。报告只出姓名，不出原话。</p>
       </div>
       <div class="actions">
-        <el-date-picker
-          v-model="weekDate"
-          type="week"
-          format="YYYY 第 ww 周"
-          placeholder="选择周期"
-          :clearable="false"
-          @change="loadCurrent"
-        />
+        <div class="period-control">
+          <span class="period-range">{{ periodLabel }}</span>
+          <el-date-picker
+            v-model="weekDate"
+            class="period-picker"
+            type="week"
+            :first-day-of-week="1"
+            placeholder="选择周期"
+            :clearable="false"
+            @change="loadCurrent"
+          />
+        </div>
         <el-button type="primary" :loading="isGenerating" @click="onGenerate">手动生成</el-button>
       </div>
     </header>
@@ -129,44 +154,52 @@ onMounted(async () => {
             <p class="lead">本周有心理记录 {{ numbers?.recorded_student_count ?? 0 }} 人</p>
             <p v-if="numbers?.average_emotion_score != null">平均情绪分 {{ numbers.average_emotion_score }}</p>
             <p v-else>暂无情绪分可计。</p>
-            <ul v-if="numbers?.emotion_tags?.length" class="plain">
-              <li v-for="item in numbers.emotion_tags" :key="item.name">{{ item.name }} {{ item.count }}</li>
-            </ul>
+            <CountChart v-if="charts.emotionTags" :chart="charts.emotionTags" />
             <p v-else>本期无情绪标签可计。</p>
             <p v-if="insight?.overview_narrative" class="narrative">{{ insight.overview_narrative }}</p>
           </section>
 
           <section class="chapter">
             <h3>本周风险学生</h3>
-            <p>本周新建且未解除 {{ numbers?.week_risk_count ?? 0 }} 人</p>
-            <ul v-if="numbers?.week_risk_students?.length" class="plain">
-              <li v-for="(item, index) in numbers.week_risk_students" :key="index">
-                {{ item.student_name }} · {{ riskLabel(item.risk_level) }} · {{ item.emotion_tag || '无标签' }}
-              </li>
-            </ul>
+            <CountChart v-if="charts.weekRiskVsWatch" :chart="charts.weekRiskVsWatch" />
+            <NameTable
+              v-if="weekRiskRows.length"
+              :columns="[
+                { key: 'student_name', label: '姓名' },
+                { key: 'risk_level', label: '风险等级' },
+                { key: 'emotion_tag', label: '情绪标签' },
+              ]"
+              :rows="weekRiskRows"
+            />
             <p v-else>本周没有未解除的风险学生。</p>
             <p v-if="insight?.week_risk_narrative" class="narrative">{{ insight.week_risk_narrative }}</p>
           </section>
 
           <section class="chapter">
             <h3>持续关注</h3>
-            <p>画像中/高风险 {{ numbers?.watchlist_count ?? 0 }} 人</p>
-            <ul v-if="numbers?.watchlist_students?.length" class="plain">
-              <li v-for="(item, index) in numbers.watchlist_students" :key="index">
-                {{ item.student_name }} · {{ riskLabel(item.risk_level) }} · {{ item.emotion_tag || '无标签' }}
-              </li>
-            </ul>
+            <NameTable
+              v-if="watchlistRows.length"
+              :columns="[
+                { key: 'student_name', label: '姓名' },
+                { key: 'risk_level', label: '风险等级' },
+                { key: 'emotion_tag', label: '情绪标签' },
+              ]"
+              :rows="watchlistRows"
+            />
             <p v-else>没有需要持续关注的学生。</p>
             <p v-if="insight?.watchlist_narrative" class="narrative">{{ insight.watchlist_narrative }}</p>
           </section>
 
-          <section v-if="numbers?.approaching_nodes?.length" class="chapter">
+          <section v-if="approachingRows.length" class="chapter">
             <h3>节点临近</h3>
-            <ul class="plain">
-              <li v-for="(item, index) in numbers.approaching_nodes" :key="index">
-                {{ item.student_name }} · {{ item.title }} · {{ item.deadline }}
-              </li>
-            </ul>
+            <NameTable
+              :columns="[
+                { key: 'student_name', label: '姓名' },
+                { key: 'title', label: '节点' },
+                { key: 'deadline', label: '截止日期' },
+              ]"
+              :rows="approachingRows"
+            />
             <p v-if="insight?.approaching_node_narrative" class="narrative">{{ insight.approaching_node_narrative }}</p>
           </section>
 
@@ -233,6 +266,34 @@ onMounted(async () => {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.period-control {
+  position: relative;
+  min-width: 240px;
+  height: 32px;
+  overflow: hidden;
+}
+
+.period-range {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 14px;
+  color: #606266;
+}
+
+.period-control :deep(.el-date-editor) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .fail {
@@ -307,18 +368,6 @@ onMounted(async () => {
 
 .narrative {
   color: #606266;
-  font-size: 13px;
-}
-
-.plain {
-  margin: 0 0 8px;
-  padding: 0;
-  list-style: none;
-}
-
-.plain li {
-  padding: 6px 0;
-  border-bottom: 1px dashed #ebeef5;
   font-size: 13px;
 }
 

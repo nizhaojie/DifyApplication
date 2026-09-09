@@ -145,7 +145,7 @@ function closeTag(path: string) {
         </el-menu-item>
       </el-menu>
     </el-aside>
-    <el-container>
+    <el-container class="content-pane">
       <el-header class="header" height="56px">
         <el-button text @click="collapsed = !collapsed">
           <el-icon :size="18">

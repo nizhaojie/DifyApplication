@@ -181,16 +181,17 @@ def test_historical_week_is_monday_through_sunday(app):
     assert report.period_end == date(2025, 3, 9)
 
 
-def test_second_generate_appends_and_current_is_the_new_success(app):
+def test_second_generate_replaces_previous_success_in_history(app):
     first = app.generate(KIND, WEEK_START)
     second = app.generate(KIND, WEEK_START)
 
     assert first.id != second.id
     current = app.current(KIND, WEEK_START)
     assert current.id == second.id
-    history_ids = [item.id for item in app.history(KIND)]
-    assert first.id in history_ids
-    assert second.id in history_ids
+    history = app.history(KIND)
+    same_period = [item for item in history if item.period_start == WEEK_START]
+    assert [item.id for item in same_period] == [second.id]
+    assert first.id not in [item.id for item in history]
 
 
 def test_insight_failure_does_not_replace_current_report(app, conn, insight):
@@ -208,6 +209,21 @@ def test_insight_failure_does_not_replace_current_report(app, conn, insight):
     current = failing.current(KIND, WEEK_START)
     assert current.id == first.id
     assert current.status == "completed"
+    history_ids = [item.id for item in failing.history(KIND)]
+    assert first.id in history_ids
+    assert failed.id not in history_ids
+
+
+def test_history_keeps_newer_period_first_after_regenerating_older(app):
+    older = app.generate(KIND, date(2025, 3, 3))
+    app.generate(KIND, WEEK_START)
+    regenerated = app.generate(KIND, date(2025, 3, 3))
+
+    history = app.history(KIND)
+    period_starts = [item.period_start for item in history]
+    assert period_starts.index(WEEK_START) < period_starts.index(date(2025, 3, 3))
+    assert older.id not in [item.id for item in history]
+    assert regenerated.id in [item.id for item in history]
 
 
 def test_history_can_open_an_older_period(app, conn):
@@ -215,7 +231,11 @@ def test_history_can_open_an_older_period(app, conn):
     older = app.generate(KIND, date(2025, 3, 3))
     app.generate(KIND, WEEK_START)
 
-    found = next(item for item in app.history(KIND) if item.id == older.id)
+    history = app.history(KIND)
+    assert older.id in [item.id for item in history]
+    period_starts = [item.period_start for item in history]
+    assert period_starts.index(WEEK_START) < period_starts.index(date(2025, 3, 3))
+    found = next(item for item in history if item.id == older.id)
     assert found.period_start == date(2025, 3, 3)
     assert found.content["numbers"]["period_complaint_count"] == 1
 
