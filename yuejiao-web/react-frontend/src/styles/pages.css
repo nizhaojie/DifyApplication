@@ -1848,7 +1848,8 @@
   flex-direction: column;
   justify-content: space-between;
   padding: 44px clamp(32px, 7vw, 110px) 40px;
-  background: radial-gradient(120% 110% at 85% 10%, #17352f 0%, var(--ink-deep) 55%);
+  background-image: var(--noise), radial-gradient(120% 110% at 85% 10%, #262b34 0%, var(--ink-deep) 58%);
+  background-size: 180px 180px, auto;
   color: #d5dde4;
   overflow: hidden;
 }
@@ -1860,7 +1861,7 @@
   bottom: -200px;
   width: 520px;
   height: 520px;
-  border: 1px solid rgba(45, 212, 191, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 50%;
   pointer-events: none;
 }
@@ -1870,7 +1871,7 @@
 }
 
 .login-brand .brand-text span {
-  color: #8fa3ad;
+  color: #8b929e;
 }
 
 .login-intro {
@@ -1879,7 +1880,7 @@
 }
 
 .login-intro .page-header-eyebrow {
-  color: #7fa89f;
+  color: #868d99;
 }
 
 .login-intro h1 {
@@ -1893,7 +1894,7 @@
 
 .login-intro h1 em {
   font-style: normal;
-  color: #5eead4;
+  color: #e9ebee;
 }
 
 .login-intro > p:last-of-type {
@@ -1901,7 +1902,7 @@
   margin-top: 22px;
   font-size: 14px;
   line-height: 1.85;
-  color: #94a8b3;
+  color: #9aa2ad;
 }
 
 .login-footnote {
@@ -1909,12 +1910,12 @@
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.08em;
-  color: #647c86;
+  color: #6d7480;
 }
 
 .login-footnote span {
   margin: 0 8px;
-  color: #4fd1b4;
+  color: #4b525d;
 }
 
 .login-form-side {

@@ -199,8 +199,57 @@ a:focus-visible {
   to   { transform: scaleX(1); }
 }
 
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .spinner {
   animation: spin 0.7s linear infinite;
+}
+
+/* ============================================================
+   v2 — Material「Ink & Paper」: 全局细噪点 / 标题排版 / 数字
+   ============================================================ */
+
+/* 全局胶片噪点:固定覆盖层,极低透明度,不拦截任何交互。
+   浅色卡面上呈纸面颗粒,深色侧栏上自然隐没。 */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  pointer-events: none;
+  background-image: var(--noise);
+  background-size: 180px 180px;
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+}
+
+/* 标题排版:统一紧字距,避免CJK行尾孤字 */
+h1, h2, h3 {
+  letter-spacing: -0.015em;
+}
+
+/* 数字/时间统一等宽数字 */
+.num, time, kbd {
+  font-variant-numeric: tabular-nums;
+}
+
+kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {

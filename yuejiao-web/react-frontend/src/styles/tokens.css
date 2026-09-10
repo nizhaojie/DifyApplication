@@ -1,36 +1,54 @@
 /* ============================================================
    Yuejiao Design System — Tokens
-   Calm Intelligence: light surfaces, ink primaries, one accent.
+   v2 "Ink & Paper": monochrome, tonal layering, material texture.
+   语义状态色（success/warning/danger/info/violet）保持不变。
    ============================================================ */
 
 :root {
-  /* -- neutral surfaces & text -------------------------------- */
-  --bg: #f6f7f8;
-  --surface: #ffffff;
-  --surface-2: #f9fafb;
-  --surface-3: #f1f3f5;
-  --border: #e7eaee;
-  --border-strong: #d8dde3;
-  --text-1: #171a21;
-  --text-2: #3d4450;
+  /* -- 明度阶梯:画布最深 → 卡片最亮 --------------------------- */
+  --bg: #f3f4f6;             /* L0 画布                          */
+  --surface: #ffffff;        /* L3 卡片/浮层(最亮)               */
+  --surface-2: #f8f9fa;      /* L2 次级面                        */
+  --surface-3: #eef0f2;      /* L1 hover/嵌入面                  */
+  --surface-4: #e6e9ec;      /* L0.5 pressed/深一档              */
+  --border: #e6e8eb;
+  --border-strong: #d5d9de;
+  --text-1: #16181d;
+  --text-2: #3d434e;
   --text-3: #6e7684;
-  --text-4: #9aa2af;
+  --text-4: #98a0ab;
   --text-inverse: #ffffff;
 
-  /* -- brand accent (used sparingly) --------------------------- */
-  --brand: #0d9488;          /* fills: charts, marks, brand      */
-  --brand-strong: #0f766e;   /* accent text on light surfaces    */
-  --brand-soft: #e4f3f1;     /* tinted background                */
-  --brand-softer: #f2faf9;
-  --brand-border: #bfe2dc;
+  /* -- ink accent(原 brand 位):全部点缀收敛为墨色 -------------- */
+  --brand: #1c1f26;
+  --brand-strong: #12141a;
+  --brand-soft: #e9ebee;     /* 选中/激活淡墨底                  */
+  --brand-softer: #f4f5f6;
+  --brand-border: #d3d7dc;
 
-  /* -- ink primary (primary buttons, emphasis) ----------------- */
-  --ink-btn: #1a1d24;
-  --ink-btn-hover: #2c313c;
-  --ink-btn-active: #12141a;
-  --ink-deep: #101317;
+  /* -- ink primary(主按钮/强调)-------------------------------- */
+  --ink-btn: #1c1f26;
+  --ink-btn-hover: #2b303a;
+  --ink-btn-active: #101318;
+  --ink-deep: #0d0f13;
 
-  /* -- status (always paired with a text label) ---------------- */
+  /* -- 材质:墨渐变 + 全局细噪点 -------------------------------- */
+  --grad-ink: linear-gradient(180deg, #2f343f 0%, #1c1f26 100%);
+  --grad-ink-deep: linear-gradient(165deg, #1e222a 0%, #111318 100%);
+  --gloss: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  --gloss-strong: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+
+  /* -- 深色墨侧栏(与浅色内容区形成明度对比)--------------------- */
+  --sidebar-bg: linear-gradient(175deg, #191c22 0%, #121419 100%);
+  --sidebar-border: #262a31;
+  --sidebar-text: #a3aab6;
+  --sidebar-text-dim: #6d7480;
+  --sidebar-text-strong: #eef0f3;
+  --sidebar-hover: rgba(255, 255, 255, 0.055);
+  --sidebar-active: rgba(255, 255, 255, 0.09);
+
+  /* -- status(语义色,保持不变)---------------------------------- */
   --success: #15803d;
   --success-soft: #e8f6ee;
   --success-border: #c4e5d1;
@@ -64,21 +82,22 @@
   --r-xl: 18px;
   --r-full: 999px;
 
-  /* -- elevation (border first, shadow subtle) ------------------ */
-  --shadow-xs: 0 1px 2px rgba(18, 22, 33, 0.05);
-  --shadow-sm: 0 1px 2px rgba(18, 22, 33, 0.04), 0 2px 6px rgba(18, 22, 33, 0.05);
-  --shadow-md: 0 2px 4px rgba(18, 22, 33, 0.04), 0 8px 20px -6px rgba(18, 22, 33, 0.1);
-  --shadow-lg: 0 4px 8px rgba(18, 22, 33, 0.05), 0 18px 44px -12px rgba(18, 22, 33, 0.16);
-  --shadow-xl: 0 24px 70px -16px rgba(18, 22, 33, 0.28);
-  --focus-ring: 0 0 0 3px rgba(13, 148, 136, 0.16);
+  /* -- elevation(先边框,阴影克制)-------------------------------- */
+  --shadow-xs: 0 1px 2px rgba(16, 19, 24, 0.05);
+  --shadow-sm: 0 1px 2px rgba(16, 19, 24, 0.04), 0 2px 6px rgba(16, 19, 24, 0.05);
+  --shadow-md: 0 2px 4px rgba(16, 19, 24, 0.04), 0 8px 20px -6px rgba(16, 19, 24, 0.1);
+  --shadow-lg: 0 4px 8px rgba(16, 19, 24, 0.05), 0 18px 44px -12px rgba(16, 19, 24, 0.16);
+  --shadow-xl: 0 24px 70px -16px rgba(16, 19, 24, 0.3);
+  --focus-ring: 0 0 0 3px rgba(23, 26, 33, 0.1), 0 0 0 1px rgba(23, 26, 33, 0.32) inset;
 
   /* -- motion ---------------------------------------------------- */
   --dur-1: 120ms;
   --dur-2: 180ms;
-  --dur-3: 260ms;
-  --dur-4: 400ms;
+  --dur-3: 240ms;
+  --dur-4: 360ms;
   --ease: cubic-bezier(0.19, 1, 0.22, 1);
   --ease-io: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.28, 0.64, 1);
 
   /* -- layout ---------------------------------------------------- */
   --sidebar-w: 248px;

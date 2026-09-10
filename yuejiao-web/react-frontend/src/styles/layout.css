@@ -43,8 +43,8 @@
   flex: none;
   border-radius: 9px;
   color: #fff;
-  background: linear-gradient(135deg, #14b8a6, #0f766e);
-  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.28);
+  background: linear-gradient(135deg, #3a404c, #1c1f26);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .brand-text {
@@ -571,5 +571,156 @@
   .grid-stats,
   .grid-stats--3 {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ============================================================
+   v2 Layout「Ink & Paper」— 深色墨侧栏 / 顶栏 / 页签 / 页面过渡
+   深色侧栏与浅色内容形成整体明度对比的最高层级。
+   ============================================================ */
+
+/* ---------- Sidebar: 墨面板 ---------- */
+.sidebar {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.045);
+}
+
+.brand-mark {
+  background: linear-gradient(135deg, #f7f8f9, #c8cdd5);
+  color: #14171c;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.brand-text strong {
+  color: var(--sidebar-text-strong);
+}
+
+.brand-text span {
+  color: var(--sidebar-text-dim);
+}
+
+.nav-label {
+  color: var(--sidebar-text-dim);
+}
+
+.is-collapsed .nav-label {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.nav-item {
+  color: var(--sidebar-text);
+  font-weight: 475;
+}
+
+.nav-item svg {
+  color: var(--sidebar-text-dim);
+}
+
+.nav-item:hover {
+  background: var(--sidebar-hover);
+  color: var(--sidebar-text-strong);
+}
+
+.nav-item:hover svg {
+  color: var(--sidebar-text);
+}
+
+/* 当前项:白字 + 左缘白色指示条(最高优先级视觉锚点) */
+.nav-item.active {
+  background: linear-gradient(90deg, var(--sidebar-active) 0%, rgba(255, 255, 255, 0.028) 100%);
+  color: #ffffff;
+  font-weight: 550;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.nav-item.active svg {
+  color: #ffffff;
+}
+
+.nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  translate: 0 -50%;
+  width: 3px;
+  height: 16px;
+  border-radius: 0 3px 3px 0;
+  background: #f5f6f7;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+}
+
+.nav-sub .nav-item.active::before {
+  display: none;
+}
+
+.sidebar-foot {
+  border-top-color: var(--sidebar-border);
+}
+
+.sidebar-user:hover {
+  background: var(--sidebar-hover);
+}
+
+.sidebar-user-text strong {
+  color: var(--sidebar-text-strong);
+}
+
+.sidebar-user-text span {
+  color: var(--sidebar-text-dim);
+}
+
+.sidebar-foot .avatar {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--sidebar-text-strong);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.sidebar-collapse {
+  color: var(--sidebar-text-dim);
+}
+
+.sidebar-collapse:hover {
+  background: var(--sidebar-hover);
+  color: var(--sidebar-text);
+}
+
+/* ---------- Topbar: 与画布同色的毛玻璃 ---------- */
+.topbar {
+  background: rgba(243, 244, 246, 0.78);
+  backdrop-filter: blur(16px) saturate(1.35);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 0 rgba(16, 19, 24, 0.02);
+}
+
+.topbar-search {
+  border-radius: var(--r-full);
+  height: 34px;
+  padding: 0 8px 0 12px;
+}
+
+.topbar-search kbd {
+  border: 0;
+  background: var(--surface-3);
+}
+
+/* ---------- Tags: 激活页签墨色化 ---------- */
+.tags .tag.active {
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text-1);
+  font-weight: 550;
+  box-shadow: var(--shadow-xs);
+}
+
+/* ---------- Page: 进入过渡(内容画布,不含侧栏顶栏) ---------- */
+.page {
+  animation: page-in var(--dur-3) var(--ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page {
+    animation: none;
   }
 }
