@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useState } from 'react'
 import {
   CalendarClock,
   ClipboardList,
@@ -23,7 +23,6 @@ import {
   fetchProgress,
   fetchPsychProfile,
   fetchScores,
-  fetchStudents,
   fetchTickets,
   type AcademicDeadline,
   type ApplicationProgress,
@@ -32,19 +31,17 @@ import {
   type StudentLeave,
   type StudentOverview,
   type StudentScore,
-  type StudentSummary,
   type StudentTicket,
 } from '@/api/student'
-import { useAuthStore } from '@/store/authStore'
 import { Badge, Button, Empty, Field, Input, Modal, PageHeader, Panel, Select, StatCard, Tabs, Textarea, type TabItem } from '@/ui'
 import { showToast } from '@/ui/toast'
 import './student.css'
 
-// 学生服务页(gqk 框架版) + 旧版功能移植:
-// - mock 降级:api 调用失败/超时(10s)回退内置演示数据,顶部「演示数据模式 / 已连接业务服务」Badge
+// 学生服务页(登录态自服务):
+// - 学生身份由后端从 JWT 推导,页面不再出现学生选择器
+// - 演示降级仅在 VITE_ENABLE_DEMO_FALLBACK=true 时启用,默认显式报错,避免掩盖故障
 // - 4 张可点 KPI 卡联动 Tab,心理关怀卡显示「需跟进/正常」
 // - 智能助手面板:正则意图路由(请假/工单/进度/学业/心理/生活/升学),IME 组合期不发送
-// - 服务概览快捷卡、学业成绩课程筛选+汇总+分数条、生活与关怀三卡入口
 
 type ServiceTab = 'overview' | 'leaves' | 'tickets' | 'academic' | 'progress' | 'life'
 type ModalType = 'leave' | 'ticket' | 'progress' | null
@@ -71,20 +68,7 @@ const EMPTY_DATA: StudentData = {
   knowledge: [],
 }
 
-// 后端不可达时的演示数据(照搬旧版 StudentPage 内置数据)
-const DEMO_STUDENT: StudentSummary = {
-  id: 1,
-  user_id: 1,
-  student_no: 'YJ2026001',
-  name: '张明',
-  real_name: '张明',
-  school: '曼彻斯特大学',
-  major: '教育学',
-  grade: '研一',
-  abroad_country: '英国',
-  class_teacher_id: null,
-}
-
+// 演示降级开启且后端不可达时使用(照搬旧版 StudentPage 内置数据)
 const DEMO_DATA: StudentData = {
   overview: { pending_leaves: 1, open_tickets: 1, upcoming_deadlines: 3, open_psych_alerts: 0 },
   leaves: [
@@ -143,6 +127,8 @@ const DEMO_DATA: StudentData = {
   ],
 }
 
+const DEMO_FALLBACK = import.meta.env.VITE_ENABLE_DEMO_FALLBACK === 'true'
+
 const tabs: TabItem<ServiceTab>[] = [
   { key: 'overview', label: '服务概览' },
   { key: 'leaves', label: '请假记录' },
@@ -196,7 +182,7 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : '数据加载失败，请稍后重试'
 }
 
-// 等价旧版 10s AbortController:每个请求独立超时,超时按失败处理并触发演示数据降级
+// 等价旧版 10s AbortController:每个请求独立超时,超时按失败处理
 function withTimeout<T>(promise: Promise<T>, ms = 10000): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = window.setTimeout(() => reject(new Error('请求超时')), ms)
@@ -220,15 +206,9 @@ function scoreLevel(score: number | string) {
 
 export function StudentPage() {
   const navigate = useNavigate()
-  const user = useAuthStore((state) => state.user)
-  const isStudent = user?.user_type === 'student' || user?.role_code === 'student'
-  const [students, setStudents] = useState<StudentSummary[]>([])
-  const [selectedId, setSelectedId] = useState<number | null>(null)
-  const [studentError, setStudentError] = useState('')
   const [data, setData] = useState<StudentData | null>(null)
   const [dataError, setDataError] = useState('')
-  const [loadingStudents, setLoadingStudents] = useState(true)
-  const [loadingData, setLoadingData] = useState(false)
+  const [loadingData, setLoadingData] = useState(true)
   const [usingRemoteData, setUsingRemoteData] = useState(true)
   const [tab, setTab] = useState<ServiceTab>('overview')
   const [modal, setModal] = useState<ModalType>(null)
@@ -242,86 +222,51 @@ export function StudentPage() {
   const [progressForm, setProgressForm] = useState({ target_school: '', target_major: '', progress_detail: '', deadline: '', next_action: '' })
   const [scoreCourse, setScoreCourse] = useState('all')
 
-  const selectedStudent = useMemo(
-    () => students.find((item) => item.id === selectedId) || null,
-    [selectedId, students],
-  )
-
-  const reloadStudents = useCallback(async () => {
-    setLoadingStudents(true)
-    setStudentError('')
-    try {
-      const items = await withTimeout(fetchStudents())
-      setStudents(items)
-      setUsingRemoteData(true)
-      setSelectedId((current) => {
-        if (current && items.some((item) => item.id === current)) return current
-        if (isStudent && user?.id && items.some((item) => item.id === user.id)) return user.id
-        return items[0]?.id ?? null
-      })
-    } catch {
-      // 降级照搬旧版:静默回退内置演示数据,仅以顶部状态标签提示
-      setStudents([DEMO_STUDENT])
-      setSelectedId(DEMO_STUDENT.id)
-      setUsingRemoteData(false)
-      setStudentError('')
-    } finally {
-      setLoadingStudents(false)
-    }
-  }, [isStudent, user?.id])
-
   const loadData = useCallback(async () => {
-    if (!selectedId) {
-      setData(null)
-      return
-    }
     setLoadingData(true)
     setDataError('')
     try {
       const [overview, leaves, tickets, deadlines, scores, progress, psych, knowledge] = await Promise.all([
-        withTimeout(fetchOverview(selectedId)),
-        withTimeout(fetchLeaves(selectedId)),
-        withTimeout(fetchTickets(selectedId)),
-        withTimeout(fetchDeadlines(selectedId)),
-        withTimeout(fetchScores(selectedId)),
-        withTimeout(fetchProgress(selectedId)),
-        withTimeout(fetchPsychProfile(selectedId)),
-        withTimeout(fetchKnowledge(selectedId)),
+        withTimeout(fetchOverview()),
+        withTimeout(fetchLeaves()),
+        withTimeout(fetchTickets()),
+        withTimeout(fetchDeadlines()),
+        withTimeout(fetchScores()),
+        withTimeout(fetchProgress()),
+        withTimeout(fetchPsychProfile()),
+        withTimeout(fetchKnowledge()),
       ])
       setData({ overview, leaves, tickets, deadlines, scores, progress, psych, knowledge })
       setUsingRemoteData(true)
-    } catch {
-      // 降级照搬旧版:回退演示数据,保留页面可用
-      setData(DEMO_DATA)
-      setUsingRemoteData(false)
-      setDataError('')
+    } catch (error) {
+      if (DEMO_FALLBACK) {
+        // 降级仅在显式开启时回退演示数据,以顶部状态标签提示
+        setData(DEMO_DATA)
+        setUsingRemoteData(false)
+      } else {
+        setData(null)
+        setDataError(errorMessage(error))
+      }
     } finally {
       setLoadingData(false)
     }
-  }, [selectedId])
+  }, [])
 
-  useEffect(() => { void reloadStudents() }, [reloadStudents])
   useEffect(() => { void loadData() }, [loadData])
 
-  async function refresh() {
-    await reloadStudents()
-    await loadData()
+  function closeModal() {
+    if (!submitting) setModal(null)
   }
 
   function openModal(type: Exclude<ModalType, null>) {
     setModal(type)
   }
 
-  function closeModal() {
-    if (!submitting) setModal(null)
-  }
-
   async function submitLeave(event: FormEvent) {
     event.preventDefault()
-    if (!selectedId) return
     setSubmitting(true)
     try {
-      await createLeave(selectedId, leaveForm)
+      await createLeave(leaveForm)
       setUsingRemoteData(true)
       showToast('请假申请已提交')
       setModal(null)
@@ -336,10 +281,9 @@ export function StudentPage() {
 
   async function submitTicket(event: FormEvent) {
     event.preventDefault()
-    if (!selectedId) return
     setSubmitting(true)
     try {
-      await createTicket(selectedId, ticketForm)
+      await createTicket(ticketForm)
       setUsingRemoteData(true)
       showToast('反馈工单已提交')
       setModal(null)
@@ -354,10 +298,9 @@ export function StudentPage() {
 
   async function submitProgress(event: FormEvent) {
     event.preventDefault()
-    if (!selectedId) return
     setSubmitting(true)
     try {
-      await createProgress(selectedId, {
+      await createProgress({
         ...progressForm,
         deadline: progressForm.deadline ? `${progressForm.deadline}T23:59:00` : undefined,
       })
@@ -374,7 +317,7 @@ export function StudentPage() {
   }
 
   function openChat(mode: 'psych' | 'life' | 'program') {
-    if (selectedId) navigate(`/student/${mode}?student_id=${selectedId}`)
+    navigate(`/student/${mode}`)
   }
 
   // 智能助手:正则意图路由(照搬旧版 handleAssistantRequest)
@@ -424,18 +367,6 @@ export function StudentPage() {
     setAssistantReply('我暂时未识别到具体办理事项。你可以直接说“我想请假”“查看申请进度”“查询论文 DDL”，或进入心理、生活、升学智能对话。')
   }
 
-  const displayStudent = selectedStudent || (user && isStudent ? {
-    id: user.id,
-    user_id: user.id,
-    student_no: null,
-    name: user.real_name,
-    real_name: user.real_name,
-    school: null,
-    major: null,
-    grade: null,
-    abroad_country: null,
-    class_teacher_id: null,
-  } satisfies StudentSummary : null)
   const currentData = data || EMPTY_DATA
 
   const courseOptions = [...new Set(currentData.scores.map((item) => item.course_name))]
@@ -529,7 +460,7 @@ export function StudentPage() {
   }
 
   function renderLife() {
-    return <Panel flush title="海外生活知识" desc={displayStudent?.abroad_country ? `当前国家：${displayStudent.abroad_country}` : '学生所在国家尚未填写'} icon={<LifeBuoy size={16} />} actions={<Button size="sm" variant="primary" icon={<Send size={14} />} onClick={() => openChat('life')}>咨询助手</Button>}>
+    return <Panel flush title="海外生活知识" desc="按留学国家检索的服务内容" icon={<LifeBuoy size={16} />} actions={<Button size="sm" variant="primary" icon={<Send size={14} />} onClick={() => openChat('life')}>咨询助手</Button>}>
       <div className="student-care-grid">
         <article className="student-care-card">
           <span className="svc-icon"><HeartPulse size={16} /></span>
@@ -567,66 +498,57 @@ export function StudentPage() {
     <PageHeader
       eyebrow={<><UserRound size={13} />Student Service</>}
       title="学生助手"
-      desc={isStudent ? '查看个人服务、学业进度和智能助手对话。' : '选择负责学生，集中处理行政服务、学业节点与智能助手会话。'}
+      desc="查看个人服务、学业进度和智能助手对话。"
       actions={<div className="page-action-row">
         <Badge tone={usingRemoteData ? 'success' : 'warning'} dot>{usingRemoteData ? '已连接业务服务' : '演示数据模式'}</Badge>
-        <Button variant="secondary" size="sm" icon={<RefreshCw size={14} />} loading={loadingStudents || loadingData} onClick={() => void refresh()}>刷新</Button>
-        <Button variant="primary" size="sm" icon={<MessageCircle size={14} />} disabled={!selectedId} onClick={() => openChat('program')}>咨询助手</Button>
+        <Button variant="secondary" size="sm" icon={<RefreshCw size={14} />} loading={loadingData} onClick={() => void loadData()}>刷新</Button>
+        <Button variant="primary" size="sm" icon={<MessageCircle size={14} />} onClick={() => openChat('program')}>咨询助手</Button>
       </div>}
     />
 
-    {studentError && <div className="alert"><span>{studentError}</span><Button size="sm" variant="ghost" onClick={() => void reloadStudents()}>重试</Button></div>}
-    {!isStudent && !loadingStudents && students.length > 0 && <Panel className="student-selector-panel" tight>
-      <div className="student-selector"><Field label="当前服务对象" hint="普通员工仅能看到负责学生；经理和管理员可查看全部学生。"><Select value={selectedId ?? ''} onChange={(event) => setSelectedId(Number(event.target.value) || null)}><option value="">请选择学生</option>{students.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.student_no || '未填写学号'}</option>)}</Select></Field><div className="student-selector-meta">{selectedStudent ? <><strong>{selectedStudent.school || '学校未填写'}</strong><span>{[selectedStudent.major, selectedStudent.grade, selectedStudent.abroad_country].filter(Boolean).join(' · ') || '档案信息待补充'}</span></> : <span>选择后加载学生服务数据</span>}</div></div>
-    </Panel>}
-    {!loadingStudents && !studentError && students.length === 0 && <Empty title={isStudent ? '学生档案不可用' : '暂无可服务学生'} desc={isStudent ? '当前账号尚未建立学生档案。' : '当前账号没有可访问的学生档案。'} />}
-
-    {selectedId && displayStudent && <>
-      <div className="student-identity-strip"><div className="student-identity-avatar"><UserRound size={18} /></div><div><strong>{displayStudent.name}</strong><span>{[displayStudent.student_no, displayStudent.school, displayStudent.major].filter(Boolean).join(' · ') || '学生档案信息待补充'}</span></div><div className="student-identity-actions"><Button size="sm" variant="ghost" onClick={() => openChat('psych')} icon={<HeartPulse size={14} />}>心理关怀</Button><Button size="sm" variant="ghost" onClick={() => openChat('life')} icon={<LifeBuoy size={14} />}>生活支持</Button></div></div>
-      {dataError && <div className="alert"><span>{dataError}</span><Button size="sm" variant="ghost" onClick={() => void loadData()}>重试</Button></div>}
-      {loadingData && !data && <Panel><div className="loading-pill"><RefreshCw size={15} className="spinner" />正在加载学生服务数据</div></Panel>}
-      {data && <>
-        <div className="student-metrics">
-          <button type="button" className="stat-btn" onClick={() => setTab('leaves')}>
-            <StatCard label="待审批请假" value={data.overview.pending_leaves} hint="查看申请状态" />
-          </button>
-          <button type="button" className="stat-btn" onClick={() => setTab('tickets')}>
-            <StatCard label="处理中工单" value={data.overview.open_tickets} hint="跟进服务反馈" />
-          </button>
-          <button type="button" className="stat-btn" onClick={() => setTab('academic')}>
-            <StatCard label="临近关键节点" value={data.overview.upcoming_deadlines} hint="论文、申请与签证" />
-          </button>
-          <button type="button" className="stat-btn" onClick={() => setTab('life')}>
-            <StatCard label="心理关怀状态" value={data.overview.open_psych_alerts ? '需跟进' : '正常'} textValue hint="需要时可随时倾诉" />
-          </button>
+    {dataError && <div className="alert"><span>{dataError}</span><Button size="sm" variant="ghost" onClick={() => void loadData()}>重试</Button></div>}
+    {loadingData && !data && <Panel><div className="loading-pill"><RefreshCw size={15} className="spinner" />正在加载学生服务数据</div></Panel>}
+    {data && <>
+      <div className="student-metrics">
+        <button type="button" className="stat-btn" onClick={() => setTab('leaves')}>
+          <StatCard label="待审批请假" value={data.overview.pending_leaves} hint="查看申请状态" />
+        </button>
+        <button type="button" className="stat-btn" onClick={() => setTab('tickets')}>
+          <StatCard label="处理中工单" value={data.overview.open_tickets} hint="跟进服务反馈" />
+        </button>
+        <button type="button" className="stat-btn" onClick={() => setTab('academic')}>
+          <StatCard label="临近关键节点" value={data.overview.upcoming_deadlines} hint="论文、申请与签证" />
+        </button>
+        <button type="button" className="stat-btn" onClick={() => setTab('life')}>
+          <StatCard label="心理关怀状态" value={data.overview.open_psych_alerts ? '需跟进' : '正常'} textValue hint="需要时可随时倾诉" />
+        </button>
+      </div>
+      <Panel title="我能帮你处理什么？" desc="直接告诉我你的问题或要办理的事项" icon={<MessageCircle size={16} />}>
+        <div className="student-assistant-reply">{assistantReply}</div>
+        <div className="student-assistant-quick">
+          <button type="button" onClick={() => handleAssistantRequest('我想请假')}>我想请假</button>
+          <button type="button" onClick={() => handleAssistantRequest('查看申请进度')}>查看申请进度</button>
+          <button type="button" onClick={() => handleAssistantRequest('查询论文 DDL')}>查询论文 DDL</button>
+          <button type="button" onClick={() => handleAssistantRequest('最近压力很大')}>最近压力很大</button>
         </div>
-        <Panel title="我能帮你处理什么？" desc="直接告诉我你的问题或要办理的事项" icon={<MessageCircle size={16} />}>
-          <div className="student-assistant-reply">{assistantReply}</div>
-          <div className="student-assistant-quick">
-            <button type="button" onClick={() => handleAssistantRequest('我想请假')}>我想请假</button>
-            <button type="button" onClick={() => handleAssistantRequest('查看申请进度')}>查看申请进度</button>
-            <button type="button" onClick={() => handleAssistantRequest('查询论文 DDL')}>查询论文 DDL</button>
-            <button type="button" onClick={() => handleAssistantRequest('最近压力很大')}>最近压力很大</button>
-          </div>
-          <div className="student-assistant-input">
-            <Input
-              value={assistantInput}
-              placeholder="例如：帮我查一下签证材料进度"
-              onChange={(event) => setAssistantInput(event.target.value)}
-              onKeyDown={(event) => {
-                // IME 组合期不触发发送(照搬旧版守卫)
-                if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
-                  event.preventDefault()
-                  handleAssistantRequest(assistantInput)
-                }
-              }}
-            />
-            <Button variant="primary" icon={<Send size={15} />} aria-label="发送" onClick={() => handleAssistantRequest(assistantInput)}>发送</Button>
-          </div>
-        </Panel>
-        <Panel className="student-tabs-panel" flush><Tabs items={tabs} value={tab} onChange={setTab} /></Panel>
-        {renderTab()}
-      </>}
+        <div className="student-assistant-input">
+          <Input
+            value={assistantInput}
+            placeholder="例如：帮我查一下签证材料进度"
+            onChange={(event) => setAssistantInput(event.target.value)}
+            onKeyDown={(event) => {
+              // IME 组合期不触发发送(照搬旧版守卫)
+              if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
+                event.preventDefault()
+                handleAssistantRequest(assistantInput)
+              }
+            }}
+          />
+          <Button variant="primary" icon={<Send size={15} />} aria-label="发送" onClick={() => handleAssistantRequest(assistantInput)}>发送</Button>
+        </div>
+      </Panel>
+      <Panel className="student-tabs-panel" flush><Tabs items={tabs} value={tab} onChange={setTab} /></Panel>
+      {renderTab()}
     </>}
 
     <Modal open={modal === 'leave'} onClose={closeModal} title="提交请假申请" desc="提交后会进入对应班主任或服务人员的审批队列。" footer={<><Button variant="secondary" onClick={closeModal}>取消</Button><Button variant="primary" loading={submitting} onClick={() => (document.getElementById('leave-form') as HTMLFormElement | null)?.requestSubmit()}>提交申请</Button></>}>

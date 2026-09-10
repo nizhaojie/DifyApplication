@@ -1,9 +1,7 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Bot, CirclePlus, Send, Trash2, UserRound } from 'lucide-react'
-import { useSearchParams } from 'react-router-dom'
-import { chatStudent, fetchStudents, type StudentSummary } from '@/api/student'
-import { useAuthStore } from '@/store/authStore'
-import { Badge, Button, Empty, Field, Select } from '@/ui'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Bot, CirclePlus, Send, Trash2 } from 'lucide-react'
+import { chatStudent } from '@/api/student'
+import { Button } from '@/ui'
 import { showToast } from '@/ui/toast'
 import './studentChat.css'
 
@@ -76,28 +74,7 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : '智能助手连接失败，请稍后重试'
 }
 
-// 后端不可达时的演示学生(照搬旧版行为:会话界面始终可用,发送失败再给降级文案)
-const DEMO_STUDENT: StudentSummary = {
-  id: 1,
-  user_id: 1,
-  student_no: 'YJ2026001',
-  name: '张明',
-  real_name: '张明',
-  school: '曼彻斯特大学',
-  major: '教育学',
-  grade: '研一',
-  abroad_country: '英国',
-  class_teacher_id: null,
-}
-
 export function StudentChatPage({ mode }: { mode: AssistantMode }) {
-  const user = useAuthStore((state) => state.user)
-  const isStudent = user?.user_type === 'student' || user?.role_code === 'student'
-  const [searchParams, setSearchParams] = useSearchParams()
-  const [students, setStudents] = useState<StudentSummary[]>([])
-  const [targetId, setTargetId] = useState<number | null>(null)
-  const [loadingTarget, setLoadingTarget] = useState(true)
-  const [targetError, setTargetError] = useState('')
   const [sessionsByMode, setSessionsByMode] = useState<Record<AssistantMode, ChatSession[]>>(() => ({
     psych: [newSession(1, MODE_CONFIG.psych.emptyTitle, MODE_CONFIG.psych.opening)],
     life: [newSession(2, MODE_CONFIG.life.emptyTitle, MODE_CONFIG.life.opening)],
@@ -107,56 +84,12 @@ export function StudentChatPage({ mode }: { mode: AssistantMode }) {
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState('')
-  const [usingRemote, setUsingRemote] = useState(true)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const config = MODE_CONFIG[mode]
 
-  const selectedStudent = useMemo(() => students.find((item) => item.id === targetId) || null, [students, targetId])
   // 每模式独立会话数组,模式间切换互不覆盖(照搬旧版 sessionsByMode)
   const sessions = sessionsByMode[mode]
   const activeSession = sessions.find((item) => item.id === activeSessionId) || sessions[0]
-
-  useEffect(() => {
-    let cancelled = false
-    setLoadingTarget(true)
-    setTargetError('')
-    void fetchStudents().then((items) => {
-      if (cancelled) return
-      setStudents(items)
-      setUsingRemote(true)
-      const requested = Number(searchParams.get('student_id'))
-      const own = isStudent && user?.id ? items.find((item) => item.id === user.id) : null
-      const next = (requested && items.some((item) => item.id === requested) ? requested : own?.id || items[0]?.id) || null
-      setTargetId(next)
-      if (!isStudent && next && String(next) !== searchParams.get('student_id')) setSearchParams({ student_id: String(next) }, { replace: true })
-    }).catch(() => {
-      if (cancelled) return
-      // 降级照搬旧版:后端不可达时回退演示学生,会话界面保持可用
-      setStudents([DEMO_STUDENT])
-      setTargetId(DEMO_STUDENT.id)
-      setUsingRemote(false)
-      setTargetError('')
-    }).finally(() => {
-      if (!cancelled) setLoadingTarget(false)
-    })
-    return () => { cancelled = true }
-  }, [isStudent, mode, searchParams, setSearchParams, user?.id])
-
-  useEffect(() => {
-    if (!targetId) {
-      setActiveSessionId(null)
-      return
-    }
-    // 切换服务对象时重置全部模式会话;模式间切换保留各自会话(照搬旧版 sessionsByMode)
-    setSessionsByMode({
-      psych: [newSession(Date.now(), MODE_CONFIG.psych.emptyTitle, MODE_CONFIG.psych.opening)],
-      life: [newSession(Date.now() + 1, MODE_CONFIG.life.emptyTitle, MODE_CONFIG.life.opening)],
-      program: [newSession(Date.now() + 2, MODE_CONFIG.program.emptyTitle, MODE_CONFIG.program.opening)],
-    })
-    setActiveSessionId(null)
-    setInput('')
-    setSendError('')
-  }, [targetId])
 
   useLayoutEffect(() => {
     const area = scrollAreaRef.current
@@ -185,15 +118,9 @@ export function StudentChatPage({ mode }: { mode: AssistantMode }) {
     if (activeSessionId === id) setActiveSessionId(next[0]?.id || null)
   }
 
-  function changeTarget(value: string) {
-    const id = Number(value)
-    setTargetId(id || null)
-    if (id) setSearchParams({ student_id: String(id) })
-  }
-
   async function sendMessage(override?: string) {
     const content = (override ?? input).trim()
-    if (!content || !activeSession || !targetId || sending) return
+    if (!content || !activeSession || sending) return
     const sessionId = activeSession.id
     const userMessage: ChatMessage = { id: Date.now(), role: 'user', content, time: currentTime() }
     patchSession(sessionId, (item) => ({ ...item, title: content.slice(0, 18), updatedAt: '刚刚', messages: [...item.messages, userMessage] }))
@@ -201,14 +128,15 @@ export function StudentChatPage({ mode }: { mode: AssistantMode }) {
     setSending(true)
     setSendError('')
     try {
-      const response = await chatStudent(targetId, mode, content, activeSession.conversationId)
+      // 对话身份由后端从登录 JWT 推导，前端不再传学生 ID
+      const response = await chatStudent(mode, content, activeSession.conversationId)
       const reply: ChatMessage = { id: Date.now() + 1, role: 'assistant', content: response.answer, time: currentTime() }
       patchSession(sessionId, (item) => ({ ...item, conversationId: response.conversation_id || item.conversationId, messages: [...item.messages, reply] }))
     } catch (error) {
       const detail = errorMessage(error)
       setSendError(detail)
       showToast(detail, 'error')
-      // 降级文案照搬旧版:失败时在会话内追加提示气泡,而不是静默失败
+      // 失败时在会话内追加提示气泡,而不是静默失败
       patchSession(sessionId, (item) => ({
         ...item,
         messages: [...item.messages, { id: Date.now() + 1, role: 'assistant' as MessageRole, content: '当前无法连接智能助手，请稍后重试或联系服务老师。', time: currentTime() }],
@@ -220,12 +148,9 @@ export function StudentChatPage({ mode }: { mode: AssistantMode }) {
 
   return <section className="chat-page student-chat-page">
     <header className="student-chat-heading">
-      <div><p>STUDENT SERVICE</p><h1>{config.title}</h1><span>{selectedStudent ? `${selectedStudent.name} · ${selectedStudent.student_no || '未填写学号'}` : '请选择学生'}</span><Badge tone={usingRemote ? 'success' : 'warning'} dot>{usingRemote ? '已连接业务服务' : '演示数据模式'}</Badge></div>
-      {!isStudent && students.length > 0 && <Field label="服务对象"><Select value={targetId ?? ''} onChange={(event) => changeTarget(event.target.value)}>{students.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.student_no || '未填写学号'}</option>)}</Select></Field>}
+      <div><p>STUDENT SERVICE</p><h1>{config.title}</h1><span>{config.subtitle}</span></div>
     </header>
-    {targetError && <div className="alert"><span>{targetError}</span><Button size="sm" variant="ghost" onClick={() => window.location.reload()}>重试</Button></div>}
-    {!loadingTarget && !targetError && !targetId && <Empty title="暂无可用学生档案" desc="当前账号没有可访问的学生，无法发起智能助手会话。" />}
-    {targetId && <section className="chat-workspace">
+    <section className="chat-workspace">
       <aside className="session-sidebar">
         <div className="assistant-identity"><span className="assistant-icon"><Bot size={18} /></span><strong>{config.title}</strong></div>
         <button type="button" className="new-chat" onClick={createSession}><CirclePlus size={16} />开启新对话</button>
@@ -243,6 +168,6 @@ export function StudentChatPage({ mode }: { mode: AssistantMode }) {
         {sendError && <div className="chat-error"><span>{sendError}</span><button type="button" onClick={() => setSendError('')}>关闭</button></div>}
         <div className="composer"><textarea rows={3} placeholder={config.placeholder} value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.ctrlKey && event.key === 'Enter') { event.preventDefault(); void sendMessage() } }} /><div><span>Ctrl + Enter 发送</span><Button variant="primary" size="sm" icon={<Send size={15} />} loading={sending} onClick={() => void sendMessage()}>发送</Button></div></div>
       </main>
-    </section>}
+    </section>
   </section>
 }

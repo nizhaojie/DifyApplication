@@ -1,18 +1,5 @@
 import http, { type Envelope } from './http'
 
-export interface StudentSummary {
-  id: number
-  user_id: number
-  student_no: string | null
-  name: string
-  real_name: string
-  school: string | null
-  major: string | null
-  grade: string | null
-  abroad_country: string | null
-  class_teacher_id: number | null
-}
-
 export interface StudentOverview {
   pending_leaves: number
   open_tickets: number
@@ -94,42 +81,34 @@ export interface StudentChatResult {
   message_id: string | null
 }
 
-function targetParams(studentId: number) {
-  return { params: { student_id: studentId } }
-}
-
-export async function fetchStudents() {
-  const { data } = await http.get<Envelope<StudentSummary[]>>('/api/v1/student/students')
-  return data.data || []
-}
-
-export async function fetchOverview(studentId: number) {
-  const { data } = await http.get<Envelope<StudentOverview>>('/api/v1/student/overview', targetParams(studentId))
+// 学生身份由后端从登录 JWT 推导，接口不再接受 student_id 参数
+export async function fetchOverview() {
+  const { data } = await http.get<Envelope<StudentOverview>>('/api/v1/student/overview')
   return data.data
 }
 
-export async function fetchLeaves(studentId: number) {
-  const { data } = await http.get<Envelope<StudentLeave[]>>('/api/v1/student/leaves', targetParams(studentId))
+export async function fetchLeaves() {
+  const { data } = await http.get<Envelope<StudentLeave[]>>('/api/v1/student/leaves')
   return data.data || []
 }
 
-export async function createLeave(studentId: number, payload: {
+export async function createLeave(payload: {
   leave_type: string
   start_time: string
   end_time: string
   reason: string
   attachment_url?: string
 }) {
-  const { data } = await http.post<Envelope<StudentLeave>>('/api/v1/student/leaves', payload, targetParams(studentId))
+  const { data } = await http.post<Envelope<StudentLeave>>('/api/v1/student/leaves', payload)
   return data.data
 }
 
-export async function fetchTickets(studentId: number) {
-  const { data } = await http.get<Envelope<StudentTicket[]>>('/api/v1/student/tickets', targetParams(studentId))
+export async function fetchTickets() {
+  const { data } = await http.get<Envelope<StudentTicket[]>>('/api/v1/student/tickets')
   return data.data || []
 }
 
-export async function createTicket(studentId: number, payload: {
+export async function createTicket(payload: {
   ticket_type: string
   category?: string
   title?: string
@@ -137,50 +116,47 @@ export async function createTicket(studentId: number, payload: {
   detail?: string
   priority: string
 }) {
-  const { data } = await http.post<Envelope<StudentTicket>>('/api/v1/student/tickets', payload, targetParams(studentId))
+  const { data } = await http.post<Envelope<StudentTicket>>('/api/v1/student/tickets', payload)
   return data.data
 }
 
-export async function fetchDeadlines(studentId: number) {
-  const { data } = await http.get<Envelope<AcademicDeadline[]>>('/api/v1/student/academic/deadlines', targetParams(studentId))
+export async function fetchDeadlines() {
+  const { data } = await http.get<Envelope<AcademicDeadline[]>>('/api/v1/student/academic/deadlines')
   return data.data || []
 }
 
-export async function fetchScores(studentId: number) {
-  const { data } = await http.get<Envelope<StudentScore[]>>('/api/v1/student/academic/scores', targetParams(studentId))
+export async function fetchScores() {
+  const { data } = await http.get<Envelope<StudentScore[]>>('/api/v1/student/academic/scores')
   return data.data || []
 }
 
-export async function fetchProgress(studentId: number) {
-  const { data } = await http.get<Envelope<ApplicationProgress[]>>('/api/v1/student/application-progress', targetParams(studentId))
+export async function fetchProgress() {
+  const { data } = await http.get<Envelope<ApplicationProgress[]>>('/api/v1/student/application-progress')
   return data.data || []
 }
 
-export async function createProgress(studentId: number, payload: {
+export async function createProgress(payload: {
   target_school: string
   target_major?: string
   progress_detail?: string
   deadline?: string
   next_action?: string
 }) {
-  const { data } = await http.post<Envelope<ApplicationProgress>>('/api/v1/student/application-progress', payload, targetParams(studentId))
+  const { data } = await http.post<Envelope<ApplicationProgress>>('/api/v1/student/application-progress', payload)
   return data.data
 }
 
-export async function fetchPsychProfile(studentId: number) {
-  const { data } = await http.get<Envelope<PsychProfile | null>>('/api/v1/student/psych/profile', targetParams(studentId))
+export async function fetchPsychProfile() {
+  const { data } = await http.get<Envelope<PsychProfile | null>>('/api/v1/student/psych/profile')
   return data.data
 }
 
-export async function fetchKnowledge(studentId: number, params: { category?: string; keyword?: string } = {}) {
-  const { data } = await http.get<Envelope<OverseasKnowledge[]>>('/api/v1/student/overseas/knowledge', {
-    params: { ...params, student_id: studentId },
-  })
+export async function fetchKnowledge(params: { category?: string; keyword?: string } = {}) {
+  const { data } = await http.get<Envelope<OverseasKnowledge[]>>('/api/v1/student/overseas/knowledge', { params })
   return data.data || []
 }
 
 export async function chatStudent(
-  studentId: number,
   scene: 'psych' | 'life' | 'program',
   query: string,
   conversationId?: string | null,
@@ -188,6 +164,6 @@ export async function chatStudent(
   const { data } = await http.post<Envelope<StudentChatResult>>(`/api/v1/student/chat/${scene}`, {
     query,
     conversation_id: conversationId || undefined,
-  }, targetParams(studentId))
+  })
   return data.data
 }

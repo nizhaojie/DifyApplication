@@ -8,10 +8,12 @@ export interface Envelope<T> {
   total: number | null
 }
 
-// 与 Vue 版 api/http.ts 逐项对齐:baseURL 兜底 8000、30s 超时、Bearer 注入、
+// 与 Vue 版 api/http.ts 逐项对齐:30s 超时、Bearer 注入、
 // Envelope code!==200 走 toast(只提示不解包)、401 清 token 后硬跳 /login。
+// baseURL 默认走相对路径(/api 由 vite 代理或生产反代转发),避免硬编码端口造成 CORS 依赖;
+// 需要直连其他后端时用 VITE_API_BASE 覆盖。
 const http = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8002',
+  baseURL: import.meta.env.VITE_API_BASE || '',
   timeout: 30000,
 })
 

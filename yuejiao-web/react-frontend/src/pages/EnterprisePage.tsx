@@ -96,6 +96,8 @@ export function EnterprisePage() {
   const [statusEdit, setStatusEdit] = useState<LeadItem | null>(null)
   const [lostReason, setLostReason] = useState('')
   const [statusSaving, setStatusSaving] = useState(false)
+  const [leaveReject, setLeaveReject] = useState<Record<string, unknown> | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
   const logRef = useRef<HTMLDivElement>(null)
   // 记忆回放后不再用问候语覆盖对话区
   const chatHydrated = useRef(false)
@@ -224,15 +226,34 @@ export function EnterprisePage() {
 
   async function decideLeave(row: Record<string, unknown>, action: 'approved' | 'rejected') {
     const name = String(row.student_name || '该同学')
+    if (action === 'rejected') {
+      // 对齐 Vue 版业务规则:驳回必须填写原因
+      setRejectReason('')
+      setLeaveReject(row)
+      return
+    }
     const ok = await confirm({
-      title: action === 'approved' ? '同意该请假申请？' : '驳回该请假申请？',
-      description: `${name} 的请假申请将${action === 'approved' ? '被批准' : '被驳回'}，结果会同步到员工端。`,
-      confirmText: action === 'approved' ? '同意' : '驳回',
+      title: '同意该请假申请？',
+      description: `${name} 的请假申请将被批准，结果会同步到员工端。`,
+      confirmText: '同意',
       tone: 'danger',
     })
     if (!ok) return
-    try { await approveLeave(Number(row.id), action); await reload(); showToast(action === 'approved' ? '已同意请假' : '已驳回请假') }
+    try { await approveLeave(Number(row.id), action); await reload(); showToast('已同意请假') }
     catch (cause) { setError(cause instanceof Error ? cause.message : '审批失败') }
+  }
+
+  async function saveLeaveReject() {
+    if (!leaveReject) return
+    if (!rejectReason.trim()) { setError('驳回需要填写原因'); return }
+    setActionSaving(true)
+    try {
+      await approveLeave(Number(leaveReject.id), 'rejected', rejectReason.trim())
+      setLeaveReject(null)
+      showToast('已驳回请假')
+      await reload()
+    } catch (cause) { setError(cause instanceof Error ? cause.message : '审批失败') }
+    finally { setActionSaving(false) }
   }
 
   function openProgressEdit(row: Record<string, unknown>) {
@@ -592,6 +613,24 @@ export function EnterprisePage() {
       <label className="field">
         <span className="field-label">流失原因（必填）</span>
         <Textarea rows={3} value={lostReason} onChange={(event) => setLostReason(event.target.value)} placeholder="例如：预算不符合、已选择其他机构…" />
+      </label>
+    </Modal>
+
+    <Modal
+      open={Boolean(leaveReject)}
+      onClose={() => setLeaveReject(null)}
+      title="驳回请假申请"
+      desc={leaveReject ? `「${String(leaveReject.student_name || '该同学')}」的请假申请将被驳回，驳回原因会同步给学生。` : undefined}
+      footer={
+        <>
+          <Button variant="secondary" onClick={() => setLeaveReject(null)}>取消</Button>
+          <Button variant="primary" loading={actionSaving} onClick={() => void saveLeaveReject()}>确认驳回</Button>
+        </>
+      }
+    >
+      <label className="field">
+        <span className="field-label">驳回原因（必填）</span>
+        <Textarea rows={3} value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} placeholder="例如：请假时间段与考试冲突、材料不齐…" />
       </label>
     </Modal>
   </section>
