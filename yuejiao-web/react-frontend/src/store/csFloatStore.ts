@@ -85,9 +85,9 @@ export const useCsFloatStore = create<CsFloatState>((set, get) => ({
     try {
       const response = await sendCsMessage({ session_id: get().sessionId ?? undefined, message: text })
       const sessionId = response.session_id || get().sessionId
-      const replyId = `assistant-${Date.now()}`
+      const replyId = `assistant-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
       set((state) => {
-        const messages = [...state.messages, createMessage('assistant', '')]
+        const messages = [...state.messages, { id: replyId, role: 'assistant' as const, content: '' }]
         saveSession(sessionId, messages)
         return { sessionId, messages }
       })
