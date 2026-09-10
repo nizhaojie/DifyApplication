@@ -1,0 +1,60 @@
+/* EnterprisePage 页面级补充样式（架构迁移自旧版 antd 实现，沿用 gqk 设计令牌） */
+
+/* 照搬旧版 sql-fold：对话消息里 NL2SQL 命中时的可折叠 SQL 块 */
+.sql-fold {
+  margin-top: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 12px;
+  overflow: hidden;
+}
+.sql-fold summary {
+  cursor: pointer;
+  padding: 6px 10px;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  user-select: none;
+}
+.sql-fold summary:hover { color: var(--text-2); }
+.sql-fold[open] summary {
+  border-bottom: 1px solid var(--border);
+  color: var(--text-2);
+}
+.sql-fold pre {
+  margin: 0;
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--text-2);
+}
+
+/* 照搬旧版日报列（进展/问题/计划）：列表项下的字段明细 */
+.daily-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+.daily-fields span {
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+.daily-fields em {
+  font-style: normal;
+  color: var(--text-4);
+  margin-right: 6px;
+}
+
+/* 照搬旧版 leads 行内「签约 / 流失 / 跟进中」操作：客户档案抽屉里的状态流转 */
+.lead-status-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}

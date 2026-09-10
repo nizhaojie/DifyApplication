@@ -1,232 +1,260 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Avatar, Badge, Button, Input, Menu } from 'antd'
-import type { MenuProps } from 'antd'
-import { create } from 'zustand'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { useTagsStore } from '@/store/tagsStore'
-import { selectDisplayName, useAuthStore } from '@/store/authStore'
-import { matchRouteMeta } from '@/router/routes'
+import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import {
-  Bell,
-  Briefcase,
-  ChatDotRound,
-  DataAnalysis,
-  Document,
-  Expand,
-  Fold,
-  Notebook,
-  OfficeBuilding,
-  Odometer,
-  Reading,
-  Setting,
-  TrendCharts,
-  User,
-} from '@/components/elementIcons'
+  BarChart3, Bell, BriefcaseBusiness, Building2, ChevronDown,
+  FileBarChart, Gauge, Headphones, LogOut, Menu, NotebookTabs,
+  PanelLeftClose, PanelLeftOpen, Search,
+  Settings, ShieldCheck, Sparkles, UserRound,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { useAuthStore } from '@/store/authStore'
+import { CommandPalette, type CommandEntry } from '@/ui/CommandPalette'
+import { ConfirmProvider } from '@/ui/ConfirmProvider'
 
-// 等价迁移自 layouts/AdminLayout.vue:深色侧栏(220/64 折叠)、分组菜单、
-// 面包屑、禁用搜索框、角标铃铛、红底头像 + 退出、tags 多页签。
+interface NavItem {
+  to: string
+  label: string
+  icon: LucideIcon
+  keywords?: string
+}
 
-const MENU_ITEMS: MenuProps['items'] = [
-  {
-    type: 'group',
-    label: '工作台',
-    children: [{ key: '/dashboard', icon: <Odometer />, label: '工作台' }],
-  },
-  {
-    type: 'group',
-    label: '业务模块 · 后接',
-    children: [
-      { key: '/profile', icon: <DataAnalysis />, label: '客户研判' },
-      { key: '/cs', icon: <ChatDotRound />, label: '客服 Agent' },
-      {
-        key: 'enterprise',
-        icon: <Briefcase />,
-        label: '企业助手',
-        children: [
-          { key: '/enterprise', icon: <ChatDotRound />, label: '对话工作台' },
-          { key: '/enterprise/company', icon: <OfficeBuilding />, label: '公司简介' },
-          { key: '/enterprise/guide', icon: <Reading />, label: '新人指南' },
-          { key: '/enterprise/board', icon: <TrendCharts />, label: '客户看板' },
-          { key: '/enterprise/memory', icon: <Notebook />, label: '对话记忆' },
-        ],
-      },
-      {
-        key: 'student',
-        icon: <User />,
-        label: '学生助手',
-        children: [
-          { key: '/student', icon: <Reading />, label: '学生服务总览' },
-          { key: '/student/psych', icon: <ChatDotRound />, label: '心理关怀' },
-          { key: '/student/life', icon: <Odometer />, label: '海外生活支持' },
-          { key: '/student/program', icon: <TrendCharts />, label: '升学项目咨询' },
-        ],
-      },
-      {
-        key: 'report',
-        icon: <Document />,
-        label: '智能报告',
-        children: [
-          { key: '/report', label: '报告入口' },
-          { key: '/report/customer-ops', label: '全域客户经营分析' },
-          { key: '/report/daily-summary', label: '员工日报智能汇总' },
-          { key: '/report/psych-weekly', label: '学生心理健康周报' },
-          { key: '/report/complaint-weekly', label: '投诉处理周报' },
-        ],
-      },
-    ],
-  },
-  {
-    type: 'group',
-    label: '系统',
-    children: [{ key: '/settings', icon: <Setting />, label: '设置' }],
-  },
+const workspaceNav: NavItem[] = [
+  { to: '/dashboard', label: '工作台', icon: Gauge, keywords: 'dashboard home' },
+  { to: '/profile', label: '客户研判', icon: BarChart3, keywords: 'assessment profile' },
+  { to: '/cs', label: '客服 Agent', icon: Headphones, keywords: 'customer service' },
 ]
 
-// 折叠状态:Vue 中为布局内 ref,这里用模块级 store 等价承载
-const useCollapsedStore = create<{ collapsed: boolean }>(() => ({ collapsed: false }))
+const enterpriseNav: NavItem[] = [
+  { to: '/enterprise', label: '对话工作台', icon: Sparkles, keywords: 'chat assistant' },
+  { to: '/enterprise/company', label: '公司简介', icon: Building2, keywords: 'company' },
+  { to: '/enterprise/guide', label: '新人指南', icon: NotebookTabs, keywords: 'guide onboarding' },
+  { to: '/enterprise/board', label: '客户看板', icon: BarChart3, keywords: 'board funnel' },
+  { to: '/enterprise/memory', label: '对话记忆', icon: ShieldCheck, keywords: 'memory' },
+]
 
-// EP 的 el-menu 会自动展开选中项所在子菜单;antd 无此行为,按路由推导父级补齐
-const SUBMENU_OF: Record<string, string> = {
-  '/enterprise': 'enterprise',
-  '/enterprise/company': 'enterprise',
-  '/enterprise/guide': 'enterprise',
-  '/enterprise/board': 'enterprise',
-  '/enterprise/memory': 'enterprise',
-  '/student': 'student',
-  '/student/psych': 'student',
-  '/student/life': 'student',
-  '/student/program': 'student',
-  '/report': 'report',
-  '/report/customer-ops': 'report',
-  '/report/daily-summary': 'report',
-  '/report/psych-weekly': 'report',
-  '/report/complaint-weekly': 'report',
+const systemNav: NavItem[] = [
+  { to: '/student', label: '学生助手', icon: UserRound, keywords: 'student' },
+  { to: '/report', label: '智能报告', icon: FileBarChart, keywords: 'report' },
+  { to: '/settings', label: '设置', icon: Settings, keywords: 'settings' },
+]
+
+const pageTitleMap: Record<string, string> = {
+  '/student/psych': '心理关怀助手',
+  '/student/life': '海外生活支持',
+  '/student/program': '学业提升咨询',
+  '/report/customer-ops': '全域客户经营分析',
+  '/report/daily-summary': '员工日报智能汇总',
+  '/report/psych-weekly': '学生心理健康周报',
+  '/report/complaint-weekly': '投诉处理周报',
+}
+
+function NavEntry({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
+  const Icon = item.icon
+  return (
+    <NavLink
+      to={item.to}
+      end={item.to === '/enterprise'}
+      className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+      data-tip={collapsed ? item.label : undefined}
+    >
+      <Icon size={16.5} strokeWidth={1.9} />
+      <span>{item.label}</span>
+    </NavLink>
+  )
+}
+
+function NavLabel({ children, collapsed }: { children: string; collapsed: boolean }) {
+  return collapsed ? <span className="nav-label sr-only">{children}</span> : <div className="nav-label">{children}</div>
 }
 
 export function AdminLayout() {
+  // 仅在中等宽度桌面自动折叠；移动端抽屉始终以展开态渲染
+  const [collapsed, setCollapsed] = useState(() => window.innerWidth > 960 && window.innerWidth <= 1280)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [enterpriseOpen, setEnterpriseOpen] = useState(() => window.location.pathname.startsWith('/enterprise'))
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const { user, logout } = useAuthStore()
   const location = useLocation()
   const navigate = useNavigate()
-  const pathname = location.pathname
-  const meta = matchRouteMeta(pathname)
+  const isStudent = user?.user_type === 'student' || user?.role_code === 'student'
+  const visibleWorkspaceNav = isStudent ? [] : workspaceNav
+  const visibleEnterpriseNav = isStudent ? [] : enterpriseNav
+  const visibleSystemNav = isStudent ? systemNav.filter((item) => item.to === '/student') : systemNav
 
-  const collapsed = useCollapsedStore((state) => state.collapsed)
-  const visited = useTagsStore((state) => state.visited)
-  const displayName = useAuthStore(selectDisplayName)
-  const logout = useAuthStore((state) => state.logout)
+  // route change closes the mobile drawer
+  useEffect(() => { setMobileOpen(false) }, [location.pathname])
 
-  const [openKeys, setOpenKeys] = useState<string[]>(['enterprise'])
-  const activeSubmenu = useMemo(() => SUBMENU_OF[pathname], [pathname])
+  // ⌘K / Ctrl+K opens the command palette
   useEffect(() => {
-    if (!activeSubmenu) return
-    setOpenKeys((keys) => (keys.includes(activeSubmenu) ? keys : [...keys, activeSubmenu]))
-  }, [activeSubmenu])
-
-  // 对齐 Vue watch(route.path, {immediate:true})
-  useEffect(() => {
-    useTagsStore.getState().add({ path: pathname, title: matchRouteMeta(pathname).title })
-  }, [pathname])
-
-  const openTag = (path: string) => {
-    void navigate(path)
-  }
-
-  const closeTag = (path: string) => {
-    if (path === '/dashboard') return
-    const current = pathname === path
-    useTagsStore.getState().remove(path)
-    if (current) {
-      const rest = useTagsStore.getState().visited
-      const last = rest[rest.length - 1]
-      void navigate(last?.path ?? '/dashboard')
+    function onKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        setPaletteOpen((value) => !value)
+      }
     }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  const title = useMemo(
+    () =>
+      pageTitleMap[location.pathname] ??
+      [...visibleWorkspaceNav, ...visibleEnterpriseNav, ...visibleSystemNav].find((item) => item.to === location.pathname)?.label ??
+      '工作台',
+    [location.pathname, visibleEnterpriseNav, visibleSystemNav, visibleWorkspaceNav],
+  )
+
+  const commandEntries = useMemo<CommandEntry[]>(() => {
+    const toEntries = (group: string, items: NavItem[]) =>
+      items.map((item) => ({
+        id: item.to,
+        label: item.label,
+        group,
+        icon: item.icon,
+        keywords: item.keywords,
+        run: () => navigate(item.to),
+      }))
+    return [
+      ...toEntries('工作空间', visibleWorkspaceNav),
+      ...toEntries('企业助手', visibleEnterpriseNav),
+      ...toEntries('分析与系统', visibleSystemNav),
+    ]
+  }, [navigate, visibleEnterpriseNav, visibleSystemNav, visibleWorkspaceNav])
+
+  if (isStudent && !location.pathname.startsWith('/student')) {
+    return <Navigate to="/student" replace />
   }
 
-  const onMenuClick: MenuProps['onClick'] = ({ key }) => {
-    void navigate(key)
+  function toggleCollapse() {
+    setCollapsed((value) => !value)
   }
 
   return (
-    <div className="layout" style={{ display: 'flex' }}>
-      <aside className="aside" style={{ width: collapsed ? 64 : 220, flexShrink: 0 }}>
-        <div className="logo">
-          <span className="mark">粤</span>
-          {!collapsed && <strong>粤教服务</strong>}
+    <div className={`shell${collapsed && !mobileOpen ? ' is-collapsed' : ''}${mobileOpen ? ' mobile-open' : ''}`}>
+      {mobileOpen && <div className="scrim" onClick={() => setMobileOpen(false)} aria-hidden />}
+
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <span className="brand-mark"><Sparkles size={16} strokeWidth={2.1} /></span>
+          {!collapsed && (
+            <div className="brand-text">
+              <strong>粤教服务</strong>
+              <span>智能工作台</span>
+            </div>
+          )}
         </div>
-        <Menu
-          mode="inline"
-          theme="dark"
-          inlineCollapsed={collapsed}
-          openKeys={collapsed ? [] : openKeys}
-          onOpenChange={(keys) => setOpenKeys(keys as string[])}
-          selectedKeys={[pathname]}
-          items={MENU_ITEMS}
-          onClick={onMenuClick}
-        />
-      </aside>
-      <div className="content-pane" style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-        <header className="header">
-          <Button
-            type="text"
-            onClick={() => useCollapsedStore.setState({ collapsed: !collapsed })}
-            icon={collapsed ? <Expand size={18} /> : <Fold size={18} />}
-          />
-          <div className="crumb">
-            粤教 / 控制台 / <b>{meta.title}</b>
-          </div>
-          <Input className="search" placeholder="搜索菜单 / 客户 / 工单" disabled />
-          <Badge dot>
-            <Button type="text" icon={<Bell size={18} />} />
-          </Badge>
-          <div className="header-user">
-            <Avatar size={28}>{displayName.slice(0, 1)}</Avatar>
-            <span>{displayName}</span>
-            <Button
-              type="text"
-              onClick={() => {
-                logout()
-                void navigate('/login')
-              }}
+
+        <nav className="sidebar-nav">
+          {visibleWorkspaceNav.length > 0 && <NavLabel collapsed={collapsed}>工作空间</NavLabel>}
+          {visibleWorkspaceNav.map((item) => <NavEntry key={item.to} item={item} collapsed={collapsed} />)}
+
+          {visibleEnterpriseNav.length > 0 && !collapsed && <NavLabel collapsed={false}>企业助手</NavLabel>}
+          {visibleEnterpriseNav.length > 0 && !collapsed && (
+            <button
+              type="button"
+              className={`nav-item${location.pathname.startsWith('/enterprise') ? ' active' : ''}`}
+              onClick={() => setEnterpriseOpen((value) => !value)}
             >
-              退出
-            </Button>
+              <BriefcaseBusiness size={16.5} strokeWidth={1.9} />
+              <span>企业助手</span>
+              <ChevronDown size={14} className={`chev${enterpriseOpen ? ' open' : ''}`} />
+            </button>
+          )}
+          {!collapsed && enterpriseOpen && (
+            <div className="nav-sub">
+              {visibleEnterpriseNav.map((item) => <NavEntry key={item.to} item={item} collapsed={false} />)}
+            </div>
+          )}
+
+          {visibleSystemNav.length > 0 && <NavLabel collapsed={collapsed}>分析与系统</NavLabel>}
+          {visibleSystemNav.map((item) => <NavEntry key={item.to} item={item} collapsed={collapsed} />)}
+        </nav>
+
+        <div className="sidebar-foot">
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
+              <button type="button" className="sidebar-user" data-tip={collapsed ? user?.real_name : undefined}>
+                <span className="avatar">{(user?.real_name || '未').slice(0, 1)}</span>
+                {!collapsed && (
+                  <span className="sidebar-user-text">
+                    <strong>{user?.real_name || '未登录'}</strong>
+                    <span>{user?.department || user?.username || '—'}</span>
+                  </span>
+                )}
+                {!collapsed && <ChevronDown size={14} color="var(--text-4)" />}
+              </button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content className="menu" align="start" sideOffset={8}>
+                <div className="menu-head">
+                  <strong>{user?.real_name || '未登录'}</strong>
+                  <span>{user?.username || '—'}</span>
+                </div>
+                <div className="menu-sep" role="separator" />
+                <DropdownMenu.Item
+                  className="menu-item menu-item--danger"
+                  onSelect={() => {
+                    logout()
+                    navigate('/login')
+                  }}
+                >
+                  <LogOut size={14} />退出登录
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
+
+          <button
+            type="button"
+            className="sidebar-collapse"
+            onClick={toggleCollapse}
+            title={collapsed ? '展开侧栏' : '收起侧栏'}
+          >
+            {collapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
+            {!collapsed && <span>收起侧栏</span>}
+          </button>
+        </div>
+      </aside>
+
+      <div className="main">
+        <header className="topbar">
+          <div className="topbar-left">
+            <button
+              type="button"
+              className="icon-btn topbar-mobile"
+              aria-label="打开菜单"
+              onClick={() => setMobileOpen(true)}
+            >
+              <Menu size={18} />
+            </button>
+            <nav className="breadcrumb" aria-label="当前位置">
+              <span className="crumb-root">粤教服务</span>
+              <em>/</em>
+              <strong>{title}</strong>
+            </nav>
+          </div>
+          <div className="topbar-right">
+            <button type="button" className="topbar-search" onClick={() => setPaletteOpen(true)}>
+              <Search size={13} />
+              <span>搜索或跳转…</span>
+              <kbd>⌘K</kbd>
+            </button>
+            <span className="topbar-env"><i aria-hidden />本地环境</span>
+            <button type="button" className="icon-btn" aria-label="通知" title="通知">
+              <Bell size={17} />
+            </button>
           </div>
         </header>
-        <div className="tags">
-          {visited.map((tag) => {
-            const current = tag.path === pathname
-            return (
-              <span
-                key={tag.path}
-                className="nav-tag"
-                style={
-                  current
-                    ? { background: '#fdecec', borderColor: '#f2b8b8', color: '#c41e1e' }
-                    : { background: '#fff', borderColor: '#d3d4d6', color: '#909399' }
-                }
-                onClick={() => openTag(tag.path)}
-              >
-                {tag.title}
-                {tag.path !== '/dashboard' ? (
-                  <span
-                    className="nav-tag-close"
-                    role="button"
-                    tabIndex={-1}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      closeTag(tag.path)
-                    }}
-                  >
-                    ×
-                  </span>
-                ) : null}
-              </span>
-            )
-          })}
-        </div>
-        <main className="main">
-          <Outlet />
+
+        <main className="page">
+          <ConfirmProvider>
+            <Outlet />
+          </ConfirmProvider>
         </main>
       </div>
+
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} entries={commandEntries} />
     </div>
   )
 }

@@ -1,10 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { toast } from '@/components/feedback'
-import { ChatDotRound, CirclePlus, Delete, Promotion } from '@/components/elementIcons'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Bot, CirclePlus, Send, Trash2, UserRound } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
+import { chatStudent, fetchStudents, type StudentSummary } from '@/api/student'
+import { useAuthStore } from '@/store/authStore'
+import { Badge, Button, Empty, Field, Select } from '@/ui'
+import { showToast } from '@/ui/toast'
 import './studentChat.css'
-
-// 等价迁移自 Vue 版 views/student/chat.vue:psych/life/program 三模式共页,
-// 每模式独立会话数组(内存态,不持久化),Ctrl+Enter 发送,X-User-Id 伪造用户(照搬 Vue 行为)。
 
 type AssistantMode = 'psych' | 'life' | 'program'
 type MessageRole = 'assistant' | 'user'
@@ -20,11 +21,9 @@ interface ChatSession {
   id: number
   title: string
   updatedAt: string
-  conversationId?: string
+  conversationId?: string | null
   messages: ChatMessage[]
 }
-
-const apiBase = 'http://127.0.0.1:8002/api/v1/student'
 
 const MODE_CONFIG: Record<AssistantMode, {
   title: string
@@ -36,25 +35,25 @@ const MODE_CONFIG: Record<AssistantMode, {
 }> = {
   psych: {
     title: '心理关怀助手',
-    subtitle: '为学生提供支持性回应、情绪陪伴和高风险分流引导。',
-    placeholder: '写下你现在的感受',
-    emptyTitle: '开启新的关怀对话',
+    subtitle: '为当前学生提供支持性回应、情绪陪伴和高风险分流引导。',
+    placeholder: '写下当前学生想表达的感受',
+    emptyTitle: '新的关怀对话',
     opening: '你好，我是学生心理关怀助手。你可以放心说说最近的感受或困扰。',
     quickPrompts: ['最近压力很大，怎么办？', '我总是睡不好。', '我担心申请材料来不及。'],
   },
   life: {
     title: '海外生活支持助手',
-    subtitle: '为留学生提供海外医疗、交通、住宿、安全和日常生活支持。',
+    subtitle: '为当前学生提供海外医疗、交通、住宿、安全和日常生活支持。',
     placeholder: '例如：在英国感冒了应该怎么就医？',
-    emptyTitle: '开启新的生活咨询',
+    emptyTitle: '新的生活咨询',
     opening: '你好，我可以协助解答医疗、交通、住宿、安全和日常生活问题。请告诉我所在国家或城市。',
     quickPrompts: ['在英国感冒了应该怎么就医？', '曼彻斯特如何乘坐公交？', '遇到紧急情况该怎么办？'],
   },
   program: {
     title: '学业提升咨询助手',
-    subtitle: '基于增值服务知识库，提供申请规划、科研和语言提升咨询。',
+    subtitle: '基于当前学生的申请服务上下文，提供规划、科研和语言提升咨询。',
     placeholder: '例如：我想咨询英国硕博申请规划',
-    emptyTitle: '开启新的项目咨询',
+    emptyTitle: '新的项目咨询',
     opening: '你好，我可以协助梳理申请规划、科研背景、学术英语和学历提升方向。',
     quickPrompts: ['英国硕博申请要做哪些准备？', '我想提升科研背景。', '学术英语应该如何规划？'],
   },
@@ -64,256 +63,186 @@ function currentTime() {
   return new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date())
 }
 
-function newSession(id: number, title: string): ChatSession {
-  return { id, title, updatedAt: '刚刚', messages: [] }
+function newSession(id: number, title: string, opening: string): ChatSession {
+  return {
+    id,
+    title,
+    updatedAt: '刚刚',
+    messages: [{ id: id + 1, role: 'assistant', content: opening, time: currentTime() }],
+  }
 }
 
-const INITIAL_SESSIONS: Record<AssistantMode, ChatSession[]> = {
-  psych: [newSession(1, '新的关怀对话')],
-  life: [newSession(2, '新的生活咨询')],
-  program: [newSession(3, '新的项目咨询')],
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : '智能助手连接失败，请稍后重试'
+}
+
+// 后端不可达时的演示学生(照搬旧版行为:会话界面始终可用,发送失败再给降级文案)
+const DEMO_STUDENT: StudentSummary = {
+  id: 1,
+  user_id: 1,
+  student_no: 'YJ2026001',
+  name: '张明',
+  real_name: '张明',
+  school: '曼彻斯特大学',
+  major: '教育学',
+  grade: '研一',
+  abroad_country: '英国',
+  class_teacher_id: null,
 }
 
 export function StudentChatPage({ mode }: { mode: AssistantMode }) {
-  const [sessionsByMode, setSessionsByMode] = useState<Record<AssistantMode, ChatSession[]>>(INITIAL_SESSIONS)
-  const [activeSessionId, setActiveSessionId] = useState(1)
+  const user = useAuthStore((state) => state.user)
+  const isStudent = user?.user_type === 'student' || user?.role_code === 'student'
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [students, setStudents] = useState<StudentSummary[]>([])
+  const [targetId, setTargetId] = useState<number | null>(null)
+  const [loadingTarget, setLoadingTarget] = useState(true)
+  const [targetError, setTargetError] = useState('')
+  const [sessionsByMode, setSessionsByMode] = useState<Record<AssistantMode, ChatSession[]>>(() => ({
+    psych: [newSession(1, MODE_CONFIG.psych.emptyTitle, MODE_CONFIG.psych.opening)],
+    life: [newSession(2, MODE_CONFIG.life.emptyTitle, MODE_CONFIG.life.opening)],
+    program: [newSession(3, MODE_CONFIG.program.emptyTitle, MODE_CONFIG.program.opening)],
+  }))
+  const [activeSessionId, setActiveSessionId] = useState<number | null>(null)
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
+  const [sendError, setSendError] = useState('')
+  const [usingRemote, setUsingRemote] = useState(true)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
-
   const config = MODE_CONFIG[mode]
+
+  const selectedStudent = useMemo(() => students.find((item) => item.id === targetId) || null, [students, targetId])
+  // 每模式独立会话数组,模式间切换互不覆盖(照搬旧版 sessionsByMode)
   const sessions = sessionsByMode[mode]
-  const activeSession = sessions.find((item) => item.id === activeSessionId) ?? sessions[0]
+  const activeSession = sessions.find((item) => item.id === activeSessionId) || sessions[0]
 
-  const scrollToBottom = () => {
-    const area = scrollAreaRef.current
-    if (area) area.scrollTop = area.scrollHeight
-  }
-
-  useLayoutEffect(() => {
-    scrollToBottom()
-  }, [activeSession?.messages.length, sending, mode])
-
-  // 对齐 Vue watch(mode, {immediate:true}):切模式时重置活动会话/输入框,并注入开场白
   useEffect(() => {
-    const first = sessionsByMode[mode][0]
-    setActiveSessionId(first.id)
-    setInput('')
-    setSessionsByMode((prev) => {
-      const list = prev[mode]
-      if (list.length > 0 && list[0].messages.length === 0) {
-        const opening: ChatMessage = {
-          id: list[0].id + 1,
-          role: 'assistant',
-          content: MODE_CONFIG[mode].opening,
-          time: currentTime(),
-        }
-        return {
-          ...prev,
-          [mode]: [{ ...list[0], messages: [opening] }, ...list.slice(1)],
-        }
-      }
-      return prev
+    let cancelled = false
+    setLoadingTarget(true)
+    setTargetError('')
+    void fetchStudents().then((items) => {
+      if (cancelled) return
+      setStudents(items)
+      setUsingRemote(true)
+      const requested = Number(searchParams.get('student_id'))
+      const own = isStudent && user?.id ? items.find((item) => item.id === user.id) : null
+      const next = (requested && items.some((item) => item.id === requested) ? requested : own?.id || items[0]?.id) || null
+      setTargetId(next)
+      if (!isStudent && next && String(next) !== searchParams.get('student_id')) setSearchParams({ student_id: String(next) }, { replace: true })
+    }).catch(() => {
+      if (cancelled) return
+      // 降级照搬旧版:后端不可达时回退演示学生,会话界面保持可用
+      setStudents([DEMO_STUDENT])
+      setTargetId(DEMO_STUDENT.id)
+      setUsingRemote(false)
+      setTargetError('')
+    }).finally(() => {
+      if (!cancelled) setLoadingTarget(false)
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode])
+    return () => { cancelled = true }
+  }, [isStudent, mode, searchParams, setSearchParams, user?.id])
 
-  const patchSession = (sessionId: number, patch: (session: ChatSession) => ChatSession) => {
-    setSessionsByMode((prev) => ({
-      ...prev,
-      [mode]: prev[mode].map((item) => (item.id === sessionId ? patch(item) : item)),
-    }))
-  }
-
-  const selectSession = (id: number) => {
-    setActiveSessionId(id)
-  }
-
-  const createSession = () => {
-    const id = Date.now()
-    const session = newSession(id, config.emptyTitle)
-    setSessionsByMode((prev) => ({
-      ...prev,
-      [mode]: [session, ...prev[mode]],
-    }))
-    setActiveSessionId(id)
-    // 与 Vue 一致:新建后立刻注入开场白
-    patchSession(id, (item) => ({
-      ...item,
-      messages: [{ id: item.id + 1, role: 'assistant', content: config.opening, time: currentTime() }],
-    }))
-  }
-
-  const removeSession = (id: number) => {
-    if (sessions.length === 1) {
-      toast.warning('请至少保留一个会话')
+  useEffect(() => {
+    if (!targetId) {
+      setActiveSessionId(null)
       return
     }
-    const rest = sessions.filter((item) => item.id !== id)
-    setSessionsByMode((prev) => ({ ...prev, [mode]: rest }))
-    if (activeSessionId === id) setActiveSessionId(rest[0].id)
+    // 切换服务对象时重置全部模式会话;模式间切换保留各自会话(照搬旧版 sessionsByMode)
+    setSessionsByMode({
+      psych: [newSession(Date.now(), MODE_CONFIG.psych.emptyTitle, MODE_CONFIG.psych.opening)],
+      life: [newSession(Date.now() + 1, MODE_CONFIG.life.emptyTitle, MODE_CONFIG.life.opening)],
+      program: [newSession(Date.now() + 2, MODE_CONFIG.program.emptyTitle, MODE_CONFIG.program.opening)],
+    })
+    setActiveSessionId(null)
+    setInput('')
+    setSendError('')
+  }, [targetId])
+
+  useLayoutEffect(() => {
+    const area = scrollAreaRef.current
+    if (area) area.scrollTop = area.scrollHeight
+  }, [activeSession?.messages.length, sending])
+
+  function patchSession(sessionId: number, patch: (session: ChatSession) => ChatSession) {
+    setSessionsByMode((prev) => ({ ...prev, [mode]: prev[mode].map((item) => item.id === sessionId ? patch(item) : item) }))
   }
 
-  const quickAsk = (question: string) => {
-    void sendMessage(question)
+  function createSession() {
+    const session = newSession(Date.now(), config.emptyTitle, config.opening)
+    setSessionsByMode((prev) => ({ ...prev, [mode]: [session, ...prev[mode]] }))
+    setActiveSessionId(session.id)
+    setInput('')
+    setSendError('')
   }
 
-  const sendMessage = async (override?: string) => {
+  function removeSession(id: number) {
+    if (sessions.length <= 1) {
+      showToast('请至少保留一个会话')
+      return
+    }
+    const next = sessions.filter((item) => item.id !== id)
+    setSessionsByMode((prev) => ({ ...prev, [mode]: next }))
+    if (activeSessionId === id) setActiveSessionId(next[0]?.id || null)
+  }
+
+  function changeTarget(value: string) {
+    const id = Number(value)
+    setTargetId(id || null)
+    if (id) setSearchParams({ student_id: String(id) })
+  }
+
+  async function sendMessage(override?: string) {
     const content = (override ?? input).trim()
-    const session = activeSession
-    if (!content || !session || sending) return
-
+    if (!content || !activeSession || !targetId || sending) return
+    const sessionId = activeSession.id
     const userMessage: ChatMessage = { id: Date.now(), role: 'user', content, time: currentTime() }
-    patchSession(session.id, (item) => ({
-      ...item,
-      title: content.slice(0, 18),
-      updatedAt: '刚刚',
-      messages: [...item.messages, userMessage],
-    }))
+    patchSession(sessionId, (item) => ({ ...item, title: content.slice(0, 18), updatedAt: '刚刚', messages: [...item.messages, userMessage] }))
     setInput('')
     setSending(true)
-
+    setSendError('')
     try {
-      const response = await fetch(`${apiBase}/chat/${mode}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-User-Id': '1' },
-        body: JSON.stringify({ query: content, conversation_id: session.conversationId }),
-      })
-      const payload = await response.json()
-      if (!response.ok || payload.code !== 200) {
-        throw new Error(payload.detail ?? payload.message ?? 'Dify 调用失败')
-      }
-      const reply: ChatMessage = {
-        id: Date.now() + 1,
-        role: 'assistant',
-        content: payload.data.answer,
-        time: currentTime(),
-      }
-      patchSession(session.id, (item) => ({
-        ...item,
-        conversationId: payload.data.conversation_id ?? item.conversationId,
-        messages: [...item.messages, reply],
-      }))
+      const response = await chatStudent(targetId, mode, content, activeSession.conversationId)
+      const reply: ChatMessage = { id: Date.now() + 1, role: 'assistant', content: response.answer, time: currentTime() }
+      patchSession(sessionId, (item) => ({ ...item, conversationId: response.conversation_id || item.conversationId, messages: [...item.messages, reply] }))
     } catch (error) {
-      const fallback: ChatMessage = {
-        id: Date.now() + 1,
-        role: 'assistant',
-        content: '当前无法连接智能助手，请稍后重试或联系服务老师。',
-        time: currentTime(),
-      }
-      patchSession(session.id, (item) => ({ ...item, messages: [...item.messages, fallback] }))
-      toast.error(error instanceof Error ? error.message : '智能助手连接失败')
+      const detail = errorMessage(error)
+      setSendError(detail)
+      showToast(detail, 'error')
+      // 降级文案照搬旧版:失败时在会话内追加提示气泡,而不是静默失败
+      patchSession(sessionId, (item) => ({
+        ...item,
+        messages: [...item.messages, { id: Date.now() + 1, role: 'assistant' as MessageRole, content: '当前无法连接智能助手，请稍后重试或联系服务老师。', time: currentTime() }],
+      }))
     } finally {
       setSending(false)
     }
   }
 
-  return (
-    <section className="chat-page">
-      <header className="chat-heading">
-        <div>
-          <p>STUDENT AI SERVICE</p>
-          <h1>{config.title}</h1>
+  return <section className="chat-page student-chat-page">
+    <header className="student-chat-heading">
+      <div><p>STUDENT SERVICE</p><h1>{config.title}</h1><span>{selectedStudent ? `${selectedStudent.name} · ${selectedStudent.student_no || '未填写学号'}` : '请选择学生'}</span><Badge tone={usingRemote ? 'success' : 'warning'} dot>{usingRemote ? '已连接业务服务' : '演示数据模式'}</Badge></div>
+      {!isStudent && students.length > 0 && <Field label="服务对象"><Select value={targetId ?? ''} onChange={(event) => changeTarget(event.target.value)}>{students.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.student_no || '未填写学号'}</option>)}</Select></Field>}
+    </header>
+    {targetError && <div className="alert"><span>{targetError}</span><Button size="sm" variant="ghost" onClick={() => window.location.reload()}>重试</Button></div>}
+    {!loadingTarget && !targetError && !targetId && <Empty title="暂无可用学生档案" desc="当前账号没有可访问的学生，无法发起智能助手会话。" />}
+    {targetId && <section className="chat-workspace">
+      <aside className="session-sidebar">
+        <div className="assistant-identity"><span className="assistant-icon"><Bot size={18} /></span><strong>{config.title}</strong></div>
+        <button type="button" className="new-chat" onClick={createSession}><CirclePlus size={16} />开启新对话</button>
+        <div className="session-list">{sessions.map((item) => <button key={item.id} type="button" className={`session-item${item.id === activeSessionId ? ' active' : ''}`} onClick={() => setActiveSessionId(item.id)}><span><strong>{item.title}</strong><small>{item.updatedAt}</small></span><span className="remove-session" role="button" tabIndex={-1} onClick={(event) => { event.stopPropagation(); removeSession(item.id) }}><Trash2 size={14} /></span></button>)}</div>
+      </aside>
+      <main className="conversation-main">
+        <div className="service-note">{config.subtitle}</div>
+        <div ref={scrollAreaRef} className="message-area">
+          {activeSession?.messages.map((message, index) => <article key={message.id} className={`message-row ${message.role}`}>
+            {message.role === 'assistant' && <span className="message-avatar"><Bot size={20} /></span>}
+            <div className="message-bubble"><p>{message.content}</p>{message.role === 'assistant' && index === 0 && <div className="quick-prompts">{config.quickPrompts.map((question) => <button key={question} type="button" onClick={() => void sendMessage(question)}>{question}</button>)}</div>}</div>
+          </article>)}
+          {sending && <article className="message-row assistant"><span className="message-avatar"><Bot size={20} /></span><div className="message-bubble waiting"><p>正在请求服务...</p></div></article>}
         </div>
-        <span className="dify-tag">Dify 已接入</span>
-      </header>
-
-      <section className="chat-workspace">
-        <aside className="session-sidebar">
-          <div className="assistant-identity">
-            <span className="assistant-icon">
-              <ChatDotRound />
-            </span>
-            <strong>{config.title}</strong>
-          </div>
-          <button type="button" className="new-chat" onClick={createSession}>
-            <CirclePlus /> 开启新对话
-          </button>
-          <div className="session-list">
-            {sessions.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={`session-item${item.id === activeSessionId ? ' active' : ''}`}
-                onClick={() => selectSession(item.id)}
-              >
-                <span>
-                  <strong>{item.title}</strong>
-                  <small>{item.updatedAt}</small>
-                </span>
-                <span
-                  className="remove-session"
-                  role="button"
-                  tabIndex={-1}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    removeSession(item.id)
-                  }}
-                >
-                  <Delete />
-                </span>
-              </button>
-            ))}
-          </div>
-        </aside>
-
-        <main className="conversation-main">
-          <div className="service-note">{config.subtitle}</div>
-          <div ref={scrollAreaRef} className="message-area">
-            {activeSession?.messages.map((message, index) => (
-              <article key={message.id} className={`message-row ${message.role}`}>
-                {message.role === 'assistant' ? (
-                  <span className="message-avatar">
-                    <ChatDotRound />
-                  </span>
-                ) : null}
-                <div className="message-bubble">
-                  <p>{message.content}</p>
-                  {message.role === 'assistant' && index === 0 ? (
-                    <div className="quick-prompts">
-                      {config.quickPrompts.map((question) => (
-                        <button key={question} type="button" onClick={() => quickAsk(question)}>
-                          {question}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              </article>
-            ))}
-            {sending ? (
-              <article className="message-row assistant">
-                <span className="message-avatar">
-                  <ChatDotRound />
-                </span>
-                <div className="message-bubble waiting">
-                  <p>正在思考...</p>
-                </div>
-              </article>
-            ) : null}
-          </div>
-          <div className="composer">
-            <textarea
-              rows={3}
-              placeholder={config.placeholder}
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.ctrlKey && event.key === 'Enter') {
-                  event.preventDefault()
-                  void sendMessage()
-                }
-              }}
-            />
-            <div>
-              <span>Ctrl + Enter 发送</span>
-              <button type="button" className="send-btn" disabled={sending} onClick={() => void sendMessage()}>
-                <Promotion /> 发送
-              </button>
-            </div>
-          </div>
-        </main>
-      </section>
-    </section>
-  )
+        {sendError && <div className="chat-error"><span>{sendError}</span><button type="button" onClick={() => setSendError('')}>关闭</button></div>}
+        <div className="composer"><textarea rows={3} placeholder={config.placeholder} value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.ctrlKey && event.key === 'Enter') { event.preventDefault(); void sendMessage() } }} /><div><span>Ctrl + Enter 发送</span><Button variant="primary" size="sm" icon={<Send size={15} />} loading={sending} onClick={() => void sendMessage()}>发送</Button></div></div>
+      </main>
+    </section>}
+  </section>
 }

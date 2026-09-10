@@ -1,5 +1,5 @@
 // 等价移植自 Vue 版 前端代码/src/views/report/NameTable.vue:
-// 原生 table、sticky 表头、max-height 320 内滚、td white-space:pre-line。
+// 原生 table、sticky 表头、max-height 320 内滚、td white-space:pre-line(样式见 ./report.css)。
 export interface NameTableColumn {
   key: string
   label: string

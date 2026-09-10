@@ -2,7 +2,7 @@ import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// 与 Vue 版(前端代码/vite.config.ts)保持一致:端口 5174、代理 /api → 8002
+// 与 Vue 版(前端代码/vite.config.ts)保持一致:端口 5174、代理 /api → 8000
 export default defineConfig({
   plugins: [react()],
   resolve: {

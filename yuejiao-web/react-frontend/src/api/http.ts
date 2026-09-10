@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { toast } from '@/components/feedback'
+import { showToast } from '@/ui/toast'
 
 export interface Envelope<T> {
   code: number
@@ -8,7 +8,7 @@ export interface Envelope<T> {
   total: number | null
 }
 
-// 与 Vue 版 api/http.ts 逐项对齐:baseURL 兜底 8002、30s 超时、Bearer 注入、
+// 与 Vue 版 api/http.ts 逐项对齐:baseURL 兜底 8000、30s 超时、Bearer 注入、
 // Envelope code!==200 走 toast(只提示不解包)、401 清 token 后硬跳 /login。
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8002',
@@ -29,13 +29,19 @@ http.interceptors.response.use(
         localStorage.removeItem('yuejiao_token')
         if (!window.location.pathname.startsWith('/login')) window.location.assign('/login')
       }
-      toast.error(payload.message || '请求失败')
+      showToast(payload.message || '请求失败', 'error')
       return Promise.reject(new Error(payload.message || '请求失败'))
     }
     return response
   },
   (error) => {
-    toast.error(error?.message || '网络异常')
+    if (error?.response?.status === 401) {
+      localStorage.removeItem('yuejiao_token')
+      localStorage.removeItem('yuejiao_user')
+      if (!window.location.pathname.startsWith('/login')) window.location.assign('/login')
+    }
+    const detail = error?.response?.data?.detail || error?.response?.data?.message
+    showToast(detail || error?.message || '网络异常', 'error')
     return Promise.reject(error)
   },
 )

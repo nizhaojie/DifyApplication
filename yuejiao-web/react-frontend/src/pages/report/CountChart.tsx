@@ -1,10 +1,11 @@
 // 等价移植自 Vue 版 前端代码/src/views/report/CountChart.vue:
 // 竖柱(≤6,grid --bar-count)/ 横条(>6 单色)/ SVG 环图(CX=CY=80、OUTER=68、INNER=40,
-// 占比 <0.18 标签外移、单一片退化整圆 stroke、total=0 画空环)与 INK 4 色板逐行照搬。
+// 占比 <0.18 标签外移、单一片退化整圆 stroke、total=0 画空环)逐行照搬;
+// 4 色板改用 gqk 设计令牌(var(--brand)/--ink-deep/--violet/--info),SVG 属性经 style 注入以支持 var()。
 import type { CSSProperties, ReactNode } from 'react'
 import type { ReportChart } from './charts'
 
-const INK = ['#c41e1e', '#2f3a4a', '#8a4b4b', '#5c6b7a']
+const INK = ['var(--brand)', 'var(--ink-deep)', 'var(--violet)', 'var(--info)']
 const CX = 80
 const CY = 80
 const OUTER = 68
@@ -144,7 +145,7 @@ export function CountChart({ chart }: { chart: ReportChart }) {
     body = (
       <div className="ring-wrap">
         <svg viewBox="0 0 160 160" className="ring" aria-hidden="true">
-          <circle cx={80} cy={80} r={68} fill="none" stroke="#e4e7ed" strokeWidth={28} />
+          <circle cx={80} cy={80} r={68} fill="none" style={{ stroke: 'var(--border)' }} strokeWidth={28} />
           {ringDrawing.isEmpty ? (
             ringDrawing.arcs.map((arc) => (
               <text
@@ -166,14 +167,14 @@ export function CountChart({ chart }: { chart: ReportChart }) {
                   cy={80}
                   r={54}
                   fill="none"
-                  stroke={ringDrawing.arcs.find((arc) => arc.isFull)?.color}
+                  style={{ stroke: ringDrawing.arcs.find((arc) => arc.isFull)?.color }}
                   strokeWidth={28}
                 />
               )}
               {ringDrawing.arcs
                 .filter((item) => !item.isFull && item.count > 0)
                 .map((arc) => (
-                  <path key={arc.name} d={arc.path} fill={arc.color} />
+                  <path key={arc.name} d={arc.path} style={{ fill: arc.color }} />
                 ))}
               {ringDrawing.arcs
                 .filter((item) => item.count > 0)

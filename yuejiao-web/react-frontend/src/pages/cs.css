@@ -1,0 +1,86 @@
+/* CsPage 页面级补充样式(移植旧版功能点时新增,视觉走 gqk 设计令牌) */
+
+/* 消息元信息里的耗时 / Token 指标(移植旧版 assistant-meta-bar 的 metric-text) */
+.msg-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-4);
+}
+
+/* 知识库来源引用(移植旧版 citations-wrapper + CitationBadge) */
+.cs-citations {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.cs-citations-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-4);
+}
+
+.cs-citation-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-full);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+/* 输入区上方的「猜你想问」标签行(移植旧版 prompt-pills-row) */
+.cs-pills-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px 10px;
+}
+
+.cs-pills-label {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--text-4);
+  white-space: nowrap;
+}
+
+.cs-pills-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.cs-pills-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.cs-pill {
+  flex: none;
+  padding: 4px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-full);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color var(--dur-1) var(--ease-io), color var(--dur-1) var(--ease-io),
+    background var(--dur-1) var(--ease-io);
+}
+
+.cs-pill:hover {
+  border-color: var(--brand);
+  color: var(--brand-strong);
+  background: var(--brand-softer);
+}

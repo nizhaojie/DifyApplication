@@ -1,0 +1,96 @@
+/* ============================================================
+   Yuejiao Design System — Tokens
+   Calm Intelligence: light surfaces, ink primaries, one accent.
+   ============================================================ */
+
+:root {
+  /* -- neutral surfaces & text -------------------------------- */
+  --bg: #f6f7f8;
+  --surface: #ffffff;
+  --surface-2: #f9fafb;
+  --surface-3: #f1f3f5;
+  --border: #e7eaee;
+  --border-strong: #d8dde3;
+  --text-1: #171a21;
+  --text-2: #3d4450;
+  --text-3: #6e7684;
+  --text-4: #9aa2af;
+  --text-inverse: #ffffff;
+
+  /* -- brand accent (used sparingly) --------------------------- */
+  --brand: #0d9488;          /* fills: charts, marks, brand      */
+  --brand-strong: #0f766e;   /* accent text on light surfaces    */
+  --brand-soft: #e4f3f1;     /* tinted background                */
+  --brand-softer: #f2faf9;
+  --brand-border: #bfe2dc;
+
+  /* -- ink primary (primary buttons, emphasis) ----------------- */
+  --ink-btn: #1a1d24;
+  --ink-btn-hover: #2c313c;
+  --ink-btn-active: #12141a;
+  --ink-deep: #101317;
+
+  /* -- status (always paired with a text label) ---------------- */
+  --success: #15803d;
+  --success-soft: #e8f6ee;
+  --success-border: #c4e5d1;
+  --warning: #b45309;
+  --warning-soft: #fdf4e5;
+  --warning-border: #f0dcbc;
+  --danger: #d92d20;
+  --danger-strong: #b42318;
+  --danger-soft: #fdeeed;
+  --danger-border: #f5cfcb;
+  --info: #2563eb;
+  --info-soft: #eaf1fe;
+  --info-border: #c9dafb;
+  --violet: #6d28d9;
+  --violet-soft: #f3eefe;
+  --violet-border: #ddd0f8;
+  --neutral: #64748b;
+  --neutral-soft: #f1f3f5;
+  --neutral-border: #e2e6ea;
+
+  /* -- typography ---------------------------------------------- */
+  --font-sans: 'Inter', 'Noto Sans SC', -apple-system, 'PingFang SC',
+    'Microsoft YaHei', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Mono',
+    Menlo, Consolas, monospace;
+
+  /* -- radii ---------------------------------------------------- */
+  --r-sm: 8px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+  --r-full: 999px;
+
+  /* -- elevation (border first, shadow subtle) ------------------ */
+  --shadow-xs: 0 1px 2px rgba(18, 22, 33, 0.05);
+  --shadow-sm: 0 1px 2px rgba(18, 22, 33, 0.04), 0 2px 6px rgba(18, 22, 33, 0.05);
+  --shadow-md: 0 2px 4px rgba(18, 22, 33, 0.04), 0 8px 20px -6px rgba(18, 22, 33, 0.1);
+  --shadow-lg: 0 4px 8px rgba(18, 22, 33, 0.05), 0 18px 44px -12px rgba(18, 22, 33, 0.16);
+  --shadow-xl: 0 24px 70px -16px rgba(18, 22, 33, 0.28);
+  --focus-ring: 0 0 0 3px rgba(13, 148, 136, 0.16);
+
+  /* -- motion ---------------------------------------------------- */
+  --dur-1: 120ms;
+  --dur-2: 180ms;
+  --dur-3: 260ms;
+  --dur-4: 400ms;
+  --ease: cubic-bezier(0.19, 1, 0.22, 1);
+  --ease-io: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* -- layout ---------------------------------------------------- */
+  --sidebar-w: 248px;
+  --sidebar-w-c: 68px;
+  --topbar-h: 56px;
+  --content-max: 1440px;
+
+  /* -- z-index ---------------------------------------------------- */
+  --z-sidebar: 40;
+  --z-topbar: 30;
+  --z-drawer: 60;
+  --z-modal: 70;
+  --z-cmdk: 80;
+  --z-toast: 90;
+}

@@ -5,6 +5,8 @@ export interface LoginUser {
   username: string
   real_name: string
   user_type: string
+  role_id?: number | null
+  role_code?: string | null
   department: string | null
 }
 

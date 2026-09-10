@@ -1,20 +1,18 @@
-// 等价移植自 Vue 版 前端代码/src/views/report/psych-weekly.vue:
+// 等价移植自 antd 版 PsychWeeklyPage(源自 Vue psych-weekly.vue):
 // 章节(整体态势/本周风险学生/持续关注/节点临近[条件渲染]/疏导建议)、RISK_LABEL、文案逐字照搬。
 import { useEffect, useState } from 'react'
-import { Alert, Button, DatePicker, Empty, Spin } from 'antd'
-import type { Dayjs } from 'dayjs'
-import dayjs from 'dayjs'
+import { AlertCircle, CalendarDays, FileBarChart, LoaderCircle, Sparkles, X } from 'lucide-react'
 import {
   fetchCurrentReport,
   fetchReportHistory,
   generateReport,
   type ReportRecord,
 } from '@/api/report'
-import { toast } from '@/components/feedback'
+import { PageHeader, Panel, Button, Empty, Skeleton, SkeletonLines, showToast } from '@/ui'
 import { CountChart } from './CountChart'
 import { NameTable } from './NameTable'
 import { indexReportCharts } from './charts'
-import { periodRangeLabel, resolveWeekPeriod, shanghaiDate } from './period'
+import { periodRangeLabel, resolveWeekPeriod, shanghaiDate, shanghaiIsoDate } from './period'
 import './report.css'
 
 const KIND = 'psych_weekly' as const
@@ -92,7 +90,7 @@ export function PsychWeeklyPage() {
       if (generatedReport.status === 'failed') {
         setFailure(generatedReport.error_message || '生成失败')
       } else {
-        toast.success('已生成当前报告')
+        showToast('已生成当前报告')
       }
       await Promise.all([loadCurrent(), loadHistory()])
     } catch (error) {
@@ -109,9 +107,9 @@ export function PsychWeeklyPage() {
     await loadCurrent(resolveWeekPeriod(nextDate).start)
   }
 
-  function onPickWeek(value: Dayjs | null) {
-    if (!value) return
-    const nextDate = value.toDate()
+  function onPickWeek(event: React.ChangeEvent<HTMLInputElement>) {
+    if (!event.target.value) return
+    const nextDate = new Date(`${event.target.value}T00:00:00+08:00`)
     setWeekDate(nextDate)
     // Vue 的 @change="loadCurrent":立即按新周期拉取
     void loadCurrent(resolveWeekPeriod(nextDate).start)
@@ -120,53 +118,61 @@ export function PsychWeeklyPage() {
   // Vue 的 onMounted:并行 loadCurrent + loadHistory
   useEffect(() => {
     void Promise.all([loadCurrent(), loadHistory()])
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (
     <section className="report-page">
-      <header className="toolbar">
-        <div>
-          <h1>学生心理健康周报</h1>
-          <p>选定周期后手动生成。数字来自心理记录与预警，叙述与疏导建议来自洞察。报告只出姓名，不出原话。</p>
-        </div>
-        <div className="actions">
-          <div className="period-control">
-            <span className="period-range">{periodLabel}</span>
-            <DatePicker
-              className="period-picker"
-              picker="week"
-              showWeek={false}
-              value={dayjs(weekDate)}
-              placeholder="选择周期"
-              allowClear={false}
-              onChange={onPickWeek}
-            />
-          </div>
-          <Button type="primary" loading={isGenerating} onClick={() => void onGenerate()}>
-            手动生成
-          </Button>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow={<><FileBarChart size={13} />Business Report</>}
+        title="学生心理健康周报"
+        desc="选定周期后手动生成。数字来自心理记录与预警，叙述与疏导建议来自洞察。报告只出姓名，不出原话。"
+        actions={
+          <>
+            <div className="period-control">
+              <span className="period-range">
+                <CalendarDays size={14} />
+                {periodLabel}
+              </span>
+              <input
+                className="period-picker"
+                type="date"
+                value={shanghaiIsoDate(weekDate)}
+                onChange={onPickWeek}
+                aria-label="选择周期"
+              />
+            </div>
+            <Button variant="primary" loading={isGenerating} onClick={() => void onGenerate()}>
+              {isGenerating ? '生成中…' : <><Sparkles size={14} />手动生成</>}
+            </Button>
+          </>
+        }
+      />
 
       {failure && (
-        <Alert className="fail" type="error" title={failure} closable={false} showIcon />
+        <div className="alert">
+          <AlertCircle size={15} />
+          <span>{failure}</span>
+          <button onClick={() => setFailure('')} aria-label="关闭提示"><X size={14} /></button>
+        </div>
       )}
 
-      <div className="workspace">
-        <article className="paper">
-          <Spin spinning={isLoading || isGenerating}>
-            {current ? (
-              <>
-                <header className="paper-head">
-                  <p className="eyebrow">当前报告</p>
-                  <h2>{current.title}</h2>
-                  <p className="period">
-                    {current.period_start} 至 {current.period_end}
-                  </p>
-                </header>
+      <div className="report-workspace">
+        <Panel flush className="report-paper">
+          {(isLoading || isGenerating) && current && (
+            <div className="report-paper-busy" aria-hidden>
+              <LoaderCircle size={18} className="spinner" />
+            </div>
+          )}
+          {current ? (
+            <>
+              <header className="report-paper-head">
+                <p className="page-header-eyebrow" style={{ marginBottom: 0 }}>当前报告</p>
+                <h2>{current.title}</h2>
+                <p>{current.period_start} 至 {current.period_end}</p>
+              </header>
 
-                <section className="chapter">
+              <div className="report-chapters" style={{ paddingTop: 6 }}>
+                <section className="report-chapter">
                   <h3>整体态势</h3>
                   <p className="lead">本周有心理记录 {numbers?.recorded_student_count ?? 0} 人</p>
                   {numbers?.average_emotion_score != null ? (
@@ -184,7 +190,7 @@ export function PsychWeeklyPage() {
                   )}
                 </section>
 
-                <section className="chapter">
+                <section className="report-chapter">
                   <h3>本周风险学生</h3>
                   {charts.weekRiskVsWatch && <CountChart chart={charts.weekRiskVsWatch} />}
                   {weekRiskRows.length > 0 ? (
@@ -197,7 +203,7 @@ export function PsychWeeklyPage() {
                   )}
                 </section>
 
-                <section className="chapter">
+                <section className="report-chapter">
                   <h3>持续关注</h3>
                   {watchlistRows.length > 0 ? (
                     <NameTable columns={RISK_TABLE_COLUMNS} rows={watchlistRows} />
@@ -210,7 +216,7 @@ export function PsychWeeklyPage() {
                 </section>
 
                 {approachingRows.length > 0 && (
-                  <section className="chapter">
+                  <section className="report-chapter">
                     <h3>节点临近</h3>
                     <NameTable
                       columns={[
@@ -226,35 +232,50 @@ export function PsychWeeklyPage() {
                   </section>
                 )}
 
-                <section className="chapter">
+                <section className="report-chapter">
                   <h3>疏导建议</h3>
                   <p>{insight?.suggested_action}</p>
                 </section>
-              </>
-            ) : (
-              <Empty description="这一周期还没有当前报告，选定周期后手动生成。" />
-            )}
-          </Spin>
-        </article>
+              </div>
+            </>
+          ) : isLoading ? (
+            <div style={{ display: 'grid', gap: 16, padding: 4 }}>
+              <Skeleton height={22} width="42%" />
+              <Skeleton height={12} width="30%" />
+              <SkeletonLines rows={5} />
+            </div>
+          ) : (
+            <Empty
+              icon={<FileBarChart size={20} />}
+              title="这一周期还没有当前报告"
+              desc="选定周期后手动生成，结果会落库并出现在历史记录中。"
+              action={
+                <Button variant="primary" onClick={() => void onGenerate()}>
+                  生成本期报告
+                </Button>
+              }
+            />
+          )}
+        </Panel>
 
-        <aside className="history">
-          <h2>报告历史</h2>
-          <p className="hint">打开同一种类的旧周期</p>
-          {history.map((item) => (
-            <button
-              key={item.id}
-              className={`history-item${current?.id === item.id ? ' on' : ''}`}
-              type="button"
-              onClick={() => void openHistory(item)}
-            >
-              <strong>
-                {item.period_start} 至 {item.period_end}
-              </strong>
-              <span>{item.title}</span>
-            </button>
-          ))}
-          {!history.length && <p className="hint">还没有已完成的学生心理健康周报。</p>}
-        </aside>
+        <Panel flush title="报告历史" actions={<span className="data-head-meta">{history.length} 条</span>}>
+          <div style={{ padding: '6px 8px 10px' }}>
+            {history.map((item) => (
+              <button
+                key={item.id}
+                className={`history-item${current?.id === item.id ? ' active' : ''}`}
+                type="button"
+                onClick={() => void openHistory(item)}
+              >
+                <strong>
+                  {item.period_start} 至 {item.period_end}
+                </strong>
+                <span>{item.title}</span>
+              </button>
+            ))}
+            {!history.length && <Empty tight title="还没有已完成的学生心理健康周报" desc="生成过的报告都会留存在这里。" />}
+          </div>
+        </Panel>
       </div>
     </section>
   )

@@ -1,24 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Button } from 'antd'
+import { ArrowRight, ArrowUpRight, CheckCircle2, ClipboardList, RefreshCw, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { fetchBrief, fetchFunnel, fetchLeads, type LeadItem } from '@/api/enterprise'
-import { BarList } from '@/components/BarList'
-import { Refresh, Right, User } from '@/components/elementIcons'
-import './DashboardPage.css'
+import { PageHeader, Panel, StatCard, Button, Badge, Skeleton, Empty, BarChart } from '@/ui'
 
-// 超集页面(Vue 版为 EmptyModule 占位):功能保留,视觉归 Vue 体系(.stat-card/.chart-card)。
+const statusLabels: Record<string, string> = { new: '新线索', contacting: '跟进中', qualified: '已合格', signed: '已签约', lost: '已流失' }
 
-const STATUS_LABELS: Record<string, string> = {
-  new: '新线索',
-  contacting: '跟进中',
-  qualified: '已合格',
-  signed: '已签约',
-  lost: '已流失',
-}
+function numberOf(value: unknown) { return typeof value === 'number' ? value : Number(value || 0) }
 
-function numberOf(value: unknown) {
-  return typeof value === 'number' ? value : Number(value || 0)
-}
+const flowSteps = [
+  ['01', '口述录入客户', '进入企业助手，说出客户基本信息和意向方向。', '/enterprise'],
+  ['02', '数据实时回读', '客户列表、漏斗和负责人信息立即刷新。', '/enterprise/board'],
+  ['03', '查看跟进详情', '打开客户档案，补充跟进记录并查看时间线。', '/enterprise'],
+  ['04', '完成状态闭环', '通过助手更新状态，再回到看板确认变化。', '/enterprise'],
+] as const
 
 export function DashboardPage() {
   const navigate = useNavigate()
@@ -43,107 +38,92 @@ export function DashboardPage() {
     }
   }
 
-  useEffect(() => {
-    void load()
-  }, [])
+  useEffect(() => { void load() }, [])
 
-  const statusRows = useMemo(
-    () => Object.entries(STATUS_LABELS).map(([key, label]) => ({ label, value: funnel[key] || 0 })),
-    [funnel],
-  )
-  const attentionLeads = useMemo(
-    () => leads.filter((lead) => ['new', 'contacting', 'qualified'].includes(lead.status)).slice(0, 5),
-    [leads],
-  )
+  const statusRows = useMemo(() => Object.entries(statusLabels).map(([key, label]) => ({ key, label, value: funnel[key] || 0 })), [funnel])
+  const attentionLeads = useMemo(() => leads.filter((lead) => ['new', 'contacting', 'qualified'].includes(lead.status)).slice(0, 5), [leads])
   const total = leads.length
   const signedRate = total ? `${Math.round(((funnel.signed || 0) / total) * 100)}%` : '0%'
 
-  const dash = loading ? '—' : undefined
-  void dash
+  return <section>
+    <PageHeader
+      eyebrow={<><Sparkles size={13} />Workspace</>}
+      title="工作台"
+      desc="从一句话办理业务，到数据回读和结果追踪，闭环都在这里。"
+      actions={
+        <Button variant="secondary" icon={<RefreshCw size={14} className={loading ? 'spinner' : ''} />} onClick={() => void load()} disabled={loading}>
+          刷新
+        </Button>
+      }
+    />
+    {error && <div className="alert"><ClipboardList size={15} /><span>{error}</span></div>}
 
-  return (
-    <section className="ent-page">
-      <header className="ent-head">
-        <h1>工作台</h1>
-        <div className="head-actions">
-          <Button onClick={() => void load()} loading={loading} icon={<Refresh />}>
-            刷新工作台
-          </Button>
-        </div>
-      </header>
-      {error ? <div className="muted" style={{ color: '#c41e1e', marginBottom: 12 }}>{error}</div> : null}
-      <div className="stat-row">
-        <div className="stat-card">
-          <small>当前客户</small>
-          <strong>{loading ? '—' : total}</strong>
-        </div>
-        <div className="stat-card">
-          <small>待办事项</small>
-          <strong>{loading ? '—' : numberOf(brief.pending_todos)}</strong>
-        </div>
-        <div className="stat-card">
-          <small>已签约</small>
-          <strong>{loading ? '—' : numberOf(funnel.signed)}</strong>
-        </div>
-        <div className="stat-card">
-          <small>签约占比</small>
-          <strong>{loading ? '—' : signedRate}</strong>
-        </div>
-      </div>
-      <div className="chart-row">
-        <section className="chart-card">
-          <h3>答辩演示路径</h3>
-          <div className="workflow-list">
-            {(
-              [
-                ['01', '口述录入客户', '进入企业助手，说出客户基本信息和意向方向。', '/enterprise'],
-                ['02', '数据实时回读', '客户列表、漏斗和负责人信息立即刷新。', '/enterprise/board'],
-                ['03', '查看跟进详情', '打开客户档案，补充跟进记录并查看时间线。', '/enterprise'],
-                ['04', '完成状态闭环', '通过助手更新状态，再回到看板确认变化。', '/enterprise'],
-              ] as const
-            ).map(([index, title, description, path]) => (
-              <button className="workflow-step" key={index} type="button" onClick={() => navigate(path)}>
-                <span>{index}</span>
+    <div className="grid-stats" style={{ marginBottom: 20 }}>
+      <StatCard label="当前客户" value={loading ? '—' : total} hint="实时客户列表" delay={0} />
+      <StatCard label="待办事项" value={loading ? '—' : numberOf(brief.pending_todos)} hint="需要今天处理" delay={50} />
+      <StatCard label="已签约" value={loading ? '—' : numberOf(funnel.signed)} hint="当前漏斗存量" delay={100} />
+      <StatCard label="签约占比" value={loading ? '—' : signedRate} hint="相对当前客户" delay={150} />
+    </div>
+
+    <div className="dash-main" style={{ marginBottom: 20 }}>
+      <Panel
+        title="客户转化漏斗"
+        desc="企业助手完成办理后的数据视图"
+        actions={<Button variant="ghost" size="sm" icon={<ArrowUpRight size={14} />} onClick={() => navigate('/enterprise/board')}>客户看板</Button>}
+        footer={<div className="chart-note" style={{ padding: '12px 20px', borderTop: '1px solid var(--border)' }}>各阶段为当前存量客户数，条形长度相对最大阶段。</div>}
+      >
+        {loading ? (
+          <span style={{ display: 'grid', gap: 20 }}>
+            {statusRows.map((row) => <span key={row.key} style={{ display: 'grid', gap: 7 }}><Skeleton height={12} width="30%" /><Skeleton height={8} /></span>)}
+          </span>
+        ) : (
+          <BarChart items={statusRows.map(({ label, value }) => ({ label, value }))} />
+        )}
+      </Panel>
+
+      <Panel
+        title="需要关注的客户"
+        desc="新线索、跟进中与已合格"
+        actions={<Button variant="ghost" size="sm" icon={<ArrowRight size={14} />} onClick={() => navigate('/enterprise')}>企业助手</Button>}
+        flush
+      >
+        <div style={{ padding: '6px 20px 14px' }}>
+          <div className="attention-list">
+            {attentionLeads.map((lead) => (
+              <button className="attention-item" key={lead.id} onClick={() => navigate('/enterprise')}>
+                <span className="avatar">{lead.customer_name.slice(0, 1)}</span>
                 <div>
-                  <strong>{title}</strong>
-                  <p>{description}</p>
+                  <strong>{lead.customer_name}</strong>
+                  <small>{[lead.intended_country, lead.intended_major].filter(Boolean).join(' · ') || '未填写意向'}</small>
                 </div>
-                <Right />
+                <Badge tone={lead.status === 'signed' ? 'success' : lead.status === 'contacting' ? 'warning' : 'info'} dot>
+                  {statusLabels[lead.status] || lead.status_text}
+                </Badge>
               </button>
             ))}
+            {!attentionLeads.length && !loading && (
+              <Empty tight icon={<CheckCircle2 size={19} />} title="当前没有需要关注的客户" desc="所有跟进中的客户都处于正常节奏。" />
+            )}
           </div>
-        </section>
-        <section className="chart-card">
-          <h3>当前客户漏斗</h3>
-          <BarList items={statusRows} />
-          <Button type="link" onClick={() => navigate('/enterprise/board')} style={{ padding: 0, marginTop: 8 }}>
-            打开客户看板 <Right />
-          </Button>
-        </section>
-      </div>
-      <section className="table-card">
-        <div className="ent-head" style={{ marginBottom: 8 }}>
-          <h3 style={{ margin: 0, fontSize: 14 }}>
-            <User size={16} /> 需要关注的客户
-          </h3>
-          <Button type="link" onClick={() => navigate('/enterprise')} style={{ padding: 0 }}>
-            进入企业助手 <Right />
-          </Button>
         </div>
-        <div className="attention-list">
-          {attentionLeads.map((lead) => (
-            <button className="attention-item" key={lead.id} type="button" onClick={() => navigate('/enterprise')}>
-              <span className="attention-avatar">{lead.customer_name.slice(0, 1)}</span>
-              <div>
-                <strong>{lead.customer_name}</strong>
-                <small>{[lead.intended_country, lead.intended_major].filter(Boolean).join(' · ') || '未填写意向'}</small>
-              </div>
-              <span className="status-badge">{STATUS_LABELS[lead.status] || lead.status_text}</span>
-            </button>
-          ))}
-          {!attentionLeads.length ? <p className="muted">当前没有需要关注的客户</p> : null}
-        </div>
-      </section>
-    </section>
-  )
+      </Panel>
+    </div>
+
+    <div className="section-title" style={{ marginBottom: 12 }}>
+      <h2>演示路径</h2>
+      <span className="chart-note">一条链路看懂业务办理与追踪</span>
+    </div>
+    <div className="dash-flow">
+      {flowSteps.map(([index, stepTitle, description, path], i) => (
+        <button className="flow-card" key={index} onClick={() => navigate(path)} style={{ animation: `fade-rise var(--dur-3) var(--ease) both`, animationDelay: `${i * 60}ms` }}>
+          <span className="flow-card-head">
+            <span className="flow-num">{index}</span>
+            <ArrowRight size={15} />
+          </span>
+          <strong>{stepTitle}</strong>
+          <p>{description}</p>
+        </button>
+      ))}
+    </div>
+  </section>
 }

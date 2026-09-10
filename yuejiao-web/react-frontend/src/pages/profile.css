@@ -1,0 +1,38 @@
+/* ProfilePage 页面级样式(移植自旧版 antd 实现的行为视觉) */
+
+/* 拖拽悬停态:旧版 Upload.Dragger 的 dragover 高亮 */
+.file-drop.profile-dragover {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}
+
+/* 匹配度进度条(等价旧版 antd Progress,strokeWidth 6) */
+.profile-scorebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 140px;
+}
+
+.profile-scorebar-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--neutral-border, var(--border));
+  overflow: hidden;
+}
+
+.profile-scorebar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.45s var(--ease, ease-out);
+}
+
+.profile-scorebar em {
+  font-style: normal;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+}

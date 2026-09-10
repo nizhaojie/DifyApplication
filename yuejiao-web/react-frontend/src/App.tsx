@@ -1,68 +1,91 @@
-import { useEffect } from 'react'
-import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
-import { LoginPage } from '@/pages/LoginPage'
 import { AdminLayout } from '@/components/AdminLayout'
-import { DashboardPage } from '@/pages/DashboardPage'
-import { ProfilePage } from '@/pages/ProfilePage'
-import { CsPage } from '@/pages/CsPage'
-import { EnterprisePage } from '@/pages/EnterprisePage'
-import { EnterpriseCompanyPage } from '@/pages/EnterpriseCompanyPage'
-import { EnterpriseGuidePage } from '@/pages/EnterpriseGuidePage'
-import { EnterpriseBoardPage } from '@/pages/EnterpriseBoardPage'
-import { EnterpriseMemoryPage } from '@/pages/EnterpriseMemoryPage'
-import { StudentPage } from '@/pages/StudentPage'
-import { StudentChatPage } from '@/pages/StudentChatPage'
-import { ReportHubPage } from '@/pages/ReportHubPage'
-import { ReportPage } from '@/pages/ReportPage'
-import { SettingsPage } from '@/pages/SettingsPage'
 
-// 等价迁移自 Vue 版 src/router/index.ts:19 条路由、/ → /dashboard、
-// 守卫未登录带 ?redirect= 回跳、无 404(未知路径保留布局、内容空白,与 Vue 一致)。
+// 路由级代码分割：登录页与各业务页按需加载
+const LoginPage = lazy(() => import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })))
+const DashboardPage = lazy(() => import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
+const ProfilePage = lazy(() => import('@/pages/ProfilePage').then((m) => ({ default: m.ProfilePage })))
+const CsPage = lazy(() => import('@/pages/CsPage').then((m) => ({ default: m.CsPage })))
+const EnterprisePage = lazy(() => import('@/pages/EnterprisePage').then((m) => ({ default: m.EnterprisePage })))
+const EnterpriseCompanyPage = lazy(() => import('@/pages/EnterpriseCompanyPage').then((m) => ({ default: m.EnterpriseCompanyPage })))
+const EnterpriseGuidePage = lazy(() => import('@/pages/EnterpriseGuidePage').then((m) => ({ default: m.EnterpriseGuidePage })))
+const EnterpriseBoardPage = lazy(() => import('@/pages/EnterpriseBoardPage').then((m) => ({ default: m.EnterpriseBoardPage })))
+const EnterpriseMemoryPage = lazy(() => import('@/pages/EnterpriseMemoryPage').then((m) => ({ default: m.EnterpriseMemoryPage })))
+const StudentPage = lazy(() => import('@/pages/StudentPage').then((m) => ({ default: m.StudentPage })))
+const StudentChatPage = lazy(() => import('@/pages/StudentChatPage').then((m) => ({ default: m.StudentChatPage })))
+const SettingsPage = lazy(() => import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
+const ReportHubPage = lazy(() => import('@/pages/ReportHubPage').then((m) => ({ default: m.ReportHubPage })))
+const ReportPage = lazy(() => import('@/pages/ReportPage').then((m) => ({ default: m.ReportPage })))
+
+function PageFallback() {
+  return (
+    <div style={{ display: 'grid', placeItems: 'center', minHeight: 280, color: 'var(--text-4)', fontSize: 13 }}>
+      <span className="spinner" style={{ width: 18, height: 18, border: '2px solid var(--border-strong)', borderTopColor: 'var(--brand)', borderRadius: '50%' }} />
+    </div>
+  )
+}
 
 function ProtectedRoute() {
   const token = useAuthStore((state) => state.token)
   const location = useLocation()
-  if (!token) {
-    const redirect = encodeURIComponent(location.pathname + location.search)
-    return <Navigate to={`/login?redirect=${redirect}`} replace />
-  }
+  if (!token) return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />
+  return (
+    <Suspense fallback={<PageFallback />}>
+      <Outlet />
+    </Suspense>
+  )
+}
+
+function RouteShell() {
+  const navigate = useNavigate()
+  useEffect(() => {
+    const path = window.location.pathname
+    if (path === '/') navigate('/dashboard', { replace: true })
+  }, [navigate])
   return <Outlet />
 }
 
 export default function App() {
   const hydrate = useAuthStore((state) => state.hydrate)
-  useEffect(() => {
-    void hydrate()
-  }, [hydrate])
+  useEffect(() => { void hydrate() }, [hydrate])
 
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/login"
+        element={
+          <Suspense fallback={<PageFallback />}>
+            <LoginPage />
+          </Suspense>
+        }
+      />
       <Route element={<ProtectedRoute />}>
-        <Route element={<AdminLayout />}>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="profile" element={<ProfilePage />} />
-          <Route path="cs" element={<CsPage />} />
-          <Route path="enterprise" element={<EnterprisePage />} />
-          <Route path="enterprise/company" element={<EnterpriseCompanyPage />} />
-          <Route path="enterprise/guide" element={<EnterpriseGuidePage />} />
-          <Route path="enterprise/board" element={<EnterpriseBoardPage />} />
-          <Route path="enterprise/memory" element={<EnterpriseMemoryPage />} />
-          <Route path="student" element={<StudentPage />} />
-          <Route path="student/psych" element={<StudentChatPage mode="psych" />} />
-          <Route path="student/life" element={<StudentChatPage mode="life" />} />
-          <Route path="student/program" element={<StudentChatPage mode="program" />} />
-          <Route path="report" element={<ReportHubPage />} />
-          <Route path="report/customer-ops" element={<ReportPage kind="customer_ops" />} />
-          <Route path="report/daily-summary" element={<ReportPage kind="daily_summary" />} />
-          <Route path="report/psych-weekly" element={<ReportPage kind="psych_weekly" />} />
-          <Route path="report/complaint-weekly" element={<ReportPage kind="complaint_weekly" />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="*" element={<></>} />
+        <Route element={<RouteShell />}>
+          <Route element={<AdminLayout />}>
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+            <Route path="cs" element={<CsPage />} />
+            <Route path="enterprise" element={<EnterprisePage />} />
+            <Route path="enterprise/company" element={<EnterpriseCompanyPage />} />
+            <Route path="enterprise/guide" element={<EnterpriseGuidePage />} />
+            <Route path="enterprise/board" element={<EnterpriseBoardPage />} />
+            <Route path="enterprise/memory" element={<EnterpriseMemoryPage />} />
+            <Route path="student" element={<StudentPage />} />
+            <Route path="student/psych" element={<StudentChatPage mode="psych" />} />
+            <Route path="student/life" element={<StudentChatPage mode="life" />} />
+            <Route path="student/program" element={<StudentChatPage mode="program" />} />
+            <Route path="report" element={<ReportHubPage />} />
+            <Route path="report/customer-ops" element={<ReportPage kind="customer_ops" />} />
+            <Route path="report/daily-summary" element={<ReportPage kind="daily_summary" />} />
+            <Route path="report/psych-weekly" element={<ReportPage kind="psych_weekly" />} />
+            <Route path="report/complaint-weekly" element={<ReportPage kind="complaint_weekly" />} />
+            <Route path="settings" element={<SettingsPage />} />
+          </Route>
         </Route>
       </Route>
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   )
 }
