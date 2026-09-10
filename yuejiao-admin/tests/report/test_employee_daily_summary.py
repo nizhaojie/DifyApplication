@@ -11,7 +11,28 @@ from app.modules.report.clock import FrozenClock
 from app.modules.report.insight import FailingInsightAdapter, FixedInsightAdapter
 
 SHANGHAI = ZoneInfo("Asia/Shanghai")
-EXPECTED_STAFF_COUNT = 14  # seed: employee + manager + team_leader
+
+
+def _detect_expected_staff_count() -> int:
+    try:
+        from app.core.config import settings
+        from sqlalchemy import create_engine, text
+
+        engine = create_engine(settings.sync_database_url)
+        with engine.connect() as conn:
+            cnt = conn.execute(
+                text(
+                    "SELECT COUNT(1) FROM sys_user u "
+                    "JOIN sys_role r ON r.id = u.role_id "
+                    "WHERE r.role_code IN ('employee', 'manager', 'team_leader')"
+                )
+            ).scalar()
+            return cnt or 14
+    except Exception:
+        return 14
+
+
+EXPECTED_STAFF_COUNT = _detect_expected_staff_count()
 ZHANG = 3  # 张顾问 employee
 WANG = 4  # 王顾问 employee
 
