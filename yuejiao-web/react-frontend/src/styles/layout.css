@@ -384,6 +384,67 @@
   background: var(--success);
 }
 
+/* ---------- Multi-tab tags (等价 Vue 版 el-tag 页签) --------------- */
+.tags {
+  width: 100%;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 10px clamp(20px, 3.4vw, 40px) 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1;
+  padding: 5px 8px 5px 4px;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.tag .tag-label {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+.tag .tag-close {
+  border: 0;
+  background: transparent;
+  color: var(--text-4);
+  display: grid;
+  place-items: center;
+  padding: 3px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.tag .tag-close:hover {
+  color: var(--danger, #d64545);
+  background: var(--surface-3);
+}
+
+.tag.active {
+  border-color: var(--brand-border);
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}
+
+.tag:not(.active):hover {
+  border-color: var(--border-strong);
+  color: var(--text-1);
+}
+
 /* ---------- Page canvas ----------------------------------------- */
 .page {
   flex: 1;

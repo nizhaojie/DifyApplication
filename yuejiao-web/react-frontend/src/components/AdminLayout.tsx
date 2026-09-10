@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import {
-  BarChart3, Bell, BriefcaseBusiness, Building2, ChevronDown,
+  BarChart3, Bell, BriefcaseBusiness, Building2, ChevronDown, X,
   FileBarChart, Gauge, Headphones, LogOut, Menu, NotebookTabs,
   PanelLeftClose, PanelLeftOpen, Search,
   Settings, ShieldCheck, Sparkles, UserRound,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { useTagsStore } from '@/store/tagsStore'
 import { CommandPalette, type CommandEntry } from '@/ui/CommandPalette'
 import { ConfirmProvider } from '@/ui/ConfirmProvider'
 import { CsFloatWidget } from '@/components/cs/CsFloatWidget'
@@ -122,6 +123,21 @@ export function AdminLayout() {
       ...toEntries('分析与系统', visibleSystemNav),
     ]
   }, [navigate, visibleEnterpriseNav, visibleSystemNav, visibleWorkspaceNav])
+
+  // 多页签:路由变化自动登记(照搬 Vue AdminLayout 的 route watch immediate)
+  const visited = useTagsStore((state) => state.visited)
+  const addTag = useTagsStore((state) => state.add)
+  const removeTag = useTagsStore((state) => state.remove)
+  useEffect(() => {
+    addTag({ path: location.pathname, title })
+  }, [addTag, location.pathname, title])
+
+  function closeTag(path: string) {
+    if (path === '/dashboard') return
+    const rest = visited.filter((tag) => tag.path !== path)
+    removeTag(path)
+    if (location.pathname === path) navigate(rest[rest.length - 1]?.path ?? '/dashboard')
+  }
 
   if (isStudent && !location.pathname.startsWith('/student')) {
     return <Navigate to="/student" replace />
@@ -247,6 +263,19 @@ export function AdminLayout() {
             </button>
           </div>
         </header>
+
+        <div className="tags">
+          {visited.map((tag) => (
+            <span key={tag.path} className={`tag${tag.path === location.pathname ? ' active' : ''}`}>
+              <button type="button" className="tag-label" onClick={() => navigate(tag.path)}>{tag.title}</button>
+              {tag.path !== '/dashboard' && (
+                <button type="button" className="tag-close" aria-label={`关闭 ${tag.title}`} onClick={() => closeTag(tag.path)}>
+                  <X size={12} />
+                </button>
+              )}
+            </span>
+          ))}
+        </div>
 
         <main className="page">
           <ConfirmProvider>
