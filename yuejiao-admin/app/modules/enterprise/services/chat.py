@@ -175,6 +175,8 @@ async def brief(db: AsyncSession, owner: SysUser) -> dict:
 async def approve_leave(db: AsyncSession, service_id: int, action: str, comment: str | None, owner: SysUser) -> dict:
     if action not in {"approved", "rejected"}:
         raise BizError("审批结果必须是 approved 或 rejected")
+    if action == "rejected" and not (comment or "").strip():
+        raise BizError("驳回时必须填写原因")
     from app.modules.student.models.admin import StudentAdminService
 
     service = await db.get(StudentAdminService, service_id)

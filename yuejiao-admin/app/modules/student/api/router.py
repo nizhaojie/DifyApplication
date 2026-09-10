@@ -1,22 +1,32 @@
 import httpx
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_db
+from app.core.deps import get_current_user, get_db
+from app.core.exceptions import BizError
 from app.core.response import ok
 from app.integrations.dify.student_client import StudentDifyClient
 from app.modules.student.crud import assistant as crud
-from app.modules.student.schemas.assistant import ChatRequest, LeaveCreate, ProgressCreate, TicketCreate
 from app.modules.student.models.assistant import ApplicationProgress
+from app.modules.student.models.info import StudentInfo
 from app.modules.student.services import assistant as student_service
+from app.modules.student.schemas.assistant import ChatRequest, LeaveCreate, ProgressCreate, TicketCreate
+from app.modules.system.models.user import SysUser
 
 router = APIRouter(prefix="/student", tags=["student"])
 
 
-def get_student_id(x_user_id: int | None = Header(default=None)) -> int:
-    if x_user_id is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing X-User-Id header")
-    return x_user_id
+async def get_student_id(
+    db: AsyncSession = Depends(get_db),
+    current_user: SysUser = Depends(get_current_user),
+) -> int:
+    """学生身份只从登录态推导；客户端传入的学生标识一律不采信。"""
+    result = await db.execute(select(StudentInfo.id).where(StudentInfo.user_id == current_user.id))
+    student_id = result.scalar_one_or_none()
+    if student_id is None:
+        raise BizError("当前用户未绑定学生档案", code=403)
+    return student_id
 
 
 @router.post("/chat/{scene}")
