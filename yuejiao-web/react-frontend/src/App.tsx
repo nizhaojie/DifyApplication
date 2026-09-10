@@ -17,7 +17,10 @@ const StudentPage = lazy(() => import('@/pages/StudentPage').then((m) => ({ defa
 const StudentChatPage = lazy(() => import('@/pages/StudentChatPage').then((m) => ({ default: m.StudentChatPage })))
 const SettingsPage = lazy(() => import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 const ReportHubPage = lazy(() => import('@/pages/ReportHubPage').then((m) => ({ default: m.ReportHubPage })))
-const ReportPage = lazy(() => import('@/pages/ReportPage').then((m) => ({ default: m.ReportPage })))
+const CustomerOpsPage = lazy(() => import('@/pages/report/CustomerOpsPage').then((m) => ({ default: m.CustomerOpsPage })))
+const DailySummaryPage = lazy(() => import('@/pages/report/DailySummaryPage').then((m) => ({ default: m.DailySummaryPage })))
+const PsychWeeklyPage = lazy(() => import('@/pages/report/PsychWeeklyPage').then((m) => ({ default: m.PsychWeeklyPage })))
+const ComplaintWeeklyPage = lazy(() => import('@/pages/report/ComplaintWeeklyPage').then((m) => ({ default: m.ComplaintWeeklyPage })))
 
 function PageFallback() {
   return (
@@ -77,10 +80,10 @@ export default function App() {
             <Route path="student/life" element={<StudentChatPage mode="life" />} />
             <Route path="student/program" element={<StudentChatPage mode="program" />} />
             <Route path="report" element={<ReportHubPage />} />
-            <Route path="report/customer-ops" element={<ReportPage kind="customer_ops" />} />
-            <Route path="report/daily-summary" element={<ReportPage kind="daily_summary" />} />
-            <Route path="report/psych-weekly" element={<ReportPage kind="psych_weekly" />} />
-            <Route path="report/complaint-weekly" element={<ReportPage kind="complaint_weekly" />} />
+            <Route path="report/customer-ops" element={<CustomerOpsPage />} />
+            <Route path="report/daily-summary" element={<DailySummaryPage />} />
+            <Route path="report/psych-weekly" element={<PsychWeeklyPage />} />
+            <Route path="report/complaint-weekly" element={<ComplaintWeeklyPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
         </Route>
