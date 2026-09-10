@@ -802,3 +802,161 @@
   cursor: pointer;
   user-select: none;
 }
+
+/* ============================================================
+   v3.1 — Sidebar 纵向节奏重排:分组呼吸 / 项距放宽 / 底部落座
+   ============================================================ */
+.sidebar-brand {
+  padding: 20px 16px 18px;
+  margin-bottom: 2px;
+}
+
+.sidebar-nav {
+  padding: 6px 12px 16px;
+  gap: 3px;
+}
+
+.nav-label {
+  margin: 22px 8px 8px;
+}
+
+.nav-label:first-child {
+  margin-top: 10px;
+}
+
+.nav-item {
+  height: 38px;
+}
+
+.nav-sub {
+  gap: 2px;
+  margin: 3px 0 6px;
+}
+
+.nav-sub .nav-item {
+  height: 34px;
+}
+
+.sidebar-foot {
+  gap: 10px;
+  padding: 14px 12px 16px;
+}
+
+.sidebar-user {
+  padding: 9px 9px;
+}
+
+/* ============================================================
+   v3.2 — 侧栏高度自适应:矮视口逐级压缩节奏,避免内容被裁切
+   (宽屏宽松节奏保持不变,仅按视口高度分级收紧)
+   ============================================================ */
+@media (max-height: 900px) {
+  .sidebar-brand {
+    padding: 15px 16px 13px;
+  }
+
+  .nav-label {
+    margin: 16px 8px 7px;
+  }
+
+  .nav-item {
+    height: 36px;
+  }
+
+  .nav-sub {
+    margin: 2px 0 4px;
+  }
+
+  .nav-sub .nav-item {
+    height: 31px;
+  }
+
+  .sidebar-foot {
+    padding: 10px 12px 12px;
+    gap: 8px;
+  }
+
+  .sidebar-user {
+    padding: 7px 8px;
+  }
+
+  .sidebar-nav {
+    scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+  }
+}
+
+@media (max-height: 780px) {
+  .sidebar-brand {
+    padding: 13px 16px 11px;
+  }
+
+  .sidebar-nav {
+    padding: 4px 12px 12px;
+  }
+
+  .nav-label {
+    margin: 12px 8px 6px;
+  }
+
+  .nav-item {
+    height: 34px;
+  }
+
+  .nav-sub .nav-item {
+    height: 30px;
+  }
+
+  .sidebar-collapse {
+    height: 28px;
+  }
+}
+
+/* ============================================================
+   v3.3 — 极限高度兜底(≤620px 视口)+ 滚动渐隐遮罩
+   ============================================================ */
+
+/* 滚动容器底部渐隐:内容溢出需要滚动时,被裁项淡出而非硬切一半 */
+.sidebar-nav {
+  mask-image: linear-gradient(180deg, #000 0%, #000 calc(100% - 18px), transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 calc(100% - 18px), transparent 100%);
+}
+
+@media (max-height: 620px) {
+  .sidebar-brand {
+    padding: 11px 16px 9px;
+  }
+
+  .brand-text span {
+    display: none;
+  }
+
+  .nav-label {
+    margin: 10px 8px 5px;
+  }
+
+  .nav-item {
+    height: 32px;
+  }
+
+  .nav-sub {
+    margin: 2px 0 3px;
+  }
+
+  .nav-sub .nav-item {
+    height: 28px;
+  }
+
+  .sidebar-foot {
+    padding: 8px 12px 10px;
+    gap: 6px;
+  }
+
+  .sidebar-collapse {
+    height: 30px;
+    justify-content: center;
+  }
+
+  .sidebar-collapse span {
+    display: none;
+  }
+}
