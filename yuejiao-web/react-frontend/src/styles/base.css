@@ -243,7 +243,6 @@ kbd {
   height: 20px;
   padding: 0 5px;
   border: 1px solid var(--border-strong);
-  border-bottom-width: 2px;
   border-radius: 5px;
   background: var(--surface);
   color: var(--text-3);
@@ -261,4 +260,17 @@ kbd {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ============================================================
+   v3 — 画布氛围光:顶部极淡墨晕,给浅色画布纵深(克制)
+   ============================================================ */
+body {
+  background:
+    radial-gradient(1100px 460px at 46% -180px, rgba(28, 31, 38, 0.05), rgba(28, 31, 38, 0) 62%),
+    var(--bg);
+}
+
+html {
+  background: var(--bg);
 }

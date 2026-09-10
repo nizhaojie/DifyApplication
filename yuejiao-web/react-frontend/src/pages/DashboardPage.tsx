@@ -60,17 +60,17 @@ export function DashboardPage() {
 
     <div className="grid-stats" style={{ marginBottom: 20 }}>
       <StatCard label="当前客户" value={loading ? '—' : total} hint="实时客户列表" delay={0} />
-      <StatCard label="待办事项" value={loading ? '—' : numberOf(brief.pending_todos)} hint="需要今天处理" delay={50} />
-      <StatCard label="已签约" value={loading ? '—' : numberOf(funnel.signed)} hint="当前漏斗存量" delay={100} />
-      <StatCard label="签约占比" value={loading ? '—' : signedRate} hint="相对当前客户" delay={150} />
+      <StatCard label="待办事项" value={loading ? '—' : numberOf(brief.pending_todos)} hint="需要今天处理" delay={60} />
+      <StatCard label="已签约" value={loading ? '—' : numberOf(funnel.signed)} hint="当前漏斗存量" delay={120} />
+      <StatCard label="签约占比" value={loading ? '—' : signedRate} hint="相对当前客户" delay={180} />
     </div>
 
-    <div className="dash-main" style={{ marginBottom: 20 }}>
+    <div className="dash-main">
       <Panel
         title="客户转化漏斗"
         desc="企业助手完成办理后的数据视图"
         actions={<Button variant="ghost" size="sm" icon={<ArrowUpRight size={14} />} onClick={() => navigate('/enterprise/board')}>客户看板</Button>}
-        footer={<div className="chart-note" style={{ padding: '12px 20px', borderTop: '1px solid var(--border)' }}>各阶段为当前存量客户数，条形长度相对最大阶段。</div>}
+        footer={<div className="chart-note">各阶段为当前存量客户数，条形长度相对最大阶段。</div>}
       >
         {loading ? (
           <span style={{ display: 'grid', gap: 20 }}>
@@ -109,7 +109,7 @@ export function DashboardPage() {
       </Panel>
     </div>
 
-    <div className="section-title" style={{ marginBottom: 12 }}>
+    <div className="section-title">
       <h2>演示路径</h2>
       <span className="chart-note">一条链路看懂业务办理与追踪</span>
     </div>

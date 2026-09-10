@@ -74,7 +74,6 @@ export function LoginPage() {
         <Button type="submit" variant="primary" size="lg" className="login-submit" block loading={loading}>
           {loading ? '登录中…' : <>进入工作台 <ArrowRight size={16} /></>}
         </Button>
-        <p className="login-hint">演示账号 <kbd>emp01</kbd> · 密码 <kbd>123456</kbd></p>
       </form>
     </section>
   </div>

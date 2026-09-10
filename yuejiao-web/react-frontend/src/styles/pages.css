@@ -1957,17 +1957,6 @@
   margin-top: 26px;
 }
 
-.login-hint {
-  margin-top: 18px;
-  text-align: center;
-  font-size: 12px;
-  color: var(--text-4);
-}
-
-.login-hint kbd {
-  margin: 0 1px;
-}
-
 /* ---------- Loading overlay (page corner) ---------------------------- */
 .loading-pill {
   position: fixed;
@@ -2099,4 +2088,91 @@
     align-items: start;
     padding: 34px 18px 56px;
   }
+}
+
+/* ============================================================
+   v3 — Dashboard 构图: 指标带 / 主图表 / 最近数据 / 路径
+   ============================================================ */
+.dash-metrics {
+  margin-bottom: var(--sp-5);
+}
+
+.dash-main {
+  margin-bottom: var(--sp-6);
+}
+
+.chart-note {
+  padding: 11px 20px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-4);
+  background: var(--surface-2);
+}
+
+.section-title {
+  margin-bottom: var(--sp-3);
+}
+.section-title h2 {
+  font-size: 15.5px;
+  font-weight: 620;
+  letter-spacing: -0.014em;
+}
+
+.flow-card {
+  position: relative;
+  padding: 15px 16px 14px;
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.flow-card::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, var(--ink-btn), rgba(28, 31, 38, 0) 70%);
+  opacity: 0;
+  transition: opacity var(--dur-2) var(--ease-io);
+}
+.flow-card:hover::after {
+  opacity: 0.5;
+}
+.flow-card:hover .flow-card-head svg {
+  transform: translateX(3px);
+}
+.flow-card-head svg {
+  color: var(--text-4);
+  transition: transform var(--dur-2) var(--ease), color var(--dur-1) var(--ease-io);
+}
+.flow-card:hover .flow-card-head svg {
+  color: var(--text-1);
+}
+.flow-num {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+}
+
+/* ---------- Login: 表单侧氛围 ---------- */
+.login-form-side {
+  position: relative;
+  background:
+    radial-gradient(700px 380px at 70% 18%, rgba(28, 31, 38, 0.035), rgba(28, 31, 38, 0) 60%),
+    var(--bg);
+}
+.login-submit {
+  box-shadow: var(--shadow-sm), var(--gloss);
+}
+.login-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md), var(--gloss-strong);
+}
+
+/* section-title 里的旁注是普通 caption,还原面板脚注样式的作用域 */
+.section-title .chart-note {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 12.5px;
+  color: var(--text-4);
 }

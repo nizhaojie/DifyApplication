@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from app.core.config import settings
 
 OUT = Path(settings.dify_yml_dir) / "enterprise" / "企业智能助手.yml"
-API = "http://host.docker.internal:8001/api/v1/enterprise"
+API = "http://host.docker.internal:8002/api/v1/enterprise"
 
 
 def edge(eid, src, tgt, src_type, tgt_type, handle="source"):
@@ -131,7 +131,7 @@ parts.append("""app:
     粤教企业智能助手（员工端）。业务走 FastAPI；知识库必须建两个：
     1) 企业信息+公司新人指南；2) 常见问答对。
     导入后为分类器和全部 LLM 选择已配置模型；两个知识检索节点分别绑定上述两个库。
-    HTTP 默认 http://host.docker.internal:8001 （Docker 里不要用 127.0.0.1）。
+    HTTP 默认 http://host.docker.internal:8002 （Docker 里不要用 127.0.0.1）。
   icon: 💼
   icon_background: '#FDECEC'
   icon_type: emoji

@@ -28,3 +28,4 @@ yuejiao-web/frontend-startup.log
 # Agent/test local artifacts (not committed to repo)
 .claude/
 .playwright-mcp/
+yuejiao-admin/logs/

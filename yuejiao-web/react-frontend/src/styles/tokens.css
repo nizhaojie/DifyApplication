@@ -113,3 +113,34 @@
   --z-cmdk: 80;
   --z-toast: 90;
 }
+
+/* ============================================================
+   v3 — Spacing & Type Scale(统一节奏,消灭随机间距)
+   ============================================================ */
+:root {
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 40px;
+  --sp-9: 48px;
+  --sp-10: 64px;
+
+  --fs-caption: 11px;
+  --fs-label: 12px;
+  --fs-body-sm: 13px;
+  --fs-body: 13.5px;
+  --fs-body-lg: 14.5px;
+  --fs-h4: 15px;
+  --fs-h3: 17px;
+  --fs-h2: 20px;
+  --fs-h1: 26px;
+  --fs-display: 32px;
+
+  --lh-tight: 1.2;
+  --lh-snug: 1.38;
+  --lh-body: 1.6;
+}

@@ -10,12 +10,12 @@ App ID：`2c44aa34-c2e3-4eaf-b154-0d77f325d2d4`
 ## 链路（已经接好）
 
 ```
-浏览器 企业助手页 :4173
+浏览器 企业助手页 :5174
   → POST /api/v1/enterprise/chat   （带 JWT）
-    → FastAPI :8001
+    → FastAPI :8002
       → Dify POST /v1/chat-messages （Bearer app-...）
         → 分类器分流
-          → HTTP 节点调 FastAPI /api/v1/enterprise/tools/*  （host.docker.internal:8001）
+          → HTTP 节点调 FastAPI /api/v1/enterprise/tools/*  （host.docker.internal:8002）
           → 或知识库检索
         → LLM 组织成口语句
       ← answer + conversation_id
@@ -26,8 +26,8 @@ App ID：`2c44aa34-c2e3-4eaf-b154-0d77f325d2d4`
 
 | 层 | 地址 | 作用 |
 |---|---|---|
-| 前端 | `yuejiao-web/前端代码`，开发口 `http://127.0.0.1:4173/enterprise` | 对话 UI，登录后打 FastAPI |
-| 后端 | `group-qkw/yuejiao-admin`，`0.0.0.0:8001` | 代理 Dify；给 Dify HTTP 节点当工具 |
+| 前端 | `yuejiao-web/react-frontend`，开发口 `http://127.0.0.1:5174/enterprise` | 对话 UI，登录后打 FastAPI |
+| 后端 | `group-qkw/yuejiao-admin`，`0.0.0.0:8002` | 代理 Dify；给 Dify HTTP 节点当工具 |
 | Dify | Docker，浏览器 `http://localhost` | 分类、知识库、组织回复 |
 
 没配 `DIFY_ENTERPRISE_API_KEY` 时，`/chat` 走本地口语解析（`source=local`），演示不会断。配了 Key 但 Dify 报错时，同样回退本地，响应里会带 `dify_fallback`。
@@ -53,10 +53,10 @@ App ID：`2c44aa34-c2e3-4eaf-b154-0d77f325d2d4`
 
 ```
 APP_HOST=0.0.0.0
-APP_PORT=8001
+APP_PORT=8002
 DEBUG=true
 
-CORS_ORIGINS=http://127.0.0.1:4173,http://localhost:4173
+CORS_ORIGINS=http://127.0.0.1:5174,http://localhost:5174
 
 DIFY_BASE_URL=http://localhost/v1
 DIFY_ENTERPRISE_API_KEY=app-这里粘访问点复制的值
@@ -64,14 +64,14 @@ DIFY_TOOL_TOKEN=
 ```
 
 - `DEBUG=true` 且 `DIFY_TOOL_TOKEN` 为空：Dify HTTP 节点可以不带 JWT 调用工具接口（开发态）。
-- 后端必须绑 `0.0.0.0:8001`。只绑 `127.0.0.1` 时，Docker 里的 `host.docker.internal` 往往打不进来。
+- 后端必须绑 `0.0.0.0:8002`。只绑 `127.0.0.1` 时，Docker 里的 `host.docker.internal` 往往打不进来。
 
 启动：
 
 ```powershell
 cd C:\Users\Windows\Desktop\粤教\group-qkw\yuejiao-admin
 .\.venv\Scripts\Activate.ps1
-uvicorn app.main:app --host 0.0.0.0 --port 8001
+uvicorn app.main:app --host 0.0.0.0 --port 8002
 ```
 
 改完 `.env` 必须重启进程，`settings` 启动时读一次。
@@ -86,20 +86,20 @@ uvicorn app.main:app --host 0.0.0.0 --port 8001
 
 ### 3. 前端 `.env`
 
-文件：`yuejiao-web/前端代码/.env`
+文件：`yuejiao-web/react-frontend/.env`
 
 ```
-VITE_API_BASE=http://127.0.0.1:8001
+VITE_API_BASE=http://127.0.0.1:8002
 ```
 
 ```powershell
-cd C:\Users\Windows\Desktop\粤教\yuejiao-web\前端代码
+cd C:\Users\Windows\Desktop\粤教\group-qkw\yuejiao-web\react-frontend
 npm run dev
 ```
 
 浏览器：
 
-1. http://127.0.0.1:4173/login
+1. http://127.0.0.1:5174/login
 2. 演示账号 `emp01` / `123456`
 3. 进入 **企业助手**
 4. 页头应显示 **已接 Dify 对话流**
@@ -111,7 +111,7 @@ npm run dev
 
 已发布图里的地址必须是：
 
-`http://host.docker.internal:8001/api/v1/enterprise/...`
+`http://host.docker.internal:8002/api/v1/enterprise/...`
 
 | 意图 | 方法 | 路径 |
 |---|---|---|
@@ -139,9 +139,9 @@ npm run dev
 ### 网络
 
 - Dify 在 Docker 里，**禁止**把 HTTP 节点写成 `127.0.0.1` 或 `localhost`（那是容器自己，不是你的 FastAPI）。
-- 正确主机名：`host.docker.internal`，端口 **8001**（不要写成 8000）。
-- FastAPI 要 `--host 0.0.0.0 --port 8001`。
-- 从容器自测：`docker exec dify-api-1 python -c "import urllib.request; print(urllib.request.urlopen('http://host.docker.internal:8001/health').read())"`
+- 正确主机名：`host.docker.internal`，端口 **8002**（不要写成 8000）。
+- FastAPI 要 `--host 0.0.0.0 --port 8002`。
+- 从容器自测：`docker exec dify-api-1 python -c "import urllib.request; print(urllib.request.urlopen('http://host.docker.internal:8002/health').read())"`
 
 ### SSRF（Dify 1.15+）
 
@@ -189,7 +189,7 @@ Squid 默认读超时约 **5 秒**。工具接口应很快；NL2SQL 或库慢时
 
 ## 怎么确认已经接上
 
-1. `GET http://127.0.0.1:8001/health` 返回 `ok`。
+1. `GET http://127.0.0.1:8002/health` 返回 `ok`。
 2. 登录后 `GET /api/v1/enterprise/chat-status` 里 `dify_enabled=true`。
 3. `POST /api/v1/enterprise/chat` 问「我今天有什么待办？」，`data.source` 为 `dify`。
 4. 企业助手页头为绿色「已接 Dify 对话流」，气泡带 `Dify`。
@@ -201,7 +201,7 @@ Squid 默认读超时约 **5 秒**。工具接口应很快；NL2SQL 或库慢时
 |---|---|
 | 公司简称是什么？ | 后端知识库快路径，答「粤教服务」，气泡标「知识库」 |
 | 打印机在几楼？坏了找谁？ | 新人指南（本地快路径或知识库1） |
-| 张三 13800138000 想咨询美国硕士 | HTTP 录入，右侧客户表多一行 |
+| 张三 13800238000 想咨询美国硕士 | HTTP 录入，右侧客户表多一行 |
 | 我今天有什么待办？ | HTTP `/brief` |
 | 有哪些待处理投诉？ | HTTP 学生业务综管（假接口） |
 | 把张三的投诉标成已解决 | HTTP 结案 + 假通知 |
@@ -217,7 +217,7 @@ Squid 默认读超时约 **5 秒**。工具接口应很快；NL2SQL 或库慢时
 | `yuejiao-admin/app/modules/enterprise/api/router.py` | `/chat` 代理 + `/tools/*` |
 | `yuejiao-admin/app/core/deps.py` | `get_actor` 给 Dify HTTP 用 |
 | `yuejiao-admin/app/modules/enterprise/services/knowledge.py` | 公司简称等知识问句的本地秒回检索 |
-| `yuejiao-web/前端代码/src/api/enterprise.ts` | 前端聊天（120s 超时） |
-| `yuejiao-web/前端代码/src/views/enterprise/index.vue` | 企业助手页 |
+| `yuejiao-web/react-frontend/src/api/enterprise.ts` | 前端聊天（120s 超时） |
+| `yuejiao-web/react-frontend/src/pages/EnterprisePage.tsx` | 企业助手页 |
 | `dify/enterprise/企业智能助手.yml` | 可再导入的 DSL |
 | `scripts/smoke_dify_chat.py` | 本机 Dify 冒烟 |
