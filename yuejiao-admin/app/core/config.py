@@ -13,11 +13,15 @@ def _default_dify_yml_dir() -> str:
     return str(Path(__file__).resolve().parents[3] / "dify")
 
 
+_ADMIN_DIR = Path(__file__).resolve().parents[2]
+_ENV_FILE = _ADMIN_DIR / ".env"
+
+
 class Settings(BaseSettings):
     """Global application settings loaded from environment or .env file."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(_ENV_FILE),
         env_file_encoding="utf-8",
         extra="ignore",
     )

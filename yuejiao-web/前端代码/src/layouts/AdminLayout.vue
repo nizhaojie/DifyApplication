@@ -26,6 +26,7 @@ const router = useRouter()
 const tags = useTagsStore()
 const users = useUserStore()
 const collapsed = ref(false)
+const isStudent = computed(() => users.user?.user_type === 'student')
 
 function logout() {
   users.logout()
@@ -88,7 +89,7 @@ function closeTag(path: string) {
           <el-icon><ChatDotRound /></el-icon>
           <span>客服 Agent</span>
         </el-menu-item>
-        <el-sub-menu index="enterprise">
+        <el-sub-menu v-if="!isStudent" index="enterprise">
           <template #title>
             <el-icon><Briefcase /></el-icon>
             <span>企业助手</span>
