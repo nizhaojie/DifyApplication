@@ -31,6 +31,10 @@ const RISK_TABLE_COLUMNS = [
   { key: 'emotion_tag', label: '情绪标签' },
 ]
 
+function disableFutureDate(current: Dayjs | null) {
+  return !!current && current.isAfter(dayjs(), 'day')
+}
+
 export function PsychWeeklyPage() {
   const [weekDate, setWeekDate] = useState<Date>(() => shanghaiDate())
   const [isGenerating, setIsGenerating] = useState(false)
@@ -140,6 +144,7 @@ export function PsychWeeklyPage() {
               value={dayjs(weekDate)}
               placeholder="选择周期"
               allowClear={false}
+              disabledDate={disableFutureDate}
               onChange={onPickWeek}
             />
           </div>

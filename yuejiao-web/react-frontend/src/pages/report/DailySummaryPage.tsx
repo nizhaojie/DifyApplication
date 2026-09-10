@@ -26,6 +26,10 @@ import './report.css'
 
 type PeriodGrain = 'week' | 'day'
 
+function disableFutureDate(current: Dayjs | null) {
+  return !!current && current.isAfter(dayjs(), 'day')
+}
+
 export function DailySummaryPage() {
   const [periodGrain, setPeriodGrain] = useState<PeriodGrain>('week')
   const [selectedDate, setSelectedDate] = useState<Date>(() => shanghaiDate())
@@ -158,6 +162,7 @@ export function DailySummaryPage() {
                 value={dayjs(selectedDate)}
                 placeholder="选择周期"
                 allowClear={false}
+                disabledDate={disableFutureDate}
                 onChange={onPickDate}
               />
             </div>
@@ -167,6 +172,7 @@ export function DailySummaryPage() {
               format="YYYY-MM-DD"
               placeholder="选择日期"
               allowClear={false}
+              disabledDate={disableFutureDate}
               onChange={onPickDate}
             />
           )}

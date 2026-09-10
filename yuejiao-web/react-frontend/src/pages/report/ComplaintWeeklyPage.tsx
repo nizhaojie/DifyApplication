@@ -19,6 +19,10 @@ import './report.css'
 
 const KIND = 'complaint_weekly' as const
 
+function disableFutureDate(current: Dayjs | null) {
+  return !!current && current.isAfter(dayjs(), 'day')
+}
+
 export function ComplaintWeeklyPage() {
   const [weekDate, setWeekDate] = useState<Date>(() => shanghaiDate())
   const [generating, setGenerating] = useState(false)
@@ -117,6 +121,7 @@ export function ComplaintWeeklyPage() {
               value={dayjs(weekDate)}
               placeholder="选择周期"
               allowClear={false}
+              disabledDate={disableFutureDate}
               onChange={onPickWeek}
             />
           </div>

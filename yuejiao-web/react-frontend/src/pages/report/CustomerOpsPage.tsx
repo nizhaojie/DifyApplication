@@ -28,6 +28,10 @@ const STATUS_LABEL: Record<string, string> = {
   lost: '已流失',
 }
 
+function disableFutureDate(current: Dayjs | null) {
+  return !!current && current.isAfter(dayjs(), 'day')
+}
+
 export function CustomerOpsPage() {
   const [weekDate, setWeekDate] = useState<Date>(() => shanghaiDate())
   const [isGenerating, setIsGenerating] = useState(false)
@@ -153,6 +157,7 @@ export function CustomerOpsPage() {
               value={dayjs(weekDate)}
               placeholder="选择周期"
               allowClear={false}
+              disabledDate={disableFutureDate}
               onChange={onPickWeek}
             />
           </div>
