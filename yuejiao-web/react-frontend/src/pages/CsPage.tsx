@@ -1,99 +1,702 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
-import { CalendarDays, CheckCircle2, CircleHelp, Clock3, FileText, LoaderCircle, MessageCircle, Phone, RefreshCw, Send, Sparkles, UserRound, X } from 'lucide-react'
-import { fetchEvents, fetchFaqs, fetchSessionMessages, recommendCourses, registerEvent, sendCsMessage, type CourseProjectItem, type EventLectureItem, type FaqItem } from '@/api/cs'
-import { MarkdownText } from '@/components/MarkdownText'
+import { useEffect, useRef, useState } from 'react'
+import type { FormEvent, KeyboardEvent } from 'react'
+import { Avatar, Button, Input, Select } from 'antd'
+import {
+  Calendar,
+  CircleCheckFilled,
+  Delete,
+  Document,
+  Lightning,
+  MagicStick,
+  Promotion,
+  Service,
+  User,
+} from '@/components/elementIcons'
+import { confirmBox, toast } from '@/components/feedback'
+import { csApi } from '@/api/cs'
+import type { ChatMessageItem, CourseProjectItem, EventLectureItem, UIConversationMessage } from '@/api/csTypes'
+import { CitationBadge } from '@/components/cs/CitationBadge'
+import { CourseCard } from '@/components/cs/CourseCard'
+import { EventCard } from '@/components/cs/EventCard'
+import { FaqDrawer } from '@/components/cs/FaqDrawer'
+import { EpTag } from '@/components/cs/EpTag'
+import type { EpTagType } from '@/components/cs/EpTag'
+import './CsPage.css'
 
-type ChatMessage = { id: string; role: 'user' | 'assistant'; content: string; time: string; intent?: string; sources?: string[]; cardType?: string; cardContent?: unknown; pending?: boolean }
-const quickPrompts = [
-  '中德双元制适合什么学历？',
-  '新加坡专升本需要读几年？',
-  '近期有什么留学讲座？',
-  '德国双元制毕业后能留德工作吗？',
-]
-const welcome = '您好！我是粤教国际官方智能客服顾问「小粤同学」。我可以为您解答中德双元制、新加坡升学、签证政策、课程推荐和近期讲座报名。请问您目前的学历背景是什么，或者对哪个国家/项目最感兴趣？'
-
-function timeNow() { return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) }
-function makeSession() { return `cs_${Date.now()}_${Math.random().toString(36).slice(2, 7)}` }
-
-export function CsPage() {
-  const [sessionId, setSessionId] = useState(() => localStorage.getItem('cs_session_id') || makeSession())
-  const [messages, setMessages] = useState<ChatMessage[]>([{ id: 'welcome', role: 'assistant', content: welcome, time: timeNow(), intent: '官方顾问欢迎' }])
-  const [draft, setDraft] = useState('')
-  const [sending, setSending] = useState(false)
-  const [events, setEvents] = useState<EventLectureItem[]>([])
-  const [faqs, setFaqs] = useState<FaqItem[]>([])
-  const [faqOpen, setFaqOpen] = useState(false)
-  const [faqSearch, setFaqSearch] = useState('')
-  const [eventToRegister, setEventToRegister] = useState<EventLectureItem | null>(null)
-  const [registerName, setRegisterName] = useState('')
-  const [registerContact, setRegisterContact] = useState('')
-  const [registering, setRegistering] = useState(false)
-  const [recommendation, setRecommendation] = useState<CourseProjectItem[]>([])
-  const [recommending, setRecommending] = useState(false)
-  const [recommendForm, setRecommendForm] = useState({ education_level: '', target_country: '', budget_max: '', interest_keyword: '' })
-  const [error, setError] = useState('')
-  const logRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    localStorage.setItem('cs_session_id', sessionId)
-    void Promise.all([fetchEvents(), fetchFaqs()]).then(([eventList, faqList]) => { setEvents(eventList); setFaqs(faqList) }).catch(() => setError('活动或 FAQ 数据暂时无法加载'))
-    const saved = localStorage.getItem('cs_session_id')
-    if (saved) void fetchSessionMessages(saved).then((items) => { if (items.length) setMessages(items.map((item, index) => ({ id: `history-${index}`, role: item.role === 'user' ? 'user' : 'assistant', content: String(item.content || ''), time: String(item.create_time || '').replace('T', ' ').slice(11, 16), intent: String(item.intent || '') || undefined }))) }).catch(() => undefined)
-  }, [sessionId])
-  useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight }, [messages])
-
-  async function send(event?: FormEvent, value?: string) {
-    event?.preventDefault()
-    const content = (value ?? draft).trim()
-    if (!content || sending) return
-    setDraft(''); setError(''); setSending(true)
-    const assistantId = `assistant-${Date.now()}`
-    setMessages((items) => [...items, { id: `user-${Date.now()}`, role: 'user', content, time: timeNow() }, { id: assistantId, role: 'assistant', content: '正在检索知识库…', time: timeNow(), pending: true }])
-    try {
-      const response = await sendCsMessage({ session_id: sessionId, message: content })
-      if (response.session_id && response.session_id !== sessionId) { setSessionId(response.session_id); localStorage.setItem('cs_session_id', response.session_id) }
-      setMessages((items) => items.map((item) => item.id === assistantId ? { ...item, content: response.reply, pending: false, intent: response.intent_name, sources: response.source_references, cardType: response.card_type, cardContent: response.card_content } : item))
-    } catch (cause) {
-      setMessages((items) => items.map((item) => item.id === assistantId ? { ...item, content: cause instanceof Error ? cause.message : '服务暂时不可用，请稍后重试。', pending: false, intent: '异常提示' } : item))
-      setError('对话发送失败，请确认后端 API 已启动')
-    } finally { setSending(false) }
-  }
-
-  function resetSession() { const next = makeSession(); localStorage.setItem('cs_session_id', next); setSessionId(next); setMessages([{ id: 'welcome', role: 'assistant', content: welcome, time: timeNow(), intent: '官方顾问欢迎' }]) }
-
-  async function submitRecommendation(event: FormEvent) {
-    event.preventDefault(); setRecommending(true); setError('')
-    try { const data = await recommendCourses({ education_level: recommendForm.education_level || undefined, target_country: recommendForm.target_country || undefined, budget_max: recommendForm.budget_max ? Number(recommendForm.budget_max) : undefined, interest_keyword: recommendForm.interest_keyword || undefined }); setRecommendation(data.recommended_courses || []) }
-    catch (cause) { setError(cause instanceof Error ? cause.message : '课程推荐失败') }
-    finally { setRecommending(false) }
-  }
-
-  async function submitRegistration(event: FormEvent) {
-    event.preventDefault(); if (!eventToRegister || !registerName.trim() || !registerContact.trim()) return
-    setRegistering(true); setError('')
-    try { const data = await registerEvent({ event_id: eventToRegister.id, customer_name: registerName.trim(), contact_info: registerContact.trim() }); setMessages((items) => [...items, { id: `register-${Date.now()}`, role: 'assistant', content: String(data.message || `已为您登记活动「${eventToRegister.event_name}」`), time: timeNow(), intent: '报名确认', cardType: 'register_success', cardContent: data }]); setEventToRegister(null); setRegisterName(''); setRegisterContact('') }
-    catch (cause) { setError(cause instanceof Error ? cause.message : '活动报名失败') }
-    finally { setRegistering(false) }
-  }
-
-  const filteredFaqs = useMemo(() => { const query = faqSearch.trim().toLowerCase(); return faqs.filter((item) => !query || `${item.question} ${item.answer} ${item.keywords?.join(' ')}`.toLowerCase().includes(query)) }, [faqs, faqSearch])
-  return <section className="cs-page">
-    <header className="page-heading"><div><div className="eyebrow"><MessageCircle size={14} /> CUSTOMER SERVICE AGENT</div><h1>小粤同学</h1><p>面向客户的咨询、知识检索、课程推荐和活动报名工作台。</p></div><div className="heading-actions"><button className="ghost-button" onClick={() => setFaqOpen(true)}><CircleHelp size={15} />FAQ {faqs.length ? `(${faqs.length})` : ''}</button><button className="danger-button" onClick={resetSession}><RefreshCw size={15} />新会话</button></div></header>
-    {error && <div className="alert-banner"><CircleHelp size={16} /><span>{error}</span><button onClick={() => setError('')} aria-label="关闭提示"><X size={15} /></button></div>}
-    <div className="cs-grid">
-      <section className="panel-surface cs-chat-panel"><div className="cs-chat-header"><div className="cs-avatar"><Sparkles size={18} /></div><div><h2>粤教国际官方顾问</h2><p>中德双元制 · 新加坡定向升学 · 政策答疑</p></div><span className="live-dot">在线</span></div><div className="cs-quick-prompts">{quickPrompts.map((prompt) => <button key={prompt} onClick={() => void send(undefined, prompt)}>{prompt}</button>)}</div><div className="cs-message-list" ref={logRef}>{messages.map((message) => <div className={`cs-message ${message.role}`} key={message.id}><div className="cs-message-avatar">{message.role === 'assistant' ? <Sparkles size={14} /> : <UserRound size={14} />}</div><div className="cs-message-main"><div className="cs-message-meta"><span>{message.role === 'assistant' ? '小粤同学' : '访客'}</span>{message.intent && <em>{message.intent}</em>}<time>{message.time}</time></div><div className={`cs-bubble ${message.pending ? 'pending' : ''}`}>{message.pending ? <><LoaderCircle size={15} className="spin" />{message.content}</> : message.role === 'assistant' ? <MarkdownText text={message.content} /> : message.content}</div>{message.cardType && <StructuredCard type={message.cardType} content={message.cardContent} onConsult={(name) => void send(undefined, `我想详细了解【${name}】的申请门槛、学制和费用`)} onRegister={(item) => setEventToRegister(item)} />}{message.sources?.length ? <div className="cs-sources"><FileText size={12} />{message.sources.join(' · ')}</div> : null}</div></div>)}</div><div className="cs-composer"><form onSubmit={(event) => void send(event)}><textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void send() } }} rows={3} placeholder="输入您关心的升学问题，Enter 发送，Shift + Enter 换行" disabled={sending} /><button className="send-button" disabled={sending || !draft.trim()} aria-label="发送"><Send size={17} /></button></form><small><Clock3 size={12} /> 会话 {sessionId.slice(-8)} · {sending ? '处理中' : '实时服务'}</small></div></section>
-      <aside className="cs-side-column"><section className="panel-surface cs-side-card"><div className="section-title"><div><div className="eyebrow">UPCOMING EVENTS</div><h2>近期活动</h2></div><CalendarDays size={17} /></div>{events.slice(0, 3).map((item) => <article className="event-item" key={item.id}><div><strong>{item.event_name}</strong><span>{new Date(item.start_time).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} · {item.location || '线上活动'}</span></div><button className="small-button success" disabled={!item.has_available_seats} onClick={() => setEventToRegister(item)}>{item.has_available_seats ? '预约' : '已满'}</button></article>)}{!events.length && <div className="empty-inline">暂无活动</div>}</section><section className="panel-surface cs-side-card"><div className="section-title"><div><div className="eyebrow">COURSE MATCH</div><h2>课程推荐</h2></div><Sparkles size={17} /></div><form className="recommend-form" onSubmit={(event) => void submitRecommendation(event)}><select value={recommendForm.education_level} onChange={(event) => setRecommendForm({ ...recommendForm, education_level: event.target.value })}><option value="">学历不限</option><option>初中</option><option>中专</option><option>高中</option><option>大专</option><option>本科</option></select><select value={recommendForm.target_country} onChange={(event) => setRecommendForm({ ...recommendForm, target_country: event.target.value })}><option value="">国家不限</option><option>德国</option><option>新加坡</option></select><input value={recommendForm.interest_keyword} onChange={(event) => setRecommendForm({ ...recommendForm, interest_keyword: event.target.value })} placeholder="兴趣方向，如计算机" /><button className="primary-button" disabled={recommending}>{recommending ? <LoaderCircle size={15} className="spin" /> : <Sparkles size={15} />}获取推荐</button></form>{recommendation.map((course) => <article className="course-item" key={course.id}><strong>{course.project_name}</strong><span>{course.category || '项目'} · {course.duration || '周期待定'}</span><p>{course.description || course.target_audience || '适合进一步咨询项目详情。'}</p><button className="text-button" onClick={() => void send(undefined, `我想详细了解【${course.project_name}】`)}>继续咨询 <Phone size={13} /></button></article>)}{!recommendation.length && <p className="side-hint">选择学历或国家后，可以直接获取课程匹配结果。</p>}</section></aside>
-    </div>
-    {faqOpen && <div className="drawer-backdrop" onClick={() => setFaqOpen(false)}><aside className="detail-drawer faq-drawer" onClick={(event) => event.stopPropagation()}><div className="drawer-header"><div><span className="eyebrow">KNOWLEDGE BASE</span><h2>高频问答库</h2></div><button className="icon-button" onClick={() => setFaqOpen(false)} aria-label="关闭"><X size={18} /></button></div><label className="faq-search"><CircleHelp size={15} /><input value={faqSearch} onChange={(event) => setFaqSearch(event.target.value)} placeholder="搜索问题、关键词" /></label><div className="faq-list">{filteredFaqs.map((item) => <button key={item.id} onClick={() => { setFaqOpen(false); void send(undefined, item.question) }}><strong>{item.question}</strong><span>{item.answer}</span></button>)}{!filteredFaqs.length && <div className="empty-inline">没有匹配的问题</div>}</div></aside></div>}
-    {eventToRegister && <div className="modal-backdrop" onClick={() => setEventToRegister(null)}><form className="modal-card" onSubmit={(event) => void submitRegistration(event)} onClick={(event) => event.stopPropagation()}><div className="drawer-header"><div><span className="eyebrow">EVENT REGISTRATION</span><h2>预约活动</h2></div><button type="button" className="icon-button" onClick={() => setEventToRegister(null)} aria-label="关闭"><X size={18} /></button></div><p className="modal-event-name">{eventToRegister.event_name}</p><label className="field-label">姓名<input value={registerName} onChange={(event) => setRegisterName(event.target.value)} required placeholder="请输入报名人姓名" /></label><label className="field-label">联系方式<input value={registerContact} onChange={(event) => setRegisterContact(event.target.value)} required placeholder="手机号或邮箱" /></label><button className="primary-button modal-submit" disabled={registering}>{registering ? <LoaderCircle size={15} className="spin" /> : <CheckCircle2 size={15} />}确认预约</button></form></div>}
-  </section>
+function getCurrentTimeStr(): string {
+  const d = new Date()
+  const hours = String(d.getHours()).padStart(2, '0')
+  const mins = String(d.getMinutes()).padStart(2, '0')
+  return `${hours}:${mins}`
 }
 
-function StructuredCard({ type, content, onConsult, onRegister }: { type: string; content: unknown; onConsult: (name: string) => void; onRegister: (item: EventLectureItem) => void }) {
-  const source = content as { courses?: CourseProjectItem[]; events?: EventLectureItem[]; recommended_courses?: CourseProjectItem[] } | CourseProjectItem[] | EventLectureItem[] | undefined
-  const list = Array.isArray(source) ? source : type === 'course_list' ? source?.courses || source?.recommended_courses || [] : source?.events || []
-  if (type === 'register_success') return <div className="structured-card register-card"><CheckCircle2 size={18} /><strong>预约登记成功</strong><span>{String((content as Record<string, unknown>)?.event_name || '活动报名信息已提交')}</span></div>
-  if (type === 'course_list') return <div className="structured-card"><div className="structured-title"><Sparkles size={14} />为您匹配到以下项目</div>{(list as CourseProjectItem[]).map((item) => <button key={item.id} className="structured-item" onClick={() => onConsult(item.project_name)}><strong>{item.project_name}</strong><span>{item.category || '项目'} · {item.duration || '周期待定'}</span></button>)}</div>
-  if (type === 'event_list') return <div className="structured-card"><div className="structured-title"><CalendarDays size={14} />近期活动</div>{(list as EventLectureItem[]).map((item) => <button key={item.id} className="structured-item" onClick={() => onRegister(item)}><strong>{item.event_name}</strong><span>{item.location || '线上'} · {item.has_available_seats ? '可预约' : '名额已满'}</span></button>)}</div>
-  return null
+// Welcome Message
+const defaultWelcomeMessage: UIConversationMessage = {
+  id: 'welcome-msg',
+  role: 'assistant',
+  content:
+    '您好！我是粤教国际官方智能客服顾问「小粤同学」🎓\n\n我可以为您提供：\n• 🇩🇪 德国中德双元制职业教育（免学费+企业每月实训津贴）\n• 🇸🇬 新加坡定向本硕连读（专升本1~1.5年/本升硕1年，带薪实习）\n• 📜 德国/新加坡最新签证、工作签与永居政策解读\n• 💡 对公银行账号、退费政策及36条官方权威FAQ秒回\n• 🎯 个性化课程推荐与近期讲座一键预约席位\n\n请问您目前的学历背景是什么？或者您对哪个国家/项目最感兴趣呢？',
+  time: getCurrentTimeStr(),
+  intent_name: '官方顾问欢迎',
+  intent_code: 'casual_chat',
+  tokens_used: 92,
+  response_time_ms: 15,
+  source_references: ['企业信息.docx', '中德精英人才共建计划.docx'],
+}
+
+// Quick Prompt Chips
+const quickPrompts = [
+  { label: '🇩🇪 德国双元制适合什么学历？', text: '请问中德双元制职业教育的招生学历要求是什么？初中或中专可以报吗？' },
+  { label: '🇸🇬 新加坡专升本读几年？', text: '大专学历去新加坡读专升本需要多长时间？受中留服认证吗？' },
+  { label: '📅 近期讲座活动有哪些？', text: '请问近期有什么关于德国双元制或新加坡留学的讲座分享会吗？' },
+  { label: '🏦 官方对公缴费银行账户', text: '请问公司简称是什么？缴费的对公银行账户信息是多少？' },
+  { label: '🎯 高中毕业新加坡本科推荐', text: '我是高中毕业，想去新加坡读本科，预算25万左右，有什么推荐的项目？' },
+  { label: '🛂 德国工作签证政策', text: '请问德国双元制毕业后在德国工作签证和永居申请政策是怎样的？' },
+]
+
+function makeSessionId(): string {
+  return `cs_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
+}
+
+export function CsPage() {
+  // Session State
+  const [sessionId, setSessionId] = useState('')
+  const [inputMessage, setInputMessage] = useState('')
+  const [isSending, setIsSending] = useState(false)
+  const [faqDrawerVisible, setFaqDrawerVisible] = useState(false)
+  const [messages, setMessages] = useState<UIConversationMessage[]>([])
+  const messageListRef = useRef<HTMLDivElement>(null)
+  // Vue 用 ref 做重入保护(始终读到最新值),React 侧用 ref 镜像 isSending
+  const isSendingRef = useRef(false)
+
+  // 超集区块(React 版遗留,Vue 无):近期活动侧栏 + 课程推荐表单
+  const [events, setEvents] = useState<EventLectureItem[]>([])
+  const [recommendation, setRecommendation] = useState<CourseProjectItem[]>([])
+  const [recommending, setRecommending] = useState(false)
+  const [recommendForm, setRecommendForm] = useState({
+    education_level: '',
+    target_country: '',
+    budget_max: '',
+    interest_keyword: '',
+  })
+
+  useEffect(() => {
+    initSession()
+
+    // ---- 以下为超集区块(Vue 基准没有):侧栏活动 + 会话历史回放 ----
+    void csApi
+      .getEvents()
+      .then((list) => setEvents(list || []))
+      .catch(() => undefined)
+
+    const saved = localStorage.getItem('cs_session_id')
+    if (saved) {
+      void csApi
+        .getSessionMessages(saved)
+        .then((items) => {
+          if (items.length) {
+            // TODO(迁移): 超集行为——把已存会话回放到欢迎语之后(Vue 只展示欢迎语)
+            setMessages((prev) => [
+              ...prev,
+              ...items.map((item, index) => mapHistoryMessage(item, index)),
+            ])
+          }
+        })
+        .catch(() => undefined)
+    }
+    // ---- 超集区块结束 ----
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function initSession() {
+    const savedId = localStorage.getItem('cs_session_id')
+    let nextId: string
+    if (savedId) {
+      nextId = savedId
+    } else {
+      nextId = makeSessionId()
+      localStorage.setItem('cs_session_id', nextId)
+    }
+    setSessionId(nextId)
+
+    setMessages([{ ...defaultWelcomeMessage, time: getCurrentTimeStr() }])
+    scrollToBottom()
+  }
+
+  function scrollToBottom() {
+    // 等价 Vue 的 nextTick:等本轮 DOM 更新完成后再滚底
+    window.setTimeout(() => {
+      const el = messageListRef.current
+      if (el) {
+        el.scrollTop = el.scrollHeight
+      }
+    }, 0)
+  }
+
+  async function streamTypewriterText(messageId: string, fullText: string) {
+    if (!fullText) return
+    const chars = Array.from(fullText)
+    const step = chars.length > 200 ? 6 : chars.length > 80 ? 3 : 1
+    let index = 0
+
+    while (index < chars.length) {
+      index = Math.min(index + step, chars.length)
+      const content = chars.slice(0, index).join('')
+      setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, content } : m)))
+      scrollToBottom()
+      await new Promise((resolve) => setTimeout(resolve, 14))
+    }
+  }
+
+  async function handleSend(textToSend?: string) {
+    const content = (textToSend || inputMessage).trim()
+    if (!content) return
+    if (isSendingRef.current) return
+
+    // 1. Append user message
+    const userMsg: UIConversationMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content,
+      time: getCurrentTimeStr(),
+    }
+    setMessages((prev) => [...prev, userMsg])
+    if (!textToSend) {
+      setInputMessage('')
+    }
+    scrollToBottom()
+
+    // 2. Append assistant placeholder
+    const assistantMsgId = `assistant-${Date.now()}`
+    const assistantMsg: UIConversationMessage = {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: '',
+      time: getCurrentTimeStr(),
+      loading: true,
+    }
+    setMessages((prev) => [...prev, assistantMsg])
+    scrollToBottom()
+
+    isSendingRef.current = true
+    setIsSending(true)
+
+    try {
+      const res = await csApi.sendMessage({
+        session_id: sessionId,
+        message: content,
+      })
+
+      if (res.session_id) {
+        setSessionId(res.session_id)
+        localStorage.setItem('cs_session_id', res.session_id)
+      }
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantMsgId
+            ? {
+                ...m,
+                loading: false,
+                intent_code: res.intent_code,
+                intent_name: res.intent_name,
+                source_references: res.source_references,
+                card_type: res.card_type,
+                card_content: res.card_content,
+                tokens_used: res.tokens_used,
+                response_time_ms: res.response_time_ms,
+              }
+            : m,
+        ),
+      )
+
+      // Smooth typewriter rendering
+      await streamTypewriterText(assistantMsgId, res.reply)
+    } catch (err: any) {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantMsgId
+            ? {
+                ...m,
+                loading: false,
+                content: `抱歉，服务连接异常（${err?.message || '请确认后端服务已就绪'}）。您可稍后重试，或点击右上角查看常见问答库。`,
+                intent_name: '异常提示',
+                intent_code: 'casual_chat',
+              }
+            : m,
+        ),
+      )
+      toast.error('对话发送失败，请确认后端 API 正常工作')
+    } finally {
+      isSendingRef.current = false
+      setIsSending(false)
+      scrollToBottom()
+    }
+  }
+
+  // TODO(迁移): Vue 原版 handleKeyDown 无 IME isComposing 守卫,按基准照搬(输入法确认回车会直接发送)
+  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      void handleSend()
+    }
+  }
+
+  function handleSelectFaqQuestion(q: string) {
+    void handleSend(q)
+  }
+
+  function handleCourseConsult(courseName: string) {
+    void handleSend(`我想详细了解【${courseName}】的申请门槛、实训补贴与学制周期`)
+  }
+
+  function handleEventRegistered(eventName: string) {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `event-ack-${Date.now()}`,
+        role: 'assistant',
+        content: `🎉 太棒啦！已为您成功预约讲座【${eventName}】！\n我们的升学规划顾问将提前向您发送参会指南，请保持手机畅通。您还可以继续向我咨询更多项目细节～`,
+        time: getCurrentTimeStr(),
+        intent_name: '报名确认',
+        intent_code: 'event_register',
+        tokens_used: 48,
+        response_time_ms: 10,
+      },
+    ])
+    scrollToBottom()
+  }
+
+  async function handleResetSession() {
+    const confirmed = await confirmBox({
+      title: '提示',
+      content: '确定要重置当前对话记录并开启新会话吗？',
+      okText: '确定重置',
+      cancelText: '取消',
+    })
+    if (!confirmed) return
+
+    const nextId = makeSessionId()
+    setSessionId(nextId)
+    localStorage.setItem('cs_session_id', nextId)
+    setMessages([{ ...defaultWelcomeMessage, time: getCurrentTimeStr() }])
+    toast.success('已开启全新会话！')
+  }
+
+  async function submitRecommendation(event: FormEvent) {
+    event.preventDefault()
+    setRecommending(true)
+    try {
+      const data = await csApi.getRecommendations({
+        education_level: recommendForm.education_level || undefined,
+        target_country: recommendForm.target_country || undefined,
+        budget_max: recommendForm.budget_max ? Number(recommendForm.budget_max) : undefined,
+        interest_keyword: recommendForm.interest_keyword || undefined,
+      })
+      setRecommendation(data.recommended_courses || [])
+    } catch {
+      // csApi 内部已 console.error;侧栏推荐失败不打断聊天主流程
+    } finally {
+      setRecommending(false)
+    }
+  }
+
+  return (
+    <div className="cs-container">
+      <div className="cs-main-row">
+        {/* 主界面卡片 */}
+        <div className="chat-card">
+          {/* 顶部状态与功能栏 */}
+          <div className="chat-header">
+            <div className="header-left">
+              <div className="avatar-wrap">
+                <Avatar size={42} className="cs-avatar">
+                  <Service size={24} />
+                </Avatar>
+                <span className="status-dot" title="顾问在线中" />
+              </div>
+              <div className="cs-info">
+                <div className="name-row">
+                  <span className="cs-name">小粤同学</span>
+                  <EpTag effect="dark" className="brand-tag">
+                    粤教国际官方
+                  </EpTag>
+                  <EpTag type="success" effect="plain" className="online-tag">
+                    AI 顾问在线
+                  </EpTag>
+                </div>
+                <div className="cs-subtitle">中德双元制 · 新加坡定向升学 · 权威留学政策答疑</div>
+              </div>
+            </div>
+
+            <div className="header-actions">
+              <Button
+                type="primary"
+                size="small"
+                className="faq-btn"
+                onClick={() => setFaqDrawerVisible(true)}
+              >
+                <Document size={12} />
+                <span>高频问答库 (36条)</span>
+              </Button>
+
+              <Button
+                size="small"
+                color="danger"
+                variant="outlined"
+                className="reset-btn"
+                title="开启新会话"
+                onClick={() => void handleResetSession()}
+              >
+                <Delete size={12} />
+                <span>清空会话</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* 消息列表滚动视窗 */}
+          <div ref={messageListRef} className="chat-body">
+            {/* 欢迎向导卡片 */}
+            <div className="welcome-guide-panel">
+              <div className="guide-title">
+                <span>✨ 您可以向小粤同学咨询以下热门方向：</span>
+              </div>
+              <div className="quick-chip-grid">
+                {quickPrompts.map((chip) => (
+                  <div
+                    key={chip.label}
+                    className="quick-chip"
+                    onClick={() => void handleSend(chip.text)}
+                  >
+                    {chip.label}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 消息气泡列表 */}
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={[
+                  'message-row',
+                  msg.role === 'user' ? 'is-user' : '',
+                  msg.role === 'assistant' ? 'is-assistant' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {/* 客服头像 */}
+                {msg.role === 'assistant' ? (
+                  <div className="msg-avatar assistant-avatar">
+                    <Service size={18} />
+                  </div>
+                ) : null}
+
+                {/* 消息实体 */}
+                <div className="msg-bubble-wrap">
+                  {/* 助手意图与指标头部 */}
+                  {msg.role === 'assistant' ? (
+                    <div className="assistant-meta-bar">
+                      {msg.intent_name ? (
+                        <EpTag
+                          type={getIntentTagType(msg.intent_code)}
+                          effect="plain"
+                          className="intent-badge"
+                        >
+                          {msg.intent_name}
+                        </EpTag>
+                      ) : null}
+                      {msg.response_time_ms ? (
+                        <span className="metric-text">
+                          <Lightning size={11} />
+                          {msg.response_time_ms}ms
+                        </span>
+                      ) : null}
+                      {msg.tokens_used ? (
+                        <span className="metric-text">{msg.tokens_used} Tokens</span>
+                      ) : null}
+                      <span className="msg-time">{msg.time}</span>
+                    </div>
+                  ) : (
+                    <div className="user-meta-bar">
+                      <span className="msg-time">{msg.time}</span>
+                    </div>
+                  )}
+
+                  {/* 消息气泡正文 */}
+                  <div className="msg-bubble">
+                    {/* 加载中动画 */}
+                    {msg.loading ? (
+                      <div className="typing-indicator">
+                        <span className="dot" />
+                        <span className="dot" />
+                        <span className="dot" />
+                        <span className="typing-hint">小粤正在检索知识库思考中...</span>
+                      </div>
+                    ) : (
+                      <div className="msg-content">{msg.content}</div>
+                    )}
+
+                    {/* 结构化卡片渲染：课程推荐列表 */}
+                    {/* TODO(迁移): Vue 模板只读 msg.card_content.recommended_courses,而实测后端把
+                        card_content 直接返回成课程数组(2026-09-09 实测 /api/v1/cs/chat),
+                        Vue 原版因此只渲染标题、卡片永不出现。此处按同型数组兜底以让卡片真正渲染,
+                        若要严格逐字对齐 Vue,请去掉 unwrapCardList 兜底 */}
+                    {msg.card_type === 'course_list' && msg.card_content ? (
+                      <div className="card-container">
+                        <div className="card-section-title">
+                          <CircleCheckFilled size={13} />
+                          <span>为您精准匹配到以下优质课程项目：</span>
+                        </div>
+                        {(unwrapCardList(msg.card_content, 'recommended_courses') as CourseProjectItem[]).map(
+                          (course) => (
+                            <CourseCard key={course.id} course={course} onConsult={handleCourseConsult} />
+                          ),
+                        )}
+                      </div>
+                    ) : null}
+
+                    {/* 结构化卡片渲染：讲座活动列表 */}
+                    {/* TODO(迁移): 同上,Vue 模板只读 msg.card_content.events,实测 card_content 是裸数组
+                        (card_type=event_list、card_content=[{...}]),Vue 原版只渲染
+                        「近期讲座与招生分享会推荐：」标题;此处按同型数组兜底让 EventCard 真正渲染 */}
+                    {msg.card_type === 'event_list' && msg.card_content ? (
+                      <div className="card-container">
+                        <div className="card-section-title">
+                          <CircleCheckFilled size={13} />
+                          <span>近期讲座与招生分享会推荐：</span>
+                        </div>
+                        {(unwrapCardList(msg.card_content, 'events') as EventLectureItem[]).map((evt) => (
+                          <EventCard key={evt.id} event={evt} onRegistered={handleEventRegistered} />
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {/* 结构化卡片渲染：报名成功卡片 */}
+                    {msg.card_type === 'register_success' && msg.card_content ? (
+                      <div className="register-success-card">
+                        <div className="success-header">
+                          <CircleCheckFilled className="success-icon" size={18} />
+                          <span className="success-title">预约登记成功！</span>
+                        </div>
+                        <div className="success-detail">
+                          <div>
+                            <strong>活动名称：</strong>
+                            {msg.card_content.event_name}
+                          </div>
+                          <div>
+                            <strong>报名编号：</strong>#REG-{msg.card_content.registration_id}
+                          </div>
+                          <div className="success-notice">
+                            讲座开场前顾问老师将通过电话/短信发送入场会议号及校区导航。
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {/* 知识库来源引用 */}
+                    {msg.source_references && msg.source_references.length > 0 ? (
+                      <div className="citations-wrapper">
+                        <div className="citation-label">权威依据与参考来源：</div>
+                        {msg.source_references.map((src) => (
+                          <CitationBadge key={src} source={src} />
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* 用户头像 */}
+                {msg.role === 'user' ? (
+                  <div className="msg-avatar user-avatar">
+                    <User size={18} />
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+
+          {/* 底部输入操作区 */}
+          <div className="chat-footer">
+            {/* 快捷问答提示标签行 */}
+            <div className="prompt-pills-row">
+              <span className="pills-label">猜你想问：</span>
+              <div className="pills-scroll">
+                <EpTag className="prompt-pill" onClick={() => void handleSend('请问德国双元制每月补贴津贴有多少欧元？')}>
+                  德国双元制津贴
+                </EpTag>
+                <EpTag
+                  className="prompt-pill"
+                  onClick={() => void handleSend('新加坡专升本受中国教育部留学服务中心学历认证吗？')}
+                >
+                  中留服学历认证
+                </EpTag>
+                <EpTag className="prompt-pill" onClick={() => void handleSend('请问公司的对公转账银行账号和开户行是什么？')}>
+                  对公账户账号
+                </EpTag>
+                <EpTag className="prompt-pill" onClick={() => void handleSend('我想报名近期的留学宣讲会')}>
+                  我要报名宣讲会
+                </EpTag>
+                <EpTag
+                  className="prompt-pill"
+                  onClick={() => void handleSend('初中学历可以报德国双元制预科或者国内工学交替班吗？')}
+                >
+                  初中学历升学路径
+                </EpTag>
+              </div>
+            </div>
+
+            {/* 输入文本框与发送按钮 */}
+            <div className="input-area-wrap">
+              <Input.TextArea
+                value={inputMessage}
+                rows={3}
+                placeholder="输入您关心的升学问题，或咨询中德双元制与近期讲座... (Enter 发送，Shift+Enter 换行)"
+                className="chat-textarea"
+                disabled={isSending}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyDown={handleKeyDown}
+              />
+              <div className="send-action-bar">
+                <span className="input-hint">Enter 发送 / Shift+Enter 换行</span>
+                <Button
+                  type="primary"
+                  className="send-btn"
+                  loading={isSending}
+                  disabled={!inputMessage.trim() || isSending}
+                  onClick={() => void handleSend()}
+                >
+                  <Promotion size={12} />
+                  <span>发送咨询</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ---- 超集附加栏(Vue 基准没有,React 版遗留功能,保持 fetch 调用照旧) ---- */}
+        <aside className="cs-side-column">
+          <section className="table-card cs-side-card">
+            <div className="side-card-head">
+              <span className="side-card-title">近期活动</span>
+              <Calendar size={16} />
+            </div>
+            {events.slice(0, 3).map((item) => (
+              <EventCard key={item.id} event={item} onRegistered={handleEventRegistered} />
+            ))}
+            {!events.length ? <div className="side-empty">暂无活动</div> : null}
+          </section>
+
+          <section className="table-card cs-side-card">
+            <div className="side-card-head">
+              <span className="side-card-title">课程推荐</span>
+              <MagicStick size={16} />
+            </div>
+            <form className="recommend-form" onSubmit={(event) => void submitRecommendation(event)}>
+              <Select
+                value={recommendForm.education_level}
+                onChange={(value) => setRecommendForm({ ...recommendForm, education_level: value })}
+                options={[
+                  { value: '', label: '学历不限' },
+                  { value: '初中', label: '初中' },
+                  { value: '中专', label: '中专' },
+                  { value: '高中', label: '高中' },
+                  { value: '大专', label: '大专' },
+                  { value: '本科', label: '本科' },
+                ]}
+              />
+              <Select
+                value={recommendForm.target_country}
+                onChange={(value) => setRecommendForm({ ...recommendForm, target_country: value })}
+                options={[
+                  { value: '', label: '国家不限' },
+                  { value: '德国', label: '德国' },
+                  { value: '新加坡', label: '新加坡' },
+                ]}
+              />
+              <Input
+                value={recommendForm.interest_keyword}
+                onChange={(e) => setRecommendForm({ ...recommendForm, interest_keyword: e.target.value })}
+                placeholder="兴趣方向，如计算机"
+              />
+              <Button type="primary" htmlType="submit" loading={recommending} icon={<MagicStick size={12} />}>
+                获取推荐
+              </Button>
+            </form>
+            {recommendation.map((course) => (
+              <article className="side-course-item" key={course.id}>
+                <strong>{course.project_name}</strong>
+                <span>
+                  {course.category || '项目'} · {course.duration || '周期待定'}
+                </span>
+                <p>{course.description || course.target_audience || '适合进一步咨询项目详情。'}</p>
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => void handleSend(`我想详细了解【${course.project_name}】`)}
+                >
+                  继续咨询
+                </Button>
+              </article>
+            ))}
+            {!recommendation.length ? (
+              <p className="side-hint">选择学历或国家后，可以直接获取课程匹配结果。</p>
+            ) : null}
+          </section>
+        </aside>
+      </div>
+
+      {/* FAQ 抽屉 */}
+      <FaqDrawer
+        open={faqDrawerVisible}
+        onClose={() => setFaqDrawerVisible(false)}
+        onSelectQuestion={handleSelectFaqQuestion}
+      />
+    </div>
+  )
+}
+
+/**
+ * 等价 Vue 模板的 `msg.card_content.recommended_courses` / `msg.card_content.events` 取值。
+ * TODO(迁移): 后端实测会把 card_content 直接给成同型数组(Vue 原版此时一张卡都不渲染),
+ * 这里对数组形态做兜底,让课程/讲座卡片真正渲染;严格对齐 Vue 时应去掉兜底。
+ */
+function unwrapCardList<T = unknown>(content: any, key: 'recommended_courses' | 'events'): T[] {
+  if (Array.isArray(content)) return content as T[]
+  const list = content?.[key]
+  return Array.isArray(list) ? (list as T[]) : []
+}
+
+/** 等价 Vue 的 getIntentTagType:意图 → EP tag type 六色映射 */
+function getIntentTagType(intentCode?: string): EpTagType {
+  switch (intentCode) {
+    case 'company_inquiry':
+      return 'info'
+    case 'business_query':
+      return 'warning'
+    case 'policy_query':
+      return 'danger'
+    case 'faq':
+      return 'success'
+    case 'course_recommend':
+      return 'danger'
+    case 'event_register':
+      return 'primary'
+    default:
+      return 'info'
+  }
+}
+
+/** 超集:把后端会话记录映射回 UI 消息(Vue 的 UIConversationMessage 形状) */
+function mapHistoryMessage(item: ChatMessageItem, index: number): UIConversationMessage {
+  return {
+    id: `history-${item.id ?? index}`,
+    role: item.role === 'user' ? 'user' : 'assistant',
+    content: String(item.content || ''),
+    time: String(item.create_time || '').replace('T', ' ').slice(11, 16),
+    intent_name: item.intent ? String(item.intent) : undefined,
+    tokens_used: item.tokens_used,
+    response_time_ms: item.response_time_ms,
+  }
 }

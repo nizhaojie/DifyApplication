@@ -1,0 +1,134 @@
+/* 等价迁移自 Vue 版 前端代码/src/views/profile/index.vue 的 <style scoped>。
+   EP 的 CSS 变量已替换为 Element Plus 默认色值:
+   --el-text-color-secondary = #909399、--el-text-color-placeholder = #a8abb2、
+   --el-text-color-regular = #606266、--el-color-primary = #c41e1e(本项目主题红)。 */
+
+.profile-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel-title {
+  font-weight: 600;
+}
+
+.panel-sub {
+  font-size: 12px;
+  color: #909399;
+}
+
+.submit-row {
+  margin-top: 12px;
+}
+
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px 24px;
+  margin-top: 4px;
+}
+
+.result-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.result-label {
+  color: #909399;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.score-bar {
+  flex: 1;
+  max-width: 260px;
+}
+
+.reason-block {
+  margin-top: 14px;
+}
+
+.reason-block p {
+  margin: 6px 0 0;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.prog-tag {
+  margin: 0 8px 6px 0;
+}
+
+.assess-table {
+  margin-top: 14px;
+}
+
+.hit-tag {
+  margin: 0 6px 4px 0;
+}
+
+.cand-block {
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.cand-cat {
+  color: #909399;
+}
+
+.muted {
+  color: #a8abb2;
+}
+
+.pager {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ---------- antd 组件细节对齐 Element Plus ---------- */
+
+/* el-tag size="small":height 20px / padding 0 5px / 12px 字号 */
+.profile-page .ep-tag-sm {
+  height: 20px;
+  padding: 0 5px;
+  font-size: 12px;
+  line-height: 18px;
+  margin-inline-end: 0;
+}
+
+/* el-input type="textarea" show-word-limit 的字数计数(EP 用 --el-color-info / 12px) */
+.profile-page .ant-input-data-count {
+  color: #909399;
+  font-size: 12px;
+}
+
+/* el-upload drag:图标 67px、占位文案配色与 EP 一致 */
+.profile-page .profile-upload .ant-upload-btn {
+  padding: 32px 10px;
+}
+
+.profile-page .profile-upload .ant-upload-drag-icon {
+  margin-bottom: 16px;
+}
+
+.profile-page .profile-upload .ant-upload-drag-icon svg {
+  color: #a8abb2;
+}
+
+.profile-page .profile-upload .ant-upload-text {
+  font-size: 14px;
+  color: #606266;
+}
+
+.profile-page .profile-upload .ant-upload-text em {
+  color: #c41e1e;
+  font-style: normal;
+}
+
+.profile-page .profile-upload .ant-upload-hint {
+  color: #909399;
+  font-size: 12px;
+  margin-top: 8px;
+}

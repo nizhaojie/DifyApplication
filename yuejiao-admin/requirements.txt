@@ -10,3 +10,11 @@ PyJWT>=2.9.0
 python-multipart>=0.0.12
 pymysql>=1.1.1
 tzdata>=2024.1
+# profile 模块 PDF/Excel 简历解析
+pdfplumber>=0.11.0
+openpyxl>=3.1.0
+# tests/cs/test_dify_integration.py 校验 DSL 用
+PyYAML>=6.0.0
+# tests/ 异步用例（report 模块 AsyncSession 事务回滚隔离）
+pytest>=8.0.0
+pytest-asyncio>=0.24.0

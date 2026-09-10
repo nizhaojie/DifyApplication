@@ -8,9 +8,10 @@ GET  /profile/profiles/{id} 研判记录详情（重新跑规则引擎填充 ass
 import json
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user, get_sync_db
+from app.core.deps import get_current_user, get_db
 from app.core.response import fail, ok
 from app.modules.profile.schemas.assess import AssessResponse, ProfileOut
 from app.modules.profile.services.assess_service import AssessService
@@ -22,11 +23,11 @@ router = APIRouter(prefix="/profile", tags=["客户研判"])
 
 
 @router.post("/assess", summary="客户研判（文本 / PDF 简历 / Excel / 结构化 profile）")
-def assess(
+async def assess(
     text: str | None = Form(None),
     profile: str | None = Form(None),
     file: UploadFile | None = File(None),
-    db: Session = Depends(get_sync_db),
+    db: AsyncSession = Depends(get_db),
     user: SysUser = Depends(get_current_user),
 ):
     svc = AssessService(db)
@@ -35,37 +36,40 @@ def assess(
             data = json.loads(profile)
         except json.JSONDecodeError:
             return fail("profile 不是合法 JSON", code=400)
-        res = svc.assess_structured(data, operator_id=user.id)
+        res = await svc.assess_structured(data, operator_id=user.id)
     elif file:
-        content = file.file.read()
+        content = await file.read()
         if not content:
             return fail("上传文件为空", code=400)
-        res = svc.assess_file(content, file.filename or "upload", operator_id=user.id)
+        res = await svc.assess_file(content, file.filename or "upload", operator_id=user.id)
     elif text:
-        res = svc.assess_text(text, operator_id=user.id)
+        res = await svc.assess_text(text, operator_id=user.id)
     else:
         return fail("需提供 text / file / profile 之一", code=400)
     return ok(AssessResponse(**res).model_dump(mode="json"))
 
 
 @router.get("/profiles", summary="研判记录列表（分页 + 过滤）")
-def list_profiles(
+async def list_profiles(
     limit: int = 50,
     offset: int = 0,
     match_result: str | None = None,
     matched_product: str | None = None,
-    db: Session = Depends(get_sync_db),
+    db: AsyncSession = Depends(get_db),
     user: SysUser = Depends(get_current_user),
 ):
     from app.modules.profile.models.pf import CustomerProfile
 
-    q = db.query(CustomerProfile)
+    query = select(CustomerProfile)
+    count_query = select(func.count()).select_from(CustomerProfile)
     if match_result:
-        q = q.filter(CustomerProfile.match_result == match_result)
+        query = query.where(CustomerProfile.match_result == match_result)
+        count_query = count_query.where(CustomerProfile.match_result == match_result)
     if matched_product:
-        q = q.filter(CustomerProfile.matched_product == matched_product)
-    total = q.count()
-    rows = q.order_by(CustomerProfile.id.desc()).limit(limit).offset(offset).all()
+        query = query.where(CustomerProfile.matched_product == matched_product)
+        count_query = count_query.where(CustomerProfile.matched_product == matched_product)
+    total = (await db.execute(count_query)).scalar_one()
+    rows = (await db.execute(query.order_by(CustomerProfile.id.desc()).limit(limit).offset(offset))).scalars()
     items = [
         ProfileOut(
             id=r.id,
@@ -81,20 +85,21 @@ def list_profiles(
 
 
 @router.get("/profiles/{profile_id}", summary="研判记录详情")
-def get_profile(
+async def get_profile(
     profile_id: int,
-    db: Session = Depends(get_sync_db),
+    db: AsyncSession = Depends(get_db),
     user: SysUser = Depends(get_current_user),
 ):
     from app.modules.profile.models.pf import CustomerProfile
 
-    r = db.get(CustomerProfile, profile_id)
+    r = await db.get(CustomerProfile, profile_id)
     if not r:
         return fail("未找到该研判记录", code=404)
     assessments = []
     if r.background_info:
         try:
             p = normalize_from_raw(r.background_info)
+            engine = await RuleEngine.load(db)
             assessments = [
                 {
                     "product_line": a.product_line,
@@ -104,7 +109,7 @@ def get_profile(
                     "matched_labels": a.matched_labels,
                     "candidate_programs": a.candidate_programs,
                 }
-                for a in RuleEngine(db).evaluate(p)
+                for a in engine.evaluate(p)
             ]
         except Exception:
             pass

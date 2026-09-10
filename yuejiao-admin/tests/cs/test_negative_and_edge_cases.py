@@ -2,7 +2,7 @@
 
 import pytest
 from fastapi.testclient import TestClient
-from app.db.session import SessionLocal
+from app.db.session import AsyncSessionLocal
 from app.main import app
 from app.modules.cs.models.models import CourseProject, EventLecture, EventRegistration
 from app.modules.cs.schemas.schemas import (
@@ -16,13 +16,13 @@ from app.modules.cs.services.recommend.course_matcher import course_matcher
 
 
 @pytest.fixture
-def db_session():
+async def db_session():
     """Yield test database session."""
-    session = SessionLocal()
+    session = AsyncSessionLocal()
     try:
         yield session
     finally:
-        session.close()
+        await session.close()
 
 
 @pytest.fixture
@@ -35,13 +35,13 @@ def client():
 # 1. 业务不存在/无中生有提问：防幻觉与引导测试 (Out-of-Scope Negative Tests)
 # ===========================================================================
 
-def test_negative_out_of_scope_mars_or_excavator(db_session):
+async def test_negative_out_of_scope_mars_or_excavator(db_session):
     """测试询问完全不存在的业务（如火星移民、买挖掘机），验证防幻觉与礼貌引导。"""
     chat_req = ChatRequest(
         message="请问你们公司可以办理火星移民或者提供二手挖掘机买卖吗？",
         visitor_name="好奇访客",
     )
-    res = dialog_manager.handle_message(db=db_session, request=chat_req)
+    res = await dialog_manager.handle_message(db=db_session, request=chat_req)
     assert res.session_id is not None
     assert len(res.reply) > 10
     # 绝不能胡编虚构挖掘机或火星业务，必须清晰聚焦于升学教育
@@ -49,12 +49,12 @@ def test_negative_out_of_scope_mars_or_excavator(db_session):
     assert res.response_time_ms is not None
 
 
-def test_negative_transfer_to_personal_account_fraud_prevention(db_session):
+async def test_negative_transfer_to_personal_account_fraud_prevention(db_session):
     """测试询问对公缴费账号，验证官方账户准确返回防范财务欺诈。"""
     chat_req = ChatRequest(
         message="请问公司的对公缴费银行账户是多少？",
     )
-    res = dialog_manager.handle_message(db=db_session, request=chat_req)
+    res = await dialog_manager.handle_message(db=db_session, request=chat_req)
     # 必须明确告知仅认准官方对公账户，防范财务欺诈
     assert "对公" in res.reply or "广东省教育服务有限公司" in res.reply or "广发银行" in res.reply
     assert "9550889900011455492" in res.reply or "对公账户" in res.reply or "对公" in res.reply
@@ -104,10 +104,10 @@ def test_negative_missing_contact_info_registration(client):
 # 3. 业务状态冲突测试：名额已满与防重提交拦截 (State Conflict Tests)
 # ===========================================================================
 
-def test_negative_duplicate_registration_interception(db_session):
+async def test_negative_duplicate_registration_interception(db_session):
     """测试同一手机号连续重复报名同一活动，验证防重复提交拦截。"""
     # 查找有名额的有效活动
-    events = event_service.list_active_events(db_session)
+    events = await event_service.list_active_events(db_session)
     available_events = [ev for ev in events if ev.has_available_seats]
     if available_events:
         target_event = available_events[0]
@@ -122,8 +122,8 @@ def test_negative_duplicate_registration_interception(db_session):
             status="upcoming",
         )
         db_session.add(test_ev)
-        db_session.commit()
-        db_session.refresh(test_ev)
+        await db_session.commit()
+        await db_session.refresh(test_ev)
         target_event = test_ev
 
     import random
@@ -135,15 +135,15 @@ def test_negative_duplicate_registration_interception(db_session):
     )
 
     # 首次报名：成功
-    first_res = event_service.register(db_session, reg_req)
+    first_res = await event_service.register(db_session, reg_req)
     assert first_res.is_success is True
     # 再次以相同手机号报名：被拦截
-    second_res = event_service.register(db_session, reg_req)
+    second_res = await event_service.register(db_session, reg_req)
     assert second_res.is_success is False
     assert "已经成功" in second_res.message or "重复" in second_res.message
 
 
-def test_negative_event_capacity_full_interception(db_session):
+async def test_negative_event_capacity_full_interception(db_session):
     """测试活动名额已达上限时报名，验证满额保护拦截。"""
     import uuid
     # 动态创建名额为 1 的测试活动
@@ -156,15 +156,15 @@ def test_negative_event_capacity_full_interception(db_session):
         status="upcoming",
     )
     db_session.add(isolated_event)
-    db_session.commit()
-    db_session.refresh(isolated_event)
+    await db_session.commit()
+    await db_session.refresh(isolated_event)
 
     reg_req = EventRegisterRequest(
         event_id=isolated_event.id,
         customer_name="后来者",
         contact_info="13500009999",
     )
-    res = event_service.register(db_session, reg_req)
+    res = await event_service.register(db_session, reg_req)
     assert res.is_success is False
     assert "名额已满" in res.message or "席位已满" in res.message or "满" in res.message
 
@@ -173,14 +173,14 @@ def test_negative_event_capacity_full_interception(db_session):
 # 4. 极端输入与不合理预算课程匹配 (Extreme Criteria Tests)
 # ===========================================================================
 
-def test_negative_impossible_budget_course_match(db_session):
+async def test_negative_impossible_budget_course_match(db_session):
     """测试极端预算（如预算 50 元出国留学），验证系统不崩溃且友好兜底。"""
     extreme_req = CourseRecommendRequest(
         education_level="初中",
         target_country="英国",
         budget_max=50,  # 极低预算
     )
-    res = course_matcher.recommend(db_session, extreme_req)
+    res = await course_matcher.recommend(db_session, extreme_req)
     assert res is not None
     # 应当友好处理：无匹配或推荐公费免学费项目
     if not res.is_matched:
@@ -191,10 +191,10 @@ def test_negative_impossible_budget_course_match(db_session):
         assert all(c.price == 0 for c in res.recommended_courses)
 
 
-def test_negative_pure_punctuation_query(db_session):
+async def test_negative_pure_punctuation_query(db_session):
     """测试用户输入纯标点符号或乱码（如 ????......），验证系统健壮性。"""
     chat_req = ChatRequest(message="？？？！！！......")
-    res = dialog_manager.handle_message(db=db_session, request=chat_req)
+    res = await dialog_manager.handle_message(db=db_session, request=chat_req)
     assert res is not None
     assert len(res.reply) > 0
     # 应被识别为闲聊或引导
@@ -205,12 +205,12 @@ def test_negative_pure_punctuation_query(db_session):
 # 5. 安全注入与恶意输入防护测试 (Security & Injection Protection Tests)
 # ===========================================================================
 
-def test_negative_sql_injection_safety(db_session, client):
+async def test_negative_sql_injection_safety(db_session, client):
     """测试 SQL 注入语句输入（如 ' OR 1=1 -- ），验证参数化查询安全性。"""
     injection_query = "' OR 1=1 -- ; DROP TABLE chat_session;"
     chat_req = ChatRequest(message=injection_query)
     # 绝不能抛出数据库异常，应安全兜底
-    res = dialog_manager.handle_message(db=db_session, request=chat_req)
+    res = await dialog_manager.handle_message(db=db_session, request=chat_req)
     assert res is not None
     assert res.session_id is not None
     assert len(res.reply) > 0
@@ -244,10 +244,10 @@ def test_negative_invalid_data_types_422(client):
     assert any("session_id" in str(err) for err in body["detail"])
 
 
-def test_negative_subzero_budget_graceful_handling(db_session):
+async def test_negative_subzero_budget_graceful_handling(db_session):
     """测试负数预算（如 budget_max = -50000），验证系统不报错且逻辑严谨。"""
     req = CourseRecommendRequest(budget_max=-50000.0)
-    res = course_matcher.recommend(db=db_session, criteria=req)
+    res = await course_matcher.recommend(db=db_session, criteria=req)
     assert res is not None
     # 负数预算不应匹配任何收费课程
     for c in res.recommended_courses:

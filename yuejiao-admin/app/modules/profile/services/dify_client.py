@@ -67,19 +67,19 @@ class AIClient:
         self.fallback = settings.pf_llm_fallback
 
     # ---------- Dify Workflow ----------
-    def _run_workflow(self, api_key: str, inputs: dict) -> dict | None:
+    async def _run_workflow(self, api_key: str, inputs: dict) -> dict | None:
         if not api_key:
             return None
         try:
-            r = httpx.post(
-                f"{self.base}/workflows/run",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                },
-                json={"inputs": inputs, "response_mode": "blocking", "user": "pf-assess"},
-                timeout=60,
-            )
+            async with httpx.AsyncClient(timeout=60) as client:
+                r = await client.post(
+                    f"{self.base}/workflows/run",
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={"inputs": inputs, "response_mode": "blocking", "user": "pf-assess"},
+                )
             r.raise_for_status()
             data = r.json().get("data", {})
             return data.get("outputs")
@@ -88,9 +88,9 @@ class AIClient:
             return None
 
     # ---------- extract ----------
-    def extract(self, raw_text: str) -> dict | None:
+    async def extract(self, raw_text: str) -> dict | None:
         """原始文本 → 结构化 profile dict。失败返回 None。"""
-        out = self._run_workflow(self.extract_key, {"raw_text": raw_text})
+        out = await self._run_workflow(self.extract_key, {"raw_text": raw_text})
         if out is None:
             # Dify 不可达 / 未配 Key：heuristic 模式用本地规则提取字段，
             # off 模式返回 None（由 assess_service 只用原文摘要兜底）。
@@ -111,7 +111,7 @@ class AIClient:
         return _jsonish(out)
 
     # ---------- narrate ----------
-    def narrate(
+    async def narrate(
         self,
         profile: CustomerProfile,
         assessments: list[ProductAssessment],
@@ -135,7 +135,7 @@ class AIClient:
             "assessments": json.dumps(assessments_json, ensure_ascii=False),
             "match_prompts": json.dumps(match_prompts, ensure_ascii=False),
         }
-        out = self._run_workflow(self.narrate_key, inputs)
+        out = await self._run_workflow(self.narrate_key, inputs)
         if isinstance(out, dict):
             # 同 extract：LLM 的 match_result JSON 可能被 end 节点当字符串透传
             mr = out.get("match_result") or out.get("result") or out.get("output")

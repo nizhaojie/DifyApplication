@@ -19,6 +19,19 @@ class StudentPsychProfile(Base):
     weekly_summary: Mapped[dict | None] = mapped_column(JSON)
 
 
+class StudentPsychRecord(Base):
+    __tablename__ = "student_psych_record"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    student_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    emotion_tag: Mapped[str | None] = mapped_column(String(64))
+    emotion_score: Mapped[int | None] = mapped_column(Integer)
+    interaction_content: Mapped[str | None] = mapped_column(Text)
+    trigger_keywords: Mapped[list | None] = mapped_column(JSON)
+    record_date: Mapped[date] = mapped_column(Date, nullable=False)
+    create_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class StudentPsychAlert(Base):
     __tablename__ = "student_psych_alert"
 

@@ -12,11 +12,12 @@
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# 项目配置在 yuejiao-admin/app/core/config.py，把 yuejiao-admin 加入 sys.path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "yuejiao-admin"))
 
 import httpx  # noqa: E402
 
-from backend.core.config import settings  # noqa: E402
+from app.core.config import settings  # noqa: E402
 
 
 def run(label: str, key: str, inputs: dict, expect_key: str) -> bool:

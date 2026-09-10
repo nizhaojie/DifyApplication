@@ -10,7 +10,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.db.session import SessionLocal
+from app.core.config import settings
 from app.modules.profile.models.pf import ProfileRule
 
 # ============================================================
@@ -124,7 +124,11 @@ RULES = [ZHONGDE_RULE, SINGAPORE_RULE]
 
 
 def seed():
-    db = SessionLocal()
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    engine = create_engine(settings.sync_database_url, pool_pre_ping=True)
+    db = sessionmaker(bind=engine, autocommit=False, autoflush=False)()
     try:
         for r in RULES:
             db.query(ProfileRule).filter(ProfileRule.product_line == r["product_line"]).delete()

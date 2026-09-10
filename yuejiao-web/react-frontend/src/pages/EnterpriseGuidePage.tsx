@@ -1,7 +1,63 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, BookOpen, ChevronDown, MessageCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { fetchGuideCatalog } from '@/api/enterprise'
+import { Button, Collapse, Spin } from 'antd'
 import { MarkdownText } from '@/components/MarkdownText'
+import { fetchGuideCatalog } from '@/api/enterprise'
 
-export function EnterpriseGuidePage() { const navigate = useNavigate(); const [items, setItems] = useState<{ title: string; excerpt: string; content?: string }[]>([]); const [open, setOpen] = useState<string | null>(null); useEffect(() => { void fetchGuideCatalog().then(setItems) }, []); return <section className="content-page"><header className="page-heading"><div><div className="eyebrow"><BookOpen size={14} /> ONBOARDING GUIDE</div><h1>新人指南</h1><p>入职办公、IT 和日常工作流程，都可以在这里找到答案。</p></div><button className="ghost-button" onClick={() => navigate('/enterprise')}><ArrowRight size={16} />去对话里问</button></header><section className="guide-list panel-surface">{items.map((item) => { const expanded = open === item.title; return <article className={`guide-item ${expanded ? 'expanded' : ''}`} key={item.title}><button className="guide-trigger" onClick={() => setOpen(expanded ? null : item.title)}><span><span className="guide-number">{String(items.indexOf(item) + 1).padStart(2, '0')}</span>{item.title}</span><ChevronDown size={17} className={expanded ? 'rotate-180' : ''} /></button>{expanded && <div className="guide-content"><MarkdownText text={item.content || item.excerpt} /><button className="text-button" onClick={() => navigate(`/enterprise?q=${encodeURIComponent(item.title)}`)}><MessageCircle size={14} />问助手</button></div>}</article> })}{!items.length && <div className="empty-cell">暂无指南内容</div>}</section></section> }
+// 等价迁移自 Vue 版 views/enterprise/guide.vue(新人指南,accordion 手风琴单开)。
+
+type GuideItem = { title: string; excerpt: string; content?: string }
+
+export function EnterpriseGuidePage() {
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState(false)
+  const [items, setItems] = useState<GuideItem[]>([])
+
+  function ask(title: string) {
+    void navigate(`/enterprise?q=${encodeURIComponent(title)}`)
+  }
+
+  useEffect(() => {
+    void (async () => {
+      setLoading(true)
+      try {
+        setItems(await fetchGuideCatalog())
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [])
+
+  return (
+    <Spin spinning={loading}>
+      <section className="ent-page">
+        <header className="ent-head">
+          <div>
+            <h1>新人指南</h1>
+            <p className="hint">入职办公、IT、楼层设施。展开看全文，或丢给助手追问。</p>
+          </div>
+          <Button type="primary" onClick={() => navigate('/enterprise')}>
+            去对话里问
+          </Button>
+        </header>
+
+        <Collapse
+          accordion
+          expandIconPosition="end"
+          items={items.map((item) => ({
+            key: item.title,
+            label: item.title,
+            children: (
+              <>
+                <MarkdownText text={item.content || item.excerpt} />
+                <Button size="small" color="primary" variant="text" onClick={() => ask(item.title)}>
+                  问助手
+                </Button>
+              </>
+            ),
+          }))}
+        />
+      </section>
+    </Spin>
+  )
+}

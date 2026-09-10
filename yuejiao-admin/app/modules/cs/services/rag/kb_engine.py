@@ -5,7 +5,9 @@ import re
 import xml.etree.ElementTree as ET
 import zipfile
 from typing import Any, Dict, List, Optional, Set
-from sqlalchemy.orm import Session
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.modules.cs.crud.crud import (
     bulk_create_knowledge_chunks,
     count_knowledge_chunks,
@@ -101,8 +103,8 @@ class KnowledgeBaseEngine:
 
         return chunks
 
-    def seed_from_local_materials(
-        self, db: Session, raw_materials_dir: str
+    async def seed_from_local_materials(
+        self, db: AsyncSession, raw_materials_dir: str
     ) -> int:
         """Parse core documents in raw_materials and persist chunks to database."""
         document_registry = [
@@ -151,7 +153,7 @@ class KnowledgeBaseEngine:
                     total_chunks.extend(document_chunks)
 
         if total_chunks:
-            return bulk_create_knowledge_chunks(db, total_chunks)
+            return await bulk_create_knowledge_chunks(db, total_chunks)
         return 0
 
     @staticmethod
@@ -207,9 +209,9 @@ class KnowledgeBaseEngine:
 
         return score
 
-    def search(
+    async def search(
         self,
-        db: Session,
+        db: AsyncSession,
         query: str,
         category_filter: Optional[str] = None,
         top_k: int = 3,
@@ -219,7 +221,7 @@ class KnowledgeBaseEngine:
         if not search_terms:
             search_terms = [query.strip()]
 
-        candidates = list_knowledge_chunks(db, category_filter=category_filter)
+        candidates = await list_knowledge_chunks(db, category_filter=category_filter)
         if not candidates:
             return []
 

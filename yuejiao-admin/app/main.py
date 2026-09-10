@@ -3,6 +3,7 @@
 import logging
 import os
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -10,13 +11,14 @@ from fastapi.responses import JSONResponse
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.exceptions import BizError
-from app.core.response import fail, make_success_response, ok
-from app.db.session import SessionLocal
+from app.core.response import fail, ok
+from app.db.session import AsyncSessionLocal
 from app.modules.cs.services.event.event_service import event_service
 from app.modules.cs.services.rag.kb_engine import kb_engine
 from app.modules.cs.services.recommend.course_matcher import course_matcher
 from app.modules.enterprise.models import *  # noqa: F401,F403
 from app.modules.profile.models import *  # noqa: F401,F403
+from app.modules.report.models import ReportGeneration  # noqa: F401
 from app.modules.student.models import *  # noqa: F401,F403
 from app.modules.system.models import *  # noqa: F401,F403
 
@@ -28,25 +30,31 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan context: seed necessary initial records on startup."""
     logger.info("Starting up %s...", settings.app_name)
-    db = SessionLocal()
-    try:
-        # 1. Seed courses
-        course_count = course_matcher.ensure_seed_courses(db)
-        logger.info("Seed courses verified/inserted: %d", course_count)
+    async with AsyncSessionLocal() as db:
+        try:
+            # 1. Seed courses
+            course_count = await course_matcher.ensure_seed_courses(db)
+            logger.info("Seed courses verified/inserted: %d", course_count)
 
-        # 2. Seed events
-        event_count = event_service.ensure_seed_events(db)
-        logger.info("Seed events verified/inserted: %d", event_count)
+            # 2. Seed events
+            event_count = await event_service.ensure_seed_events(db)
+            logger.info("Seed events verified/inserted: %d", event_count)
 
-        # 3. Seed knowledge base chunks from local materials if available
-        raw_materials_dir = r"c:\new\group-qukewei\docs\raw_materials"
-        if os.path.exists(raw_materials_dir):
-            kb_count = kb_engine.seed_from_local_materials(db, raw_materials_dir)
-            logger.info("Knowledge base chunks verified/inserted: %d", kb_count)
-    except Exception as exc:
-        logger.warning("Startup database seeding skipped or encountered error: %s", exc)
-    finally:
-        db.close()
+            # 3. Seed knowledge base chunks from local materials if available
+            raw_materials_dir = settings.kb_raw_materials_dir
+            if raw_materials_dir and os.path.isdir(raw_materials_dir):
+                kb_count = await kb_engine.seed_from_local_materials(db, raw_materials_dir)
+                logger.info("Knowledge base chunks verified/inserted: %d", kb_count)
+            else:
+                logger.warning(
+                    "知识库原始素材未配置或不存在（KB_RAW_MATERIALS_DIR=%r），"
+                    "客服知识库 /faq 知识库将保持为空；"
+                    "请在 .env 中配置 KB_RAW_MATERIALS_DIR 指向包含 "
+                    "公司信息/公司业务/留学政策 子目录的素材文件夹。",
+                    raw_materials_dir,
+                )
+        except Exception as exc:
+            logger.warning("Startup database seeding skipped or encountered error: %s", exc)
     yield
     logger.info("Shutting down %s...", settings.app_name)
 
@@ -75,9 +83,9 @@ async def biz_error_handler(_: Request, exc: BizError) -> JSONResponse:
 
 
 @app.get("/health", summary="Health Check")
-def health_check():
+async def health_check():
     """Health check ping endpoint."""
-    return make_success_response(payload={"status": "healthy", "app": settings.app_name})
+    return ok({"status": "healthy", "app": settings.app_name})
 
 
 @app.get("/api/v1/health")
@@ -86,10 +94,10 @@ async def api_health():
 
 
 @app.get("/", summary="Root Index")
-def root_index():
+async def root_index():
     """Root metadata endpoint."""
-    return make_success_response(
-        payload={
+    return ok(
+        {
             "app": settings.app_name,
             "docs_url": "/docs",
             "api_v1": settings.api_v1_prefix,

@@ -1,0 +1,48 @@
+/*
+ * EnterprisePage 专属补充样式。
+ * 仅两块:1) React 超集的「概览」Tab(Vue 无此区块,复用 Vue 卡片类 .stat-card);
+ *        2) antd Timeline 无 EP 的 timestamp 属性,跟进时间补一小行。
+ */
+
+/* 超集:概览 Tab(顶部 4 指标卡 + 漏斗条) */
+.ent-overview .stat-row {
+  grid-template-columns: repeat(4, 1fr);
+  margin-bottom: 12px;
+}
+
+.ent-overview-funnel {
+  border-top: 1px dashed #ebeef5;
+  padding-top: 12px;
+}
+
+.ent-overview-funnel h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+
+.ent-overview-funnel .funnel-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  font-size: 12px;
+  color: #606266;
+}
+
+.ent-overview-funnel .funnel-items b {
+  color: #c41e1e;
+  margin-right: 4px;
+}
+
+/* 表格操作列的 link 按钮组(等价 el-button link 排列) */
+.ent-page .lead-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* EP el-timeline-item 的 timestamp(默认在内容下方) */
+.ent-page .timeline-time {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #909399;
+}

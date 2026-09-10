@@ -1,6 +1,93 @@
 import { useEffect, useState } from 'react'
-import { Brain, MessageCircle, RotateCcw, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { Button, Empty, Spin } from 'antd'
 import { clearMemory, fetchMemory, type MemoryMessage } from '@/api/enterprise'
+import { confirmBox, toast } from '@/components/feedback'
 
-export function EnterpriseMemoryPage() { const navigate = useNavigate(); const [loading, setLoading] = useState(true); const [memory, setMemory] = useState<{ last_person: string | null; preferred_name: string | null; total: number; messages: MemoryMessage[] }>({ last_person: null, preferred_name: null, total: 0, messages: [] }); async function load() { setLoading(true); try { setMemory(await fetchMemory()) } finally { setLoading(false) } } async function reset() { if (!window.confirm('清空后对话工作台不会再看到刚才的聊天。')) return; await clearMemory(); await load() } useEffect(() => { void load() }, []); const asks = memory.messages.filter((item) => item.role === 'user').slice(-3).reverse(); return <section className="content-page"><header className="page-heading"><div><div className="eyebrow"><Brain size={14} /> CONVERSATION MEMORY</div><h1>对话记忆</h1><p>工作台会记住本轮对话中的人物和最近业务上下文。</p></div><div className="heading-actions"><button className="ghost-button" onClick={() => navigate('/enterprise')}><MessageCircle size={16} />回对话</button><button className="danger-button" disabled={!memory.total} onClick={() => void reset()}><Trash2 size={16} />清空</button></div></header><div className="memory-stats"><div><small>对话自称</small><strong>{memory.preferred_name || '还没有'}</strong></div><div><small>最近客户</small><strong>{memory.last_person || '还没有'}</strong></div><div><small>已记条数</small><strong>{loading ? '—' : memory.total}</strong></div></div><section className="panel-surface memory-list"><div className="section-title"><h2>最近三问</h2><RotateCcw size={16} className={loading ? 'spin' : ''} /></div>{asks.length ? <ol>{asks.map((item, index) => <li key={`${item.create_time}-${index}`}><time>{item.create_time || '—'}</time><p>{item.content}</p></li>)}</ol> : <div className="empty-cell">还没有记忆。去对话工作台说一句就会记下来。</div>}</section></section> }
+// 等价迁移自 Vue 版 views/enterprise/memory.vue(对话记忆:3 统计卡 + 最近三问 + 清空)。
+
+export function EnterpriseMemoryPage() {
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState(false)
+  const [lastPerson, setLastPerson] = useState<string | null>(null)
+  const [preferredName, setPreferredName] = useState<string | null>(null)
+  const [total, setTotal] = useState(0)
+  const [messages, setMessages] = useState<MemoryMessage[]>([])
+
+  const recentAsks = messages.filter((item) => item.role === 'user').slice(-3).reverse()
+
+  async function load() {
+    setLoading(true)
+    try {
+      const data = await fetchMemory()
+      setLastPerson(data.last_person)
+      setPreferredName(data.preferred_name)
+      setTotal(data.total)
+      setMessages(data.messages || [])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function reset() {
+    const ok = await confirmBox({ title: '开始新对话', content: '清空后对话工作台不会再看到刚才的聊天。' })
+    if (!ok) return
+    await clearMemory()
+    toast.success('已清空')
+    await load()
+  }
+
+  useEffect(() => {
+    void load()
+  }, [])
+
+  return (
+    <Spin spinning={loading}>
+      <section className="ent-page">
+        <header className="ent-head">
+          <div>
+            <h1>对话记忆</h1>
+            <p className="hint">会记住这轮对话里你说过的自称、最近客户。完整对话在工作台，刷新也不会丢。</p>
+          </div>
+          <div className="head-actions">
+            <Button onClick={() => navigate('/enterprise')}>回对话</Button>
+            <Button color="danger" variant="outlined" disabled={!total} onClick={() => void reset()}>
+              清空记忆
+            </Button>
+          </div>
+        </header>
+
+        <div className="stat-row compact">
+          <article className="stat-card">
+            <small>对话自称</small>
+            <strong>{preferredName || '还没有'}</strong>
+          </article>
+          <article className="stat-card">
+            <small>最近客户</small>
+            <strong>{lastPerson || '还没有'}</strong>
+          </article>
+          <article className="stat-card">
+            <small>已记条数</small>
+            <strong>{total}</strong>
+          </article>
+        </div>
+
+        <div className="chart-card">
+          <h3>最近三问</h3>
+          {recentAsks.length ? (
+            <ol className="ask-list">
+              {recentAsks.map((item, index) => (
+                <li key={index}>
+                  <small>{item.create_time}</small>
+                  <p>{item.content}</p>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <Empty description="还没有记忆。去对话工作台说一句就会记下来。" />
+          )}
+        </div>
+      </section>
+    </Spin>
+  )
+}

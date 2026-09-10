@@ -8,6 +8,7 @@ from app.modules.student.models.assistant import (
     OverseasLifeKnowledge,
     StudentPsychAlert,
     StudentPsychProfile,
+    StudentPsychRecord,
 )
 
 __all__ = [
@@ -19,5 +20,6 @@ __all__ = [
     "StudentInfo",
     "StudentPsychAlert",
     "StudentPsychProfile",
+    "StudentPsychRecord",
     "StudentScore",
 ]

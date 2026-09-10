@@ -4,7 +4,9 @@ import re
 import time
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
-from sqlalchemy.orm import Session
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.modules.cs.crud.crud import (
     create_chat_message,
     create_chat_session,
@@ -81,22 +83,22 @@ class DialogManager:
             recommend_limit=3,
         )
 
-    def handle_message(self, db: Session, request: ChatRequest) -> ChatResponse:
+    async def handle_message(self, db: AsyncSession, request: ChatRequest) -> ChatResponse:
         """Process incoming user utterance through the 7-intent conversation pipeline."""
         start_time = time.perf_counter()
 
         # 1. Manage session lifecycle
         session_id = request.session_id or f"cs_sess_{uuid.uuid4().hex[:12]}"
-        existing_session = get_session_by_session_id(db, session_id)
+        existing_session = await get_session_by_session_id(db, session_id)
         if not existing_session:
-            create_chat_session(
+            await create_chat_session(
                 db=db,
                 session_id=session_id,
                 visitor_name=request.visitor_name,
                 visitor_contact=request.visitor_contact,
             )
         else:
-            update_session_activity(
+            await update_session_activity(
                 db=db,
                 session_id=session_id,
                 visitor_name=request.visitor_name,
@@ -104,7 +106,7 @@ class DialogManager:
             )
 
         # Count previous message rounds in session
-        previous_messages = list_messages_by_session_id(db, session_id)
+        previous_messages = await list_messages_by_session_id(db, session_id)
         user_turn_count = (
             len([m for m in previous_messages if m.role == "user"]) + 1
         )
@@ -131,7 +133,7 @@ class DialogManager:
                 )
                 source_references.append("粤教服务标准FAQ问答库 (36条)")
             else:
-                kb_chunks = kb_engine.search(db, user_message_text, top_k=2)
+                kb_chunks = await kb_engine.search(db, user_message_text, top_k=2)
                 if kb_chunks:
                     reply_text = kb_chunks[0].content
                     source_references.append(kb_chunks[0].source_file or "业务知识库")
@@ -142,7 +144,7 @@ class DialogManager:
                     )
 
         elif intent_code == "company_inquiry":
-            kb_chunks = kb_engine.search(
+            kb_chunks = await kb_engine.search(
                 db, user_message_text, category_filter="company_info", top_k=2
             )
             if kb_chunks:
@@ -161,7 +163,7 @@ class DialogManager:
                 source_references.append("企业信息.docx")
 
         elif intent_code == "business_query":
-            kb_chunks = kb_engine.search(
+            kb_chunks = await kb_engine.search(
                 db, user_message_text, category_filter="business", top_k=2
             )
             if kb_chunks:
@@ -179,7 +181,7 @@ class DialogManager:
                 )
 
         elif intent_code == "policy_query":
-            kb_chunks = kb_engine.search(
+            kb_chunks = await kb_engine.search(
                 db, user_message_text, category_filter="policy", top_k=2
             )
             policy_body = ""
@@ -201,7 +203,7 @@ class DialogManager:
 
         elif intent_code == "course_recommend":
             inferred_criteria = self._extract_recommend_criteria(user_message_text)
-            recommend_result = course_matcher.recommend(db, inferred_criteria)
+            recommend_result = await course_matcher.recommend(db, inferred_criteria)
             if recommend_result.is_matched:
                 reply_text = (
                     f"小粤为您精选了匹配度最高的留学/升学方案：\n\n"
@@ -229,7 +231,7 @@ class DialogManager:
             if not parsed_name and request.visitor_name:
                 parsed_name = request.visitor_name
 
-            active_events = event_service.list_active_events(db)
+            active_events = await event_service.list_active_events(db)
 
             # Check if user is inquiring about their existing registration status (Chat Memory)
             query_status_indicators = [
@@ -252,7 +254,7 @@ class DialogManager:
                             break
 
                 if target_phone:
-                    my_regs = event_service.query_user_registrations(db, contact_info=target_phone)
+                    my_regs = await event_service.query_user_registrations(db, contact_info=target_phone)
                     if my_regs:
                         latest_reg = my_regs[0]
                         reply_text = (
@@ -283,7 +285,7 @@ class DialogManager:
                 # Pick earliest event that has seats available, or first event
                 available_events = [ev for ev in active_events if ev.has_available_seats]
                 target_event = available_events[0] if available_events else active_events[0]
-                reg_response = event_service.register(
+                reg_response = await event_service.register(
                     db=db,
                     payload=EventRegisterRequest(
                         event_id=target_event.id,
@@ -327,7 +329,7 @@ class DialogManager:
         approx_tokens = (len(user_message_text) + len(reply_text)) // 2
 
         # 5. Persist to chat_message table
-        create_chat_message(
+        await create_chat_message(
             db=db,
             session_id=session_id,
             role="user",
@@ -335,7 +337,7 @@ class DialogManager:
             intent=intent_code,
         )
 
-        create_chat_message(
+        await create_chat_message(
             db=db,
             session_id=session_id,
             role="assistant",

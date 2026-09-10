@@ -18,7 +18,6 @@ import sys
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, ROOT)
 
-from app.db.session import SessionLocal                      # noqa: E402
 from app.modules.profile.services.assess_service import AssessService  # noqa: E402
 
 SAMPLES_PATH = os.path.join(os.path.dirname(__file__), "data", "customer_samples.json")
@@ -52,36 +51,43 @@ def program_matches(recs: list[str], target: str) -> bool:
     return False
 
 
-def main() -> int:
-    db = SessionLocal()
-    svc = AssessService(db)
-    with open(SAMPLES_PATH, encoding="utf-8") as f:
-        samples = json.load(f)
+async def run() -> int:
+    from app.db.session import AsyncSessionLocal
 
-    passed = 0
-    for s in samples:
-        raw = dict(s)
-        raw.pop("target_project", None)          # 不把标签当特征
-        res = svc.assess_structured(raw, persist=False)
-        exp = expected_product(s.get("target_project", ""))
-        got = res["matched_product"]
-        recs = res["recommended_programs"] or []
-        prod_ok = got == exp
-        prog_ok = program_matches(recs, s.get("target_project", "")) if exp else False
-        ok = prod_ok and prog_ok
-        passed += 1 if ok else 0
-        flag = "✅" if ok else "❌"
-        top = res["assessments"][0] if res["assessments"] else {}
-        print(
-            f"{flag} {s.get('id')} {s.get('name',''):<6} | "
-            f"目标={s.get('target_project')} | 推荐={got} / {recs} | 分={res['match_score']}"
-        )
-        if not ok:
-            print(f"     期望产品={exp} 得到={got} 产品对={prod_ok} 专业对={prog_ok} 命中={top.get('matched_labels')}")
-    rate = passed / len(samples) * 100
-    print(f"\n一致率：{passed}/{len(samples)} = {rate:.0f}%  ({'达标 ≥80%' if rate >= 80 else '未达标'})")
-    db.close()
-    return 0 if rate >= 80 else 1
+    async with AsyncSessionLocal() as db:
+        svc = AssessService(db)
+        with open(SAMPLES_PATH, encoding="utf-8") as f:
+            samples = json.load(f)
+
+        passed = 0
+        for s in samples:
+            raw = dict(s)
+            raw.pop("target_project", None)          # 不把标签当特征
+            res = await svc.assess_structured(raw, persist=False)
+            exp = expected_product(s.get("target_project", ""))
+            got = res["matched_product"]
+            recs = res["recommended_programs"] or []
+            prod_ok = got == exp
+            prog_ok = program_matches(recs, s.get("target_project", "")) if exp else False
+            ok = prod_ok and prog_ok
+            passed += 1 if ok else 0
+            flag = "✅" if ok else "❌"
+            top = res["assessments"][0] if res["assessments"] else {}
+            print(
+                f"{flag} {s.get('id')} {s.get('name',''):<6} | "
+                f"目标={s.get('target_project')} | 推荐={got} / {recs} | 分={res['match_score']}"
+            )
+            if not ok:
+                print(f"     期望产品={exp} 得到={got} 产品对={prod_ok} 专业对={prog_ok} 命中={top.get('matched_labels')}")
+        rate = passed / len(samples) * 100
+        print(f"\n一致率：{passed}/{len(samples)} = {rate:.0f}%  ({'达标 ≥80%' if rate >= 80 else '未达标'})")
+        return 0 if rate >= 80 else 1
+
+
+def main() -> int:
+    import asyncio
+
+    return asyncio.run(run())
 
 
 if __name__ == "__main__":
