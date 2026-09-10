@@ -113,6 +113,7 @@ export function ComplaintWeeklyPage() {
             <DatePicker
               className="period-picker"
               picker="week"
+              showWeek={false}
               value={dayjs(weekDate)}
               placeholder="选择周期"
               allowClear={false}

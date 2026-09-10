@@ -72,6 +72,7 @@ class ReportApplication:
             await self._finish(report_id, "completed", content, None)
         except InsightError as exc:
             await self._finish(report_id, "failed", None, str(exc))
+        await self._db.commit()
         return await self._get(report_id)
 
     async def current(self, kind: str, period_start: date) -> Report | None:
