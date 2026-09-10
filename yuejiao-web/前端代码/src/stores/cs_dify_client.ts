@@ -15,6 +15,33 @@ function read_sse_payload(raw_line: string): Record<string, unknown> | null {
   }
 }
 
+function strip_think_blocks(raw_text: string): string {
+  return raw_text
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
+    .replace(/<think>[\s\S]*/gi, '')
+    .replace(/^[\s\S]*?<\/think>/, '')
+    .trim()
+}
+
+function cut_runaway_repeat(raw_text: string): { text: string; runaway: boolean } {
+  const detectors = [/(\]\)\*\*){2,}/, /([^\s]{1,24})\1{6,}/]
+  for (const detector of detectors) {
+    const matched = detector.exec(raw_text)
+    if (matched && typeof matched.index === 'number') {
+      return { text: raw_text.slice(0, matched.index).trim(), runaway: true }
+    }
+  }
+  return { text: raw_text, runaway: false }
+}
+
+function merge_stream_text(current_text: string, incoming_text: string): string {
+  if (!incoming_text) return current_text
+  if (!current_text) return incoming_text
+  if (incoming_text.startsWith(current_text)) return incoming_text
+  if (current_text.startsWith(incoming_text)) return current_text
+  return current_text + incoming_text
+}
+
 function extract_answer_chunk(payload: Record<string, unknown>): string {
   const event_name = String(payload.event ?? '')
   if (event_name === 'message' || event_name === 'agent_message') {
@@ -98,17 +125,26 @@ async function request_dify_chat_once(
       }
       const chunk_text = extract_answer_chunk(payload)
       if (chunk_text) {
-        assistant_text += chunk_text
-        on_delta?.(chunk_text)
+        assistant_text = merge_stream_text(assistant_text, chunk_text)
+        const clipped = cut_runaway_repeat(strip_think_blocks(assistant_text))
+        if (clipped.text) {
+          on_delta?.(clipped.text)
+        }
+        if (clipped.runaway) {
+          assistant_text = clipped.text
+          await reader.cancel()
+          break
+        }
       }
     }
   }
 
-  if (!assistant_text.trim()) {
+  const cleaned_text = strip_think_blocks(assistant_text)
+  if (!cleaned_text) {
     throw new Error('dify_empty_answer')
   }
   return {
-    assistant_text: assistant_text.trim(),
+    assistant_text: cleaned_text,
     conversation_id: resolved_conversation_id,
   }
 }
