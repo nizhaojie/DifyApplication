@@ -134,6 +134,11 @@ router.beforeEach((to) => {
   if (!token) {
     return { path: '/login', query: { redirect: to.fullPath } }
   }
+  const rawUser = localStorage.getItem('yuejiao_user')
+  const user = rawUser ? JSON.parse(rawUser) as { user_type?: string } : null
+  if (to.path.startsWith('/enterprise') && user?.user_type === 'student') {
+    return '/student'
+  }
   return true
 })
 

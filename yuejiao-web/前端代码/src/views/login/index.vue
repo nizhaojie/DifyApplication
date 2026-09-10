@@ -18,7 +18,8 @@ async function submit() {
   try {
     await users.login(form.username, form.password)
     ElMessage.success('登录成功')
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/enterprise'
+    const defaultPath = users.user?.user_type === 'student' ? '/student' : '/enterprise'
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : defaultPath
     await router.replace(redirect)
   } catch {
     /* interceptor already toasts */
