@@ -25,6 +25,14 @@ export interface FollowUpItem {
   create_time: string
 }
 
+export interface OrgItem {
+  id: number
+  org_name: string
+  parent_id: number | null
+  org_level: number
+  sort_order: number
+}
+
 export interface ChatResult {
   reply: string
   conversation_id: string | null
@@ -61,6 +69,13 @@ export async function chat(query: string, conversationId?: string | null) {
   return data.data
 }
 
+export async function fetchChatStatus() {
+  const { data } = await http.get<
+    Envelope<{ dify_enabled: boolean; source: string; app_hint: string; online?: boolean }>
+  >('/api/v1/enterprise/chat-status')
+  return data.data
+}
+
 export async function fetchBrief() {
   const { data } = await http.get<Envelope<Record<string, unknown>>>('/api/v1/enterprise/brief')
   return data.data
@@ -71,6 +86,7 @@ export async function fetchFunnel() {
   return data.data
 }
 
+// Vue 版无默认参;React 版 DashboardPage 以 fetchLeads() 无参调用,保留默认 {} 兼容
 export async function fetchLeads(params: { keyword?: string; status?: string } = {}) {
   const { data } = await http.get<Envelope<LeadItem[]>>('/api/v1/enterprise/leads', { params })
   return { items: data.data || [], total: data.total || 0 }
@@ -81,19 +97,19 @@ export async function fetchLeadDetail(id: number) {
   return data.data
 }
 
-export async function addFollowUp(id: number, content: string, nextPlan?: string) {
+export async function addFollowUp(id: number, content: string, next_plan?: string) {
   const { data } = await http.post<Envelope<FollowUpItem>>(`/api/v1/enterprise/leads/${id}/follow-ups`, {
     content,
     follow_type: 'other',
-    next_plan: nextPlan,
+    next_plan,
   })
   return data.data
 }
 
-export async function updateLeadStatus(id: number, status: string, lostReason?: string) {
+export async function updateLeadStatus(id: number, status: string, lost_reason?: string) {
   const { data } = await http.put<Envelope<LeadItem>>(`/api/v1/enterprise/leads/${id}/status`, {
     status,
-    lost_reason: lostReason,
+    lost_reason,
   })
   return data.data
 }
@@ -116,13 +132,41 @@ export async function approveLeave(id: number, action: 'approved' | 'rejected', 
   return data.data
 }
 
+export async function fetchStudentProgress(stage?: string) {
+  const { data } = await http.get<Envelope<Record<string, unknown>[]>>('/api/v1/enterprise/student-progress', {
+    params: stage ? { stage } : undefined,
+  })
+  return data.data || []
+}
+export async function updateStudentProgress(id: number, status: string, content: string, next_plan: string) {
+  const { data } = await http.put<Envelope<Record<string, unknown>>>(`/api/v1/enterprise/student-progress/${id}`, {
+    status,
+    content,
+    next_plan,
+  })
+  return data.data
+}
+export async function fetchStudentTickets(status?: string) {
+  const { data } = await http.get<Envelope<Record<string, unknown>[]>>('/api/v1/enterprise/tickets', {
+    params: status ? { status } : undefined,
+  })
+  return data.data || []
+}
+export async function handleStudentTicket(id: number, action: string, solution: string) {
+  const { data } = await http.post<Envelope<Record<string, unknown>>>(`/api/v1/enterprise/tickets/${id}/handle`, {
+    action,
+    solution,
+  })
+  return data.data
+}
+
 export async function fetchCompany() {
   const { data } = await http.get<Envelope<Record<string, unknown>>>('/api/v1/enterprise/company')
   return data.data
 }
 
 export async function fetchOrgs() {
-  const { data } = await http.get<Envelope<Record<string, unknown>[]>>('/api/v1/enterprise/orgs')
+  const { data } = await http.get<Envelope<OrgItem[]>>('/api/v1/enterprise/orgs')
   return data.data || []
 }
 

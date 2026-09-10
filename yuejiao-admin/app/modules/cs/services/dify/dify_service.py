@@ -1,17 +1,17 @@
 """Dify platform integration service.
 
 Manages bidirectional communication with Dify APIs, including:
-- OpenAPI tool schema management;
-- Dify Advanced Chat & Workflow completions;
+- Dify Advanced Chat completions;
 - Automatic failover / dual-engine routing between Dify and local dialog engine.
 """
 
 import logging
-import os
 import re
-from typing import Any, Dict, List, Optional
 import uuid
-import requests
+from typing import Any, Dict, List, Optional
+
+import httpx
+
 from app.core.config import get_app_settings
 from app.modules.cs.crud.crud import (
     create_chat_message,
@@ -48,7 +48,7 @@ class DifyIntegrationService:
         current_key = self.api_key
         return bool(current_key and len(current_key) > 5)
 
-    def execute_chat_flow(
+    async def execute_chat_flow(
         self,
         chat_request: ChatRequest,
         db_session: Any,
@@ -56,7 +56,7 @@ class DifyIntegrationService:
         """Execute chat request via Dify if enabled, else delegate to local engine."""
         if not self.is_configured:
             logger.info("Dify API key not present, using local high-performance dialog engine.")
-            return dialog_manager.handle_message(db=db_session, request=chat_request)
+            return await dialog_manager.handle_message(db=db_session, request=chat_request)
 
         # 1. Determine Dify conversation_id for multi-turn conversational memory
         dify_conversation_id = ""
@@ -85,12 +85,8 @@ class DifyIntegrationService:
             }
 
             url = f"{self.base_url}/chat-messages"
-            response = requests.post(
-                url,
-                json=payload,
-                headers=headers,
-                timeout=self._timeout_seconds,
-            )
+            async with httpx.AsyncClient(timeout=self._timeout_seconds) as client:
+                response = await client.post(url, json=payload, headers=headers)
 
             if response.status_code == 200:
                 response_json = response.json()
@@ -125,30 +121,30 @@ class DifyIntegrationService:
                 elapsed_ms = int(response.elapsed.total_seconds() * 1000)
 
                 # Persist session and messages into MySQL
-                existing_session = get_session_by_session_id(db_session, effective_session_id)
+                existing_session = await get_session_by_session_id(db_session, effective_session_id)
                 if not existing_session:
-                    create_chat_session(
+                    await create_chat_session(
                         db=db_session,
                         session_id=effective_session_id,
                         visitor_name=chat_request.visitor_name,
                         visitor_contact=chat_request.visitor_contact,
                     )
                 else:
-                    update_session_activity(
+                    await update_session_activity(
                         db=db_session,
                         session_id=effective_session_id,
                         visitor_name=chat_request.visitor_name,
                         visitor_contact=chat_request.visitor_contact,
                     )
 
-                create_chat_message(
+                await create_chat_message(
                     db=db_session,
                     session_id=effective_session_id,
                     role="user",
                     content=chat_request.message.strip(),
                     intent="dify_workflow",
                 )
-                create_chat_message(
+                await create_chat_message(
                     db=db_session,
                     session_id=effective_session_id,
                     role="assistant",
@@ -175,11 +171,11 @@ class DifyIntegrationService:
                     response.status_code,
                     response.text[:200],
                 )
-                return dialog_manager.handle_message(db=db_session, request=chat_request)
+                return await dialog_manager.handle_message(db=db_session, request=chat_request)
 
         except Exception as exc:
             logger.warning("Dify communication error (%s). Seamlessly falling back to local engine.", exc)
-            return dialog_manager.handle_message(db=db_session, request=chat_request)
+            return await dialog_manager.handle_message(db=db_session, request=chat_request)
 
 
 dify_service = DifyIntegrationService()

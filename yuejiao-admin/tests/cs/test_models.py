@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, timedelta
 import pytest
-from app.db.session import SessionLocal
+from app.db.session import AsyncSessionLocal
 from app.modules.cs.crud.crud import (
     create_chat_message,
     create_chat_session,
@@ -19,26 +19,26 @@ from app.modules.cs.crud.crud import (
 from app.modules.cs.models.models import CourseProject, EventLecture
 
 
-@pytest.fixture(scope="module")
-def db_session():
+@pytest.fixture
+async def db_session():
     """Yield a database session for test execution and clean up."""
-    session = SessionLocal()
+    session = AsyncSessionLocal()
     yield session
-    session.close()
+    await session.close()
 
 
-def test_database_connection(db_session):
+async def test_database_connection(db_session):
     """Ensure database connection is alive and can query."""
     from sqlalchemy import text
-    result = db_session.execute(text("SELECT 1")).scalar()
+    result = (await db_session.execute(text("SELECT 1"))).scalar()
     assert result == 1
 
 
-def test_chat_session_and_message_lifecycle(db_session):
+async def test_chat_session_and_message_lifecycle(db_session):
     """Verify full session creation, message storage, and history listing."""
     unique_session_id = f"test_session_{uuid.uuid4().hex[:12]}"
 
-    created_session = create_chat_session(
+    created_session = await create_chat_session(
         db=db_session,
         session_id=unique_session_id,
         visitor_name="测试访客小王",
@@ -49,12 +49,12 @@ def test_chat_session_and_message_lifecycle(db_session):
     assert created_session.status == "active"
 
     # Fetch back
-    fetched_session = get_session_by_session_id(db_session, unique_session_id)
+    fetched_session = await get_session_by_session_id(db_session, unique_session_id)
     assert fetched_session is not None
     assert fetched_session.visitor_name == "测试访客小王"
 
     # Add messages
-    user_message = create_chat_message(
+    user_message = await create_chat_message(
         db=db_session,
         session_id=unique_session_id,
         role="user",
@@ -63,7 +63,7 @@ def test_chat_session_and_message_lifecycle(db_session):
     )
     assert user_message.id is not None
 
-    assistant_message = create_chat_message(
+    assistant_message = await create_chat_message(
         db=db_session,
         session_id=unique_session_id,
         role="assistant",
@@ -75,13 +75,13 @@ def test_chat_session_and_message_lifecycle(db_session):
     assert assistant_message.id is not None
 
     # Retrieve history
-    message_history = list_messages_by_session_id(db_session, unique_session_id)
+    message_history = await list_messages_by_session_id(db_session, unique_session_id)
     assert len(message_history) == 2
     assert message_history[0].role == "user"
     assert message_history[1].role == "assistant"
 
     # Update activity
-    updated_session = update_session_activity(
+    updated_session = await update_session_activity(
         db=db_session,
         session_id=unique_session_id,
         visitor_name="小王同学",
@@ -89,7 +89,7 @@ def test_chat_session_and_message_lifecycle(db_session):
     assert updated_session.visitor_name == "测试访客小王"  # Existing name preserved
 
 
-def test_event_and_registration_lifecycle(db_session):
+async def test_event_and_registration_lifecycle(db_session):
     """Verify event lecture creation, registration, seat limit, and duplicate guard."""
     unique_event_name = f"德国双元制项目线上说明会_{uuid.uuid4().hex[:6]}"
     test_event = EventLecture(
@@ -103,17 +103,17 @@ def test_event_and_registration_lifecycle(db_session):
         status="upcoming",
     )
     db_session.add(test_event)
-    db_session.commit()
-    db_session.refresh(test_event)
+    await db_session.commit()
+    await db_session.refresh(test_event)
 
     test_event_id = test_event.id
     assert test_event_id is not None
 
     # First registration
     test_contact = f"139{uuid.uuid4().hex[:8]}"
-    assert not has_user_registered_for_event(db_session, test_event_id, test_contact)
+    assert not await has_user_registered_for_event(db_session, test_event_id, test_contact)
 
-    registration_record = create_event_registration(
+    registration_record = await create_event_registration(
         db=db_session,
         event_id=test_event_id,
         customer_name="张三",
@@ -124,9 +124,9 @@ def test_event_and_registration_lifecycle(db_session):
     assert registration_record.status == "registered"
 
     # Check participant count increased
-    refreshed_event = get_event_by_id(db_session, test_event_id)
+    refreshed_event = await get_event_by_id(db_session, test_event_id)
     assert refreshed_event.current_participants == 1
 
     # Check duplicate prevention
-    has_registered = has_user_registered_for_event(db_session, test_event_id, test_contact)
+    has_registered = await has_user_registered_for_event(db_session, test_event_id, test_contact)
     assert has_registered is True

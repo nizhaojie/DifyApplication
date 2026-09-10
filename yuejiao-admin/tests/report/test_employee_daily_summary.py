@@ -16,8 +16,8 @@ ZHANG = 3  # 张顾问 employee
 WANG = 4  # 王顾问 employee
 
 
-def test_empty_week_yields_completed_empty_current_report(app):
-    report = app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
+async def test_empty_week_yields_completed_empty_current_report(app):
+    report = await app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
 
     assert report.status == "completed"
     assert report.kind == KIND_WEEKLY_SUMMARY
@@ -27,14 +27,14 @@ def test_empty_week_yields_completed_empty_current_report(app):
     assert coverage["missing_count"] == EXPECTED_STAFF_COUNT
     assert coverage["submitted"] == []
 
-    current = app.current(KIND_WEEKLY_SUMMARY, WEEK_START)
+    current = await app.current(KIND_WEEKLY_SUMMARY, WEEK_START)
     assert current is not None
     assert current.id == report.id
     assert current.status == "completed"
 
 
-def test_expected_submitters_exclude_student_and_admin(app):
-    report = app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
+async def test_expected_submitters_exclude_student_and_admin(app):
+    report = await app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
     names = {person["name"] for person in report.content["numbers"]["coverage"]["expected"]}
 
     assert "张顾问" in names
@@ -46,11 +46,11 @@ def test_expected_submitters_exclude_student_and_admin(app):
     assert len(names) == EXPECTED_STAFF_COUNT
 
 
-def test_draft_and_missing_count_as_unsubmitted(app, conn):
-    insert_daily_report(conn, employee_id=ZHANG, report_date=date(2025, 3, 11), status="submitted")
-    insert_daily_report(conn, employee_id=WANG, report_date=date(2025, 3, 11), status="draft")
+async def test_draft_and_missing_count_as_unsubmitted(app, db):
+    await insert_daily_report(db, employee_id=ZHANG, report_date=date(2025, 3, 11), status="submitted")
+    await insert_daily_report(db, employee_id=WANG, report_date=date(2025, 3, 11), status="draft")
 
-    report = app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
+    report = await app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
     coverage = report.content["numbers"]["coverage"]
     submitted_names = [item["name"] for item in coverage["submitted"]]
     missing_names = {item["name"] for item in coverage["missing"]}
@@ -62,19 +62,19 @@ def test_draft_and_missing_count_as_unsubmitted(app, conn):
     assert "张顾问" not in missing_names
 
 
-def test_empty_report_insight_narrates_nobody_submitted(app):
-    report = app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
+async def test_empty_report_insight_narrates_nobody_submitted(app):
+    report = await app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
 
     assert report.status == "completed"
     assert "无人提交日报" in report.content["insight"]["coverage_narrative"]
     assert report.content["insight"]["suggested_action"]
 
 
-def test_day_period_is_that_calendar_day(app, conn):
-    insert_daily_report(conn, employee_id=ZHANG, report_date=date(2025, 3, 11), status="submitted")
-    insert_daily_report(conn, employee_id=WANG, report_date=date(2025, 3, 12), status="submitted")
+async def test_day_period_is_that_calendar_day(app, db):
+    await insert_daily_report(db, employee_id=ZHANG, report_date=date(2025, 3, 11), status="submitted")
+    await insert_daily_report(db, employee_id=WANG, report_date=date(2025, 3, 12), status="submitted")
 
-    report = app.generate(KIND_DAILY_SUMMARY, date(2025, 3, 12))
+    report = await app.generate(KIND_DAILY_SUMMARY, date(2025, 3, 12))
     coverage = report.content["numbers"]["coverage"]
     submitted_names = [item["name"] for item in coverage["submitted"]]
 
@@ -83,11 +83,11 @@ def test_day_period_is_that_calendar_day(app, conn):
     assert submitted_names == ["王顾问"]
 
 
-def test_week_period_includes_each_day_in_the_grain(app, conn):
-    insert_daily_report(conn, employee_id=ZHANG, report_date=date(2025, 3, 11), status="submitted")
-    insert_daily_report(conn, employee_id=WANG, report_date=date(2025, 3, 12), status="submitted")
+async def test_week_period_includes_each_day_in_the_grain(app, db):
+    await insert_daily_report(db, employee_id=ZHANG, report_date=date(2025, 3, 11), status="submitted")
+    await insert_daily_report(db, employee_id=WANG, report_date=date(2025, 3, 12), status="submitted")
 
-    report = app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
+    report = await app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
     submitted_names = {item["name"] for item in report.content["numbers"]["coverage"]["submitted"]}
 
     assert report.period_start == date(2025, 3, 10)
@@ -96,91 +96,92 @@ def test_week_period_includes_each_day_in_the_grain(app, conn):
     assert report.content["numbers"]["coverage"]["submitted_count"] == 2
 
 
-def test_in_progress_week_ends_today_not_sunday(app):
-    report = app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
+async def test_in_progress_week_ends_today_not_sunday(app):
+    report = await app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
 
     assert report.period_start == date(2025, 3, 10)
     assert report.period_end == date(2025, 3, 12)
 
 
-def test_historical_week_is_monday_through_sunday(app):
-    report = app.generate(KIND_WEEKLY_SUMMARY, date(2025, 3, 3))
+async def test_historical_week_is_monday_through_sunday(app):
+    report = await app.generate(KIND_WEEKLY_SUMMARY, date(2025, 3, 3))
 
     assert report.period_start == date(2025, 3, 3)
     assert report.period_end == date(2025, 3, 9)
 
 
-def test_second_generate_replaces_previous_success_in_history(app):
-    first = app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
-    second = app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
+async def test_second_generate_replaces_previous_success_in_history(app):
+    first = await app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
+    second = await app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
 
     assert first.id != second.id
-    current = app.current(KIND_WEEKLY_SUMMARY, WEEK_START)
+    current = await app.current(KIND_WEEKLY_SUMMARY, WEEK_START)
     assert current.id == second.id
-    history = app.history(KIND_WEEKLY_SUMMARY)
+    history = await app.history(KIND_WEEKLY_SUMMARY)
     same_period = [item for item in history if item.period_start == WEEK_START]
     assert [item.id for item in same_period] == [second.id]
     assert first.id not in [item.id for item in history]
 
 
-def test_insight_failure_does_not_replace_current_report(app, conn, insight):
-    first = app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
+async def test_insight_failure_does_not_replace_current_report(app, db, insight):
+    first = await app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
     failing = ReportApplication(
-        conn=conn,
+        db=db,
         clock=FrozenClock(NOW),
         insight=FailingInsightAdapter(),
     )
 
-    failed = failing.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
+    failed = await failing.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
 
     assert failed.status == "failed"
     assert failed.error_message
-    current = failing.current(KIND_WEEKLY_SUMMARY, WEEK_START)
+    current = await failing.current(KIND_WEEKLY_SUMMARY, WEEK_START)
     assert current.id == first.id
     assert current.status == "completed"
 
 
-def test_history_can_open_an_older_period(app, conn):
-    insert_daily_report(conn, employee_id=ZHANG, report_date=date(2025, 3, 4), status="submitted")
-    older = app.generate(KIND_WEEKLY_SUMMARY, date(2025, 3, 3))
-    app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
+async def test_history_can_open_an_older_period(app, db):
+    await insert_daily_report(db, employee_id=ZHANG, report_date=date(2025, 3, 4), status="submitted")
+    older = await app.generate(KIND_WEEKLY_SUMMARY, date(2025, 3, 3))
+    await app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
 
-    found = next(item for item in app.history(KIND_WEEKLY_SUMMARY) if item.id == older.id)
+    history = await app.history(KIND_WEEKLY_SUMMARY)
+    found = next(item for item in history if item.id == older.id)
     assert found.period_start == date(2025, 3, 3)
     assert found.content["numbers"]["coverage"]["submitted_count"] == 1
     assert found.content["numbers"]["coverage"]["submitted"][0]["name"] == "张顾问"
 
 
-def test_current_still_finds_a_midweek_report_after_the_week_has_ended(conn, insight):
-    midweek = ReportApplication(conn=conn, clock=FrozenClock(NOW), insight=insight)
-    created = midweek.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
+async def test_current_still_finds_a_midweek_report_after_the_week_has_ended(db, insight):
+    midweek = ReportApplication(db=db, clock=FrozenClock(NOW), insight=insight)
+    created = await midweek.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
     later = ReportApplication(
-        conn=conn,
+        db=db,
         clock=FrozenClock(datetime(2025, 3, 17, 10, 0, tzinfo=SHANGHAI)),
         insight=insight,
     )
 
-    current = later.current(KIND_WEEKLY_SUMMARY, WEEK_START)
+    current = await later.current(KIND_WEEKLY_SUMMARY, WEEK_START)
 
     assert current is not None
     assert current.id == created.id
     assert current.period_end == date(2025, 3, 12)
 
 
-def test_insight_does_not_rewrite_coverage_counts(app, conn):
-    insert_daily_report(conn, employee_id=ZHANG, report_date=date(2025, 3, 11), status="submitted")
+async def test_insight_does_not_rewrite_coverage_counts(app, db):
+    await insert_daily_report(db, employee_id=ZHANG, report_date=date(2025, 3, 11), status="submitted")
 
-    report = app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
+    report = await app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
 
     assert report.content["numbers"]["coverage"]["submitted_count"] == 1
     assert report.content["numbers"]["coverage"]["expected_count"] == EXPECTED_STAFF_COUNT
     assert report.content["insight"] == FixedInsightAdapter().narrate(KIND_WEEKLY_SUMMARY, report.content["numbers"])
 
 
-def test_completed_report_has_fixed_chapters(app, conn):
-    insert_daily_report(conn, employee_id=ZHANG, report_date=date(2025, 3, 11), status="submitted")
+async def test_completed_report_has_fixed_chapters(app, db):
+    await insert_daily_report(db, employee_id=ZHANG, report_date=date(2025, 3, 11), status="submitted")
 
-    report = app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
+    report = await app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
     insight = report.content["insight"]
 
     assert "coverage" in report.content["numbers"]
@@ -191,11 +192,11 @@ def test_completed_report_has_fixed_chapters(app, conn):
     assert insight["suggested_action"]
 
 
-def test_totals_stay_full_when_insight_detail_exceeds_fifty(app, conn):
+async def test_totals_stay_full_when_insight_detail_exceeds_fifty(app, db):
     for index in range(40):
-        insert_staff(conn, username=f"rpt_cap_{index}", real_name=f"测试员{index}")
+        await insert_staff(db, username=f"rpt_cap_{index}", real_name=f"测试员{index}")
 
-    report = app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
+    report = await app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
     coverage = report.content["numbers"]["coverage"]
 
     assert coverage["expected_count"] == EXPECTED_STAFF_COUNT + 40
@@ -203,14 +204,14 @@ def test_totals_stay_full_when_insight_detail_exceeds_fifty(app, conn):
     assert coverage["submitted_count"] == 0
 
 
-def test_insight_payload_caps_detail_and_puts_missing_first(conn):
+async def test_insight_payload_caps_detail_and_puts_missing_first(db):
     recorder = _RecordingInsight()
-    app = ReportApplication(conn=conn, clock=FrozenClock(NOW), insight=recorder)
-    insert_daily_report(conn, employee_id=ZHANG, report_date=date(2025, 3, 11), status="submitted")
+    app = ReportApplication(db=db, clock=FrozenClock(NOW), insight=recorder)
+    await insert_daily_report(db, employee_id=ZHANG, report_date=date(2025, 3, 11), status="submitted")
     for index in range(40):
-        insert_staff(conn, username=f"rpt_miss_{index}", real_name=f"缺交员{index}")
+        await insert_staff(db, username=f"rpt_miss_{index}", real_name=f"缺交员{index}")
 
-    report = app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
+    report = await app.generate(KIND_WEEKLY_SUMMARY, WEEK_START)
     detail = recorder.payload["insight_detail"]
     coverage = report.content["numbers"]["coverage"]
 

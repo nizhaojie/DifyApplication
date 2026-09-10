@@ -6,20 +6,20 @@ import pytest
 import yaml
 from fastapi.testclient import TestClient
 from app.core.config import get_app_settings
-from app.db.session import SessionLocal
+from app.db.session import AsyncSessionLocal
 from app.main import app
 from app.modules.cs.schemas.schemas import ChatRequest
 from app.modules.cs.services.dify.dify_service import dify_service
 
 
 @pytest.fixture
-def db_session():
+async def db_session():
     """Yield database session and cleanup."""
-    session = SessionLocal()
+    session = AsyncSessionLocal()
     try:
         yield session
     finally:
-        session.close()
+        await session.close()
 
 
 @pytest.fixture
@@ -98,7 +98,7 @@ def test_dify_dsl_structure_validity():
     assert "防幻觉" in system_prompt or "虚假" in system_prompt
 
 
-def test_dify_service_execution_and_local_fallback(db_session):
+async def test_dify_service_execution_and_local_fallback(db_session):
     """Test dify_service dual-engine routing and graceful fallback to local engine."""
     chat_request = ChatRequest(
         message="请问德国双元制职业教育带薪实训每月津贴是多少？",
@@ -107,7 +107,7 @@ def test_dify_service_execution_and_local_fallback(db_session):
     )
 
     # When unconfigured or remote unreachable, should seamlessly process through local engine
-    outcome = dify_service.execute_chat_flow(chat_request, db_session)
+    outcome = await dify_service.execute_chat_flow(chat_request, db_session)
     assert outcome.session_id is not None
     assert len(outcome.reply) > 10
     assert outcome.intent_code in ["faq", "business_query", "dify_workflow", "company_inquiry"]

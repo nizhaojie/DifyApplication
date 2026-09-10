@@ -1,3 +1,3 @@
-from app.db.session import open_connection
+from app.db.session import AsyncSessionLocal, get_db
 
-__all__ = ["open_connection"]
+__all__ = ["AsyncSessionLocal", "get_db"]

@@ -12,7 +12,8 @@ rule_content JSON 约定：
 
 from dataclasses import dataclass, field
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.profile.models.pf import ProfileRule
 from app.modules.profile.schemas.profile import CustomerProfile
@@ -29,13 +30,17 @@ class ProductAssessment:
 
 
 class RuleEngine:
-    def __init__(self, db: Session):
-        self.rules: list[ProfileRule] = (
-            db.query(ProfileRule)
-            .filter(ProfileRule.status == 1)
+    def __init__(self, rules: list[ProfileRule]):
+        self.rules: list[ProfileRule] = rules
+
+    @classmethod
+    async def load(cls, db: AsyncSession) -> "RuleEngine":
+        result = await db.execute(
+            select(ProfileRule)
+            .where(ProfileRule.status == 1)
             .order_by(ProfileRule.priority.desc())
-            .all()
         )
+        return cls(list(result.scalars()))
 
     def evaluate(self, profile: CustomerProfile) -> list[ProductAssessment]:
         results = []

@@ -1,19 +1,17 @@
 """FastAPI dependency injection utilities."""
 
-from collections.abc import Iterator
-from typing import Generator
+from collections.abc import AsyncGenerator
 
 from fastapi import Depends, Header, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import InvalidTokenError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.exceptions import BizError
 from app.core.security import decode_token
-from app.db.session import get_database_session, get_db, get_sync_db, open_connection
+from app.db.session import AsyncSessionLocal, get_db
 from app.integrations.dify import DifyWorkflowInsightAdapter
 from app.modules.report.application import (
     KIND_COMPLAINT_WEEKLY,
@@ -82,31 +80,26 @@ async def get_actor(
     return user
 
 
-def get_conn() -> Iterator:
-    conn = open_connection()
-    try:
-        yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
-
-
-def get_report_app(conn=Depends(get_conn)) -> ReportApplication:
-    return ReportApplication(
-        conn=conn,
-        clock=ShanghaiClock(),
-        insight=DifyWorkflowInsightAdapter(
-            base_url=settings.dify_api_base,
-            api_keys={
-                KIND_CUSTOMER_OPS: settings.dify_customer_ops_api_key,
-                KIND_COMPLAINT_WEEKLY: settings.dify_complaint_weekly_api_key,
-                KIND_DAILY_SUMMARY: settings.dify_daily_summary_api_key,
-                KIND_WEEKLY_SUMMARY: settings.dify_daily_summary_api_key,
-                KIND_PSYCH_WEEKLY: settings.dify_psych_weekly_api_key,
-            },
-            timeout=settings.dify_timeout_seconds,
-        ),
-    )
+async def get_report_app() -> AsyncGenerator[ReportApplication, None]:
+    """Yield a ReportApplication bound to an async session with commit-on-success."""
+    async with AsyncSessionLocal() as session:
+        try:
+            yield ReportApplication(
+                db=session,
+                clock=ShanghaiClock(),
+                insight=DifyWorkflowInsightAdapter(
+                    base_url=settings.dify_api_base,
+                    api_keys={
+                        KIND_CUSTOMER_OPS: settings.dify_customer_ops_api_key,
+                        KIND_COMPLAINT_WEEKLY: settings.dify_complaint_weekly_api_key,
+                        KIND_DAILY_SUMMARY: settings.dify_daily_summary_api_key,
+                        KIND_WEEKLY_SUMMARY: settings.dify_daily_summary_api_key,
+                        KIND_PSYCH_WEEKLY: settings.dify_psych_weekly_api_key,
+                    },
+                    timeout=settings.dify_timeout_seconds,
+                ),
+            )
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise

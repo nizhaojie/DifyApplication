@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any
 
+from sqlalchemy import bindparam, text
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.modules.report.clock import SHANGHAI
 from app.modules.report.insight import InsightError
+from app.modules.report.models import ReportGeneration
 
 KIND_COMPLAINT_WEEKLY = "complaint_weekly"
 KIND_DAILY_SUMMARY = "daily_summary"
@@ -43,52 +48,56 @@ class Report:
 
 
 class ReportApplication:
-    def __init__(self, conn, clock, insight):
-        self._conn = conn
+    def __init__(self, db: AsyncSession, clock, insight):
+        self._db = db
         self._clock = clock
         self._insight = insight
 
-    def generate(self, kind: str, period_start: date) -> Report:
+    async def _fetch_rows(self, sql: str, params: dict | None = None) -> list[dict]:
+        """Execute a raw SQL query on the async session and return plain dict rows."""
+        result = await self._db.execute(text(sql), params or {})
+        return [dict(row) for row in result.mappings()]
+
+    async def generate(self, kind: str, period_start: date) -> Report:
         start, end = resolve_period(period_start, self._clock.now(), kind=kind)
         title = f"{TITLES[kind]} {start.isoformat()} ~ {end.isoformat()}"
-        report_id = self._insert_generating(kind, title, start, end)
+        report_id = await self._insert_generating(kind, title, start, end)
         try:
-            numbers = self._aggregate(kind, start, end)
-            insight = self._insight.narrate(kind, insight_payload(kind, numbers))
+            numbers = await self._aggregate(kind, start, end)
+            # 洞察适配器为同步接口（含最长 90s 的 Dify HTTP 调用），放线程池避免阻塞事件循环
+            insight = await asyncio.to_thread(
+                self._insight.narrate, kind, insight_payload(kind, numbers)
+            )
             content = {"numbers": numbers, "insight": insight}
-            self._finish(report_id, "completed", content, None)
+            await self._finish(report_id, "completed", content, None)
         except InsightError as exc:
-            self._finish(report_id, "failed", None, str(exc))
-        return self._get(report_id)
+            await self._finish(report_id, "failed", None, str(exc))
+        return await self._get(report_id)
 
-    def current(self, kind: str, period_start: date) -> Report | None:
+    async def current(self, kind: str, period_start: date) -> Report | None:
         start, _end = resolve_period(period_start, self._clock.now(), kind=kind)
-        with self._conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT * FROM report_generation
-                WHERE report_type = %s
-                  AND period_start = %s
-                  AND status = 'completed'
-                ORDER BY id DESC
-                LIMIT 1
-                """,
-                (kind, start),
-            )
-            row = cur.fetchone()
-        return _row_to_report(row) if row else None
+        rows = await self._fetch_rows(
+            """
+            SELECT * FROM report_generation
+            WHERE report_type = :kind
+              AND period_start = :start
+              AND status = 'completed'
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            {"kind": kind, "start": start},
+        )
+        return _row_to_report(rows[0]) if rows else None
 
-    def history(self, kind: str) -> list[Report]:
-        with self._conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT * FROM report_generation
-                WHERE report_type = %s AND status = 'completed'
-                ORDER BY id DESC
-                """,
-                (kind,),
-            )
-            rows = cur.fetchall()
+    async def history(self, kind: str) -> list[Report]:
+        rows = await self._fetch_rows(
+            """
+            SELECT * FROM report_generation
+            WHERE report_type = :kind AND status = 'completed'
+            ORDER BY id DESC
+            """,
+            {"kind": kind},
+        )
         latest_by_period: dict[date, Report] = {}
         for row in rows:
             report = _row_to_report(row)
@@ -100,50 +109,57 @@ class ReportApplication:
             reverse=True,
         )
 
-    def _insert_generating(self, kind: str, title: str, start: date, end: date) -> int:
-        with self._conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO report_generation
-                    (report_type, report_title, period_start, period_end, status)
-                VALUES (%s, %s, %s, %s, 'generating')
-                """,
-                (kind, title, start, end),
-            )
-            return cur.lastrowid
+    async def _insert_generating(self, kind: str, title: str, start: date, end: date) -> int:
+        record = ReportGeneration(
+            report_type=kind,
+            report_title=title,
+            period_start=start,
+            period_end=end,
+            status="generating",
+        )
+        self._db.add(record)
+        await self._db.flush()
+        return record.id
 
-    def _finish(self, report_id: int, status: str, content: dict | None, error: str | None) -> None:
-        payload = json.dumps(content, ensure_ascii=False) if content is not None else None
-        with self._conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE report_generation
-                SET status = %s, report_content = %s, error_message = %s
-                WHERE id = %s
-                """,
-                (status, payload, error, report_id),
-            )
+    async def _finish(self, report_id: int, status: str, content: dict | None, error: str | None) -> None:
+        record = await self._db.get(ReportGeneration, report_id)
+        if record is None:
+            return
+        record.status = status
+        record.report_content = content
+        record.error_message = error
 
-    def _get(self, report_id: int) -> Report:
-        with self._conn.cursor() as cur:
-            cur.execute("SELECT * FROM report_generation WHERE id = %s", (report_id,))
-            row = cur.fetchone()
-        if row is None:
+    async def _get(self, report_id: int) -> Report:
+        record = await self._db.get(ReportGeneration, report_id)
+        if record is None:
             raise RuntimeError(f"report {report_id} missing after write")
-        return _row_to_report(row)
+        content = record.report_content
+        if isinstance(content, str):
+            content = json.loads(content)
+        return Report(
+            id=record.id,
+            kind=record.report_type,
+            title=record.report_title,
+            period_start=record.period_start,
+            period_end=record.period_end,
+            status=record.status,
+            error_message=record.error_message,
+            content=content,
+            created_at=record.create_time,
+        )
 
-    def _aggregate(self, kind: str, start: date, end: date) -> dict[str, Any]:
+    async def _aggregate(self, kind: str, start: date, end: date) -> dict[str, Any]:
         if kind == KIND_CUSTOMER_OPS:
-            return self._aggregate_customer_ops(start, end)
+            return await self._aggregate_customer_ops(start, end)
         if kind in DAILY_SUMMARY_KINDS:
-            return self._aggregate_daily_summary(start, end)
+            return await self._aggregate_daily_summary(start, end)
         if kind == KIND_PSYCH_WEEKLY:
-            return self._aggregate_psych_weekly(start, end)
-        return self._aggregate_complaint_weekly(start, end)
+            return await self._aggregate_psych_weekly(start, end)
+        return await self._aggregate_complaint_weekly(start, end)
 
-    def _aggregate_customer_ops(self, start: date, end: date) -> dict[str, Any]:
-        leads = self._load_leads()
-        follow_ups = self._load_follow_ups()
+    async def _aggregate_customer_ops(self, start: date, end: date) -> dict[str, Any]:
+        leads = await self._load_leads()
+        follow_ups = await self._load_follow_ups()
         end_instant = period_end_instant(end, self._clock.now())
         existed_in_funnel = [lead for lead in leads if funnel_entry_date(lead) <= end]
         intent = [lead for lead in existed_in_funnel if lead["status"] in INTENT_STATUSES]
@@ -184,35 +200,31 @@ class ReportApplication:
             },
         }
 
-    def _load_leads(self) -> list[dict]:
-        with self._conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT id, customer_name, education_level, intended_country, source_channel,
-                       status, last_contact_time, lost_reason, create_time
-                FROM crm_lead
-                """
-            )
-            return list(cur.fetchall())
+    async def _load_leads(self) -> list[dict]:
+        return await self._fetch_rows(
+            """
+            SELECT id, customer_name, education_level, intended_country, source_channel,
+                   status, last_contact_time, lost_reason, create_time
+            FROM crm_lead
+            """
+        )
 
-    def _load_follow_ups(self) -> list[dict]:
-        with self._conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT id, lead_id, content, create_time
-                FROM crm_follow_up
-                ORDER BY create_time
-                """
-            )
-            return list(cur.fetchall())
+    async def _load_follow_ups(self) -> list[dict]:
+        return await self._fetch_rows(
+            """
+            SELECT id, lead_id, content, create_time
+            FROM crm_follow_up
+            ORDER BY create_time
+            """
+        )
 
-    def _aggregate_psych_weekly(self, start: date, end: date) -> dict[str, Any]:
-        records = self._load_psych_records(start, end)
+    async def _aggregate_psych_weekly(self, start: date, end: date) -> dict[str, Any]:
+        records = await self._load_psych_records(start, end)
         recorded_ids = {row["student_id"] for row in records}
         scores = [row["emotion_score"] for row in records if row["emotion_score"] is not None]
-        week_risk_students = week_risk_list(self._load_psych_alerts(), start, end)
-        watchlist_students = watchlist(self._load_psych_profiles())
-        approaching_nodes = approaching_node_list(self._load_academic_deadlines(), start, end)
+        week_risk_students = week_risk_list(await self._load_psych_alerts(), start, end)
+        watchlist_students = watchlist(await self._load_psych_profiles())
+        approaching_nodes = approaching_node_list(await self._load_academic_deadlines(), start, end)
         return {
             "recorded_student_count": len(recorded_ids),
             "emotion_tags": bucket_emotion_tags(records),
@@ -226,62 +238,54 @@ class ReportApplication:
             "approaching_nodes": approaching_nodes,
         }
 
-    def _load_psych_records(self, start: date, end: date) -> list[dict]:
-        with self._conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT r.student_id, r.emotion_tag, r.emotion_score, r.record_date,
-                       u.real_name
-                FROM student_psych_record r
-                JOIN sys_user u ON u.id = r.student_id
-                WHERE u.user_type = 'student'
-                  AND r.record_date BETWEEN %s AND %s
-                """,
-                (start, end),
-            )
-            return list(cur.fetchall())
+    async def _load_psych_records(self, start: date, end: date) -> list[dict]:
+        return await self._fetch_rows(
+            """
+            SELECT r.student_id, r.emotion_tag, r.emotion_score, r.record_date,
+                   u.real_name
+            FROM student_psych_record r
+            JOIN sys_user u ON u.id = r.student_id
+            WHERE u.user_type = 'student'
+              AND r.record_date BETWEEN :start AND :end
+            """,
+            {"start": start, "end": end},
+        )
 
-    def _load_psych_alerts(self) -> list[dict]:
-        with self._conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT a.student_id, a.risk_level, a.status, a.create_time,
-                       u.real_name, p.latest_emotion_tag
-                FROM student_psych_alert a
-                JOIN sys_user u ON u.id = a.student_id
-                LEFT JOIN student_psych_profile p ON p.student_id = a.student_id
-                WHERE u.user_type = 'student'
-                """
-            )
-            return list(cur.fetchall())
+    async def _load_psych_alerts(self) -> list[dict]:
+        return await self._fetch_rows(
+            """
+            SELECT a.student_id, a.risk_level, a.status, a.create_time,
+                   u.real_name, p.latest_emotion_tag
+            FROM student_psych_alert a
+            JOIN sys_user u ON u.id = a.student_id
+            LEFT JOIN student_psych_profile p ON p.student_id = a.student_id
+            WHERE u.user_type = 'student'
+            """
+        )
 
-    def _load_psych_profiles(self) -> list[dict]:
-        with self._conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT p.student_id, p.risk_level, p.latest_emotion_tag, u.real_name
-                FROM student_psych_profile p
-                JOIN sys_user u ON u.id = p.student_id
-                WHERE u.user_type = 'student'
-                """
-            )
-            return list(cur.fetchall())
+    async def _load_psych_profiles(self) -> list[dict]:
+        return await self._fetch_rows(
+            """
+            SELECT p.student_id, p.risk_level, p.latest_emotion_tag, u.real_name
+            FROM student_psych_profile p
+            JOIN sys_user u ON u.id = p.student_id
+            WHERE u.user_type = 'student'
+            """
+        )
 
-    def _load_academic_deadlines(self) -> list[dict]:
-        with self._conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT d.student_id, d.title, d.deadline, u.real_name
-                FROM academic_deadline d
-                JOIN sys_user u ON u.id = d.student_id
-                WHERE u.user_type = 'student'
-                """
-            )
-            return list(cur.fetchall())
+    async def _load_academic_deadlines(self) -> list[dict]:
+        return await self._fetch_rows(
+            """
+            SELECT d.student_id, d.title, d.deadline, u.real_name
+            FROM academic_deadline d
+            JOIN sys_user u ON u.id = d.student_id
+            WHERE u.user_type = 'student'
+            """
+        )
 
-    def _aggregate_daily_summary(self, start: date, end: date) -> dict[str, Any]:
-        expected = self._load_expected_submitters()
-        reports = self._load_daily_reports(start, end)
+    async def _aggregate_daily_summary(self, start: date, end: date) -> dict[str, Any]:
+        expected = await self._load_expected_submitters()
+        reports = await self._load_daily_reports(start, end)
         submitted = [
             {
                 "user_id": row["employee_id"],
@@ -307,37 +311,33 @@ class ReportApplication:
             }
         }
 
-    def _load_expected_submitters(self) -> list[dict]:
-        placeholders = ",".join(["%s"] * len(EXPECTED_ROLE_CODES))
-        with self._conn.cursor() as cur:
-            cur.execute(
-                f"""
-                SELECT u.id AS user_id, u.real_name AS name
-                FROM sys_user u
-                JOIN sys_role r ON r.id = u.role_id
-                WHERE r.role_code IN ({placeholders})
-                ORDER BY u.id
-                """,
-                EXPECTED_ROLE_CODES,
-            )
-            return list(cur.fetchall())
+    async def _load_expected_submitters(self) -> list[dict]:
+        stmt = text(
+            """
+            SELECT u.id AS user_id, u.real_name AS name
+            FROM sys_user u
+            JOIN sys_role r ON r.id = u.role_id
+            WHERE r.role_code IN :roles
+            ORDER BY u.id
+            """
+        ).bindparams(bindparam("roles", expanding=True))
+        result = await self._db.execute(stmt, {"roles": list(EXPECTED_ROLE_CODES)})
+        return [dict(row) for row in result.mappings()]
 
-    def _load_daily_reports(self, start: date, end: date) -> list[dict]:
-        with self._conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT d.employee_id, d.report_date, d.content, d.key_progress,
-                       d.risks, d.status, u.real_name
-                FROM employee_daily_report d
-                JOIN sys_user u ON u.id = d.employee_id
-                WHERE d.report_date BETWEEN %s AND %s
-                """,
-                (start, end),
-            )
-            return list(cur.fetchall())
+    async def _load_daily_reports(self, start: date, end: date) -> list[dict]:
+        return await self._fetch_rows(
+            """
+            SELECT d.employee_id, d.report_date, d.content, d.key_progress,
+                   d.risks, d.status, u.real_name
+            FROM employee_daily_report d
+            JOIN sys_user u ON u.id = d.employee_id
+            WHERE d.report_date BETWEEN :start AND :end
+            """,
+            {"start": start, "end": end},
+        )
 
-    def _aggregate_complaint_weekly(self, start: date, end: date) -> dict[str, Any]:
-        tickets = self._load_complaints()
+    async def _aggregate_complaint_weekly(self, start: date, end: date) -> dict[str, Any]:
+        tickets = await self._load_complaints()
         end_instant = period_end_instant(end, self._clock.now())
         period_tickets = [ticket for ticket in tickets if in_range(ticket, start, end)]
         prior_tickets = [
@@ -378,18 +378,16 @@ class ReportApplication:
             "satisfaction": satisfaction(period_tickets),
         }
 
-    def _load_complaints(self) -> list[dict]:
-        with self._conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT t.id, t.student_id, t.ticket_type, t.category, t.status,
-                       t.satisfaction, t.create_time, t.update_time, u.real_name
-                FROM student_feedback_ticket t
-                LEFT JOIN sys_user u ON u.id = t.student_id
-                WHERE t.ticket_type = 'complaint'
-                """
-            )
-            return list(cur.fetchall())
+    async def _load_complaints(self) -> list[dict]:
+        return await self._fetch_rows(
+            """
+            SELECT t.id, t.student_id, t.ticket_type, t.category, t.status,
+                   t.satisfaction, t.create_time, t.update_time, u.real_name
+            FROM student_feedback_ticket t
+            LEFT JOIN sys_user u ON u.id = t.student_id
+            WHERE t.ticket_type = 'complaint'
+            """
+        )
 
 
 def resolve_period(on_date: date, now: datetime, *, kind: str = KIND_COMPLAINT_WEEKLY) -> tuple[date, date]:

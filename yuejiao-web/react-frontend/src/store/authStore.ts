@@ -22,6 +22,8 @@ interface AuthState {
   logout: () => void
 }
 
+export const selectDisplayName = (state: AuthState) => state.user?.real_name || '未登录'
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   token: localStorage.getItem(TOKEN_KEY) || '',
   user: readUser(),

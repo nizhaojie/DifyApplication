@@ -31,7 +31,7 @@ const router = createRouter({
           path: 'cs',
           name: 'cs',
           component: () => import('@/views/cs/index.vue'),
-          meta: { title: '客服 Agent', hint: '空白模版。以后接咨询问答、荐课、活动报名。' },
+          meta: { title: '客服 Agent', hint: '正式聊天在右下角粤小蜜，本页不是对话入口。' },
         },
         {
           path: 'enterprise',

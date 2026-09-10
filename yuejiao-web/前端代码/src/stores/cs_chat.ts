@@ -123,6 +123,11 @@ export const useCsChatStore = defineStore('cs_chat', () => {
     is_open.value = !is_open.value
   }
 
+  function start_new_session(): void {
+    session.value = create_blank_session()
+    persist_session(session.value)
+  }
+
   function apply_reply_fields(
     pending_intent: PendingIntent,
     course_slots: CourseSlots,
@@ -148,12 +153,12 @@ export const useCsChatStore = defineStore('cs_chat', () => {
           user_text,
           session.value.session_id,
           session.value.dify_conversation_id,
-          (chunk_text) => {
+          (latest_text) => {
             if (!msg_box.current) {
               msg_box.current = create_message('assistant', '')
               session.value.messages.push(msg_box.current)
             }
-            msg_box.current.content += chunk_text
+            msg_box.current.content = latest_text
           },
         )
         if (msg_box.current) {
@@ -193,6 +198,7 @@ export const useCsChatStore = defineStore('cs_chat', () => {
     open_panel,
     close_panel,
     toggle_panel,
+    start_new_session,
     send_user_text,
   }
 })
