@@ -24,12 +24,12 @@ copy .env.example .env
 # mysql -u root -p yuejiao < ..\公用\表\db_init.sql
 # mysql -u root -p yuejiao < .\scripts\seed_enterprise_demo.sql
 
-uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
 ```
 
-打开 http://127.0.0.1:8001/docs
+打开 http://127.0.0.1:8002/docs
 
-演示账号：`emp01` / `123456`（李顾问）。Dify 在 Docker 里调本机，请用 `http://host.docker.internal:8001`，不要写 `127.0.0.1`。
+演示账号：`emp01` / `123456`（李顾问）。Dify 在 Docker 里调本机，请用 `http://host.docker.internal:8002`，不要写 `127.0.0.1`。
 
 ## 核心接口
 
