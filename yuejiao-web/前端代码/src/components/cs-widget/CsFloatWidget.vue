@@ -46,9 +46,14 @@ function submit_quick_question(label: string): void {
           <strong>粤小蜜</strong>
           <span>在线</span>
         </div>
-        <el-button text class="cs-close" aria-label="关闭客服窗口" @click="cs_chat.close_panel">
-          <el-icon :size="16"><Close /></el-icon>
-        </el-button>
+        <div class="cs-head-actions">
+          <el-button text class="cs-close" aria-label="开始新对话" @click="cs_chat.start_new_session">
+            新对话
+          </el-button>
+          <el-button text class="cs-close" aria-label="关闭客服窗口" @click="cs_chat.close_panel">
+            <el-icon :size="16"><Close /></el-icon>
+          </el-button>
+        </div>
       </header>
 
       <div ref="message_scroller" class="cs-messages">
@@ -168,6 +173,11 @@ function submit_quick_question(label: string): void {
 .cs-panel-head span {
   font-size: 12px;
   opacity: 0.85;
+}
+
+.cs-head-actions {
+  display: flex;
+  align-items: center;
 }
 
 .cs-close {

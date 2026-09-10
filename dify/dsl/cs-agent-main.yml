@@ -1,5 +1,5 @@
 app:
-  description: 粤教服务对外客服粤小蜜。七类咨询分流：知识问答走资料、荐课与报名多轮追问、其余模块只导流。
+  description: 粤教服务对外客服粤小蜜。七类咨询分流：公司/业务/政策/FAQ分库作答，荐课与报名多轮追问，其余模块只导流。
   icon: 🍯
   icon_background: '#C41E1E'
   icon_type: emoji
@@ -69,7 +69,7 @@ workflow:
       - id: intent-company
         source: intent_router
         sourceHandle: company_inquiry
-        target: llm_rag
+        target: llm_company
         targetHandle: target
         type: custom
         data:
@@ -80,7 +80,7 @@ workflow:
       - id: intent-business
         source: intent_router
         sourceHandle: business_query
-        target: llm_rag
+        target: llm_business
         targetHandle: target
         type: custom
         data:
@@ -91,7 +91,7 @@ workflow:
       - id: intent-policy
         source: intent_router
         sourceHandle: policy_query
-        target: llm_rag
+        target: llm_policy
         targetHandle: target
         type: custom
         data:
@@ -102,7 +102,7 @@ workflow:
       - id: intent-faq
         source: intent_router
         sourceHandle: faq
-        target: llm_rag
+        target: llm_faq
         targetHandle: target
         type: custom
         data:
@@ -209,10 +209,43 @@ workflow:
           targetType: answer
           isInIteration: false
           isInLoop: false
-      - id: llm_rag-answer
-        source: llm_rag
+      - id: llm_company-answer
+        source: llm_company
         sourceHandle: source
-        target: answer_rag
+        target: answer_company
+        targetHandle: target
+        type: custom
+        data:
+          sourceType: llm
+          targetType: answer
+          isInIteration: false
+          isInLoop: false
+      - id: llm_business-answer
+        source: llm_business
+        sourceHandle: source
+        target: answer_business
+        targetHandle: target
+        type: custom
+        data:
+          sourceType: llm
+          targetType: answer
+          isInIteration: false
+          isInLoop: false
+      - id: llm_policy-answer
+        source: llm_policy
+        sourceHandle: source
+        target: answer_policy
+        targetHandle: target
+        type: custom
+        data:
+          sourceType: llm
+          targetType: answer
+          isInIteration: false
+          isInLoop: false
+      - id: llm_faq-answer
+        source: llm_faq
+        sourceHandle: source
+        target: answer_faq
         targetHandle: target
         type: custom
         data:
@@ -334,10 +367,11 @@ workflow:
             - id: unclear
               name: 意图不清
           instruction: |
-            你是粤教服务客服粤小蜜的意图分类器。只判断当前这句话属于哪一类。
+            你是粤教服务客服粤小蜜的意图分类器。只判断当前这句话属于哪一类，不要回答问题。
             规则：
             - 问公司是谁、简称、划转、部门、事业部 → 公司信息咨询
-            - 问有哪些项目、2+2、国际班、中德计划、双元制、学制学费（项目本身） → 公司业务查询
+            - 问有哪些业务、有哪些项目、2+2、国际班、中德计划、双元制、项目学制学费 → 公司业务查询
+            - 「有哪些留学业务」必须走公司业务查询，不要走留学政策
             - 问国家官方政策、签证、APS、EP、PR、公立大学门槛、雅思托福官方要求 → 留学政策查询
             - 问咨询是否收费、退费、汇款账号、入学笔试面试 → 常见问题
             - 问我适合什么、推荐课程/项目 → 课程与项目推荐
@@ -358,88 +392,41 @@ workflow:
             mode: chat
             completion_params:
               temperature: 0.1
+              enable_thinking: false
           vision:
             enabled: false
           selected: false
         sourcePosition: right
         targetPosition: left
-      - id: llm_rag
+      - id: llm_company
         type: custom
         position:
           x: 720
-          y: 40
+          y: -80
         data:
           type: llm
-          title: 知识问答
-          desc: 公司 / 业务 / 政策 / FAQ，只根据资料回答
+          title: 公司信息
+          desc: 只答公司是谁、部门、主营
           model:
             provider: langgenius/tongyi/tongyi
             name: qwen3.5-flash
             mode: chat
             completion_params:
-              temperature: 0.2
-              max_tokens: 1024
+              temperature: 0.1
+              max_tokens: 280
+              enable_thinking: false
           prompt_template:
-            - id: rag-system
+            - id: company-system
               role: system
               text: |
-                你是粤教服务的客服「粤小蜜」。只根据【资料】回答，用简洁中文。不要输出思考过程，不要用 <think>。
-                当前分类：{{#intent_router.class_name#}}
-                规则：
-                1. 资料没有的数字、国家、退费比例，明确说没有，不能编。可接一句：欢迎补充学历、语言基础和目标方向，我按现有项目给你更贴合的建议。
-                2. 英国/美国/加拿大等政策：资料没有，拒绝编造，引导改问新加坡或德国。
-                3. 不要把 NUS/NTU 的雅思 6.5 安到公司 2+2 国际班头上。国际班简章未写雅思分数。
-                4. 先给直接答案，再补最多 3 条关键条件，结尾标明依据。
-                5. 只输出给访客看的正文。语气礼貌、不生硬。
+                你是粤小蜜。只用下面资料用中文回答公司是谁。3到6句，答完立刻停止。
+                禁止英文、禁止思考过程、禁止重复符号、禁止编造签证政策。
 
-                【资料】
-                ## 公司信息
-                公司简称粤教服务，全称广东省教育服务有限公司，创办于1981年。2024年3月划转至广东教育国际交流服务中心有限公司（粤教国际）。
+                资料：
+                简称粤教服务，全称广东省教育服务有限公司，创办于1981年。2024年3月划转至广东教育国际交流服务中心有限公司（粤教国际）。
                 主营：国际教育、智慧教育、素质教育、实体教育。国际教育含双元制、学历提升、国际留学、国际研学。
                 部门：双元制事业部、智能装备事业部、课后服务事业部、研学服务事业部、科技赛事事业部。
-                国际留学：与美英加澳新及欧洲、亚洲多国院校合作，提供院校匹配、材料指导、签证策略，口径称连续保持98%以上签证通过率。
-
-                ## 新加坡国际本硕升学计划
-                优势：入学门槛低、学制短、费用相对低、学历回国受教育部认证。
-                2+2新加坡定向培养本科班：应往届初中毕业生。国内两年（第一年学费75000元+学籍管理费50000元，第二年学费75000元）+ 新加坡两年（第三年0学费，第四年计算机约19500新币/约11万人民币，其他专业约16500新币/约10万人民币）。四年总计约30-31万人民币。第三年酒店运营6个月理论+6个月带薪实习，航空运营9+6，其他专业12个月理论。第四年直升本科，毕业获世界综合排名约200-500名大学证书。
-                2+2+1：初中起点，本科后再最快1年硕，可申新加坡、港澳内地、英美澳加 TOP200 硕士。
-                0.5/1+2：高二在读、应往届高中或中职中技。国内0.5/1年预科（学费100000元/年+学籍50000元）+新加坡两年（第二年0学费，第三年同上本科学费）。2.5/3年总计约25-26万人民币。
-                0.5/1+2+1：高中毕业后可直升一年硕。
-                一年制专升本 1-1.5 年；本升硕约1年。
-                6+6酒店运营、9+6航空运营大专就业班：职高中专中职技校，年满17岁，无语言要求。实习薪资口径6000-8000元/月，就业薪资口径15000元/月以上。
-                报名：提交材料→核查→笔试面试→缴第一年费用→Offer。笔试40%（英语+心理测评），面试60%（口语沟通合作态度）。
-                汇款：户名广东省教育服务有限公司，账号9550889900011455492，广发银行广州华夏路支行，备注「新加坡国际班+学生姓名」。
-
-                ## 中德精英人才共建计划
-                粤教服务项目。双元制：职业学校学理论 + 企业学技能，培训2-3.5年。
-                三大优势：省属教育国企直接签协议、银行全额低息贷款、全程保姆式服务。
-                报名：18-35岁，高中及以上，动手与逻辑能力强，无犯罪记录，有一定德语学习能力。
-                专业：医疗健康、机械制造、商贸会计、电子电器、汽车服务、酒店管理。
-                流程：预审签约缴费→面试和动手测试→国内考德语B1→匹配德国企业面试→收到职业培训合同后办签证→赴德落地、入职、职业学校、考IHK/HWK证书，可就业或升学。
-                特色：免学费、无学籍注册费。机电一体化津贴示例：第一年880欧/月、第二年950、第三年1030，三年约34320欧。完成后平均薪资约2100-3500欧/月。完成培训可申请德国大学，免德福、免APS。工作年限与永居以德国移民法原文为准，资料写连续工作五年可申请永居。
-                德语培训：线下封闭6-12个月通过欧标B1。
-
-                ## 新加坡留学政策（官方指南摘要，2026）
-                公立本科：高考需超当地一本线100-150分，热门专业更高；A-Level建议4A；IB建议39+/42；雅思6.5（单项≥6.0）或托福90。
-                公立硕士授课型：本科，985/211 GPA≥80，双非≥85-90；雅思6.5或托福90。
-                私立：高中毕业或高二结业，雅思5.5-6.0，需EduTrust认证院校。
-                学生签证：SOLAR+，申请费30新元+签发费60新元；中国学生审批约10个工作日。
-                国际学生公立本科年学费约3.1万-3.8万新币；MOE津贴本科约50%-70%，需签3年服务协议。
-                在校打工：学期内每周限16小时（需批准），假期可全职；18岁以下严禁校外兼职。
-                EP：2026年起非金融月薪门槛5600新元，金融6200新元。
-                PR：持有EP满1年可申请；名额上调口径见指南。资料没有的国家不要补充。
-
-                ## 德国留学政策（官方指南摘要，2026）
-                中国高中毕业生高考需达总分70%以上（750分制约525分）。211在读1学期、非211在读3学期可申请。德语授课需TestDaF 4×TDN4、DSH-2、Goethe C1/C2或telc C1；英语授课雅思6.0-7.0或托福80-100。
-                中国学生必须APS。审核约4-8周（材料）或8-12周（面谈）。
-                14个州公立免学费，每学期学期费150-400欧元。巴符州非欧盟每学期1500欧元。TUM本科每学期2000-3000欧元。
-                签证冻结账户每年11904欧元。学生可兼职每年140个全天或280个半天。
-                毕业后找工作签证18个月。欧盟蓝卡普通职业年薪≥50700欧元，紧缺职业≥45934欧元。
-                德国毕业生工作签证满2年、缴24个月养老保险、德语B1可申请永居。
-
-                ## FAQ
-                咨询免费。正式服务费签约时确认。资料没有退费比例，不能报数字。
-                新加坡国际班汇款账号见上。入学测试笔试40%面试60%。
+                国际留学口径：与多国院校合作，提供院校匹配、材料指导、签证策略，称连续保持98%以上签证通过率。
           context:
             enabled: false
             variable_selector: []
@@ -447,7 +434,152 @@ workflow:
             enabled: true
             window:
               enabled: true
-              size: 12
+              size: 6
+            query_prompt_template: '{{#sys.query#}}'
+            role_prefix:
+              user: ''
+              assistant: ''
+          vision:
+            enabled: false
+          selected: false
+        sourcePosition: right
+        targetPosition: left
+      - id: llm_business
+        type: custom
+        position:
+          x: 720
+          y: 80
+        data:
+          type: llm
+          title: 公司业务
+          desc: 只介绍两条产品线，不讲国家政策
+          model:
+            provider: langgenius/tongyi/tongyi
+            name: qwen3.5-flash
+            mode: chat
+            completion_params:
+              temperature: 0.1
+              max_tokens: 320
+              enable_thinking: false
+          prompt_template:
+            - id: business-system
+              role: system
+              text: |
+                你是粤小蜜。访客在问公司业务。只介绍下面两条产品线，一条都不能多，一条都不能少。
+                禁止把「新加坡留学政策」「德国留学政策」写成业务。
+                禁止把中德计划说成新加坡项目。禁止英文单词。禁止思考过程。答完立刻停止。
+
+                必须按这个结构回答（数字可按资料微调，产品线名称不得改）：
+                粤教服务对外主推两条产品线：
+                1. 新加坡国际本硕升学计划：面向初中到本科不同学历，含2+2（初中起点，四年约30-31万人民币）、0.5/1+2（高中或中职，约25-26万）、一年制专升本/本升硕，以及6+6酒店、9+6航空就业班。
+                2. 中德精英人才共建计划：德国双元制，不是新加坡项目。18-35岁、高中及以上；免学费；国内德语B1后赴德企业培训2-3.5年。
+
+                若还想了解签证、雅思、APS，请另问政策。
+          context:
+            enabled: false
+            variable_selector: []
+          memory:
+            enabled: true
+            window:
+              enabled: true
+              size: 4
+            query_prompt_template: '{{#sys.query#}}'
+            role_prefix:
+              user: ''
+              assistant: ''
+          vision:
+            enabled: false
+          selected: false
+        sourcePosition: right
+        targetPosition: left
+      - id: llm_policy
+        type: custom
+        position:
+          x: 720
+          y: 240
+        data:
+          type: llm
+          title: 留学政策
+          desc: 只答新德官方政策，不把公司项目当政策
+          model:
+            provider: langgenius/tongyi/tongyi
+            name: qwen3.5-flash
+            mode: chat
+            completion_params:
+              temperature: 0.1
+              max_tokens: 360
+              enable_thinking: false
+          prompt_template:
+            - id: policy-system
+              role: system
+              text: |
+                你是粤小蜜。只根据下面官方政策摘要用中文回答。先给直接答案，最多再补3条。结尾写依据。答完立刻停止。
+                禁止英文夹杂。禁止把公司2+2、中德计划的学费说成国家政策。禁止把NUS雅思6.5安到公司国际班头上。
+                英国美国加拿大：资料没有，明确说没有，引导改问新加坡或德国。
+
+                新加坡（2026指南）：
+                公立本科：高考超当地一本线100-150分；雅思6.5（单项不低于6.0）或托福90。
+                公立硕士授课型：本科，985/211 GPA不低于80，双非85-90；雅思6.5或托福90。
+                私立：高中毕业或高二结业，雅思5.5-6.0，需EduTrust院校。
+                学生签证SOLAR+：申请费30新元+签发费60新元。
+                EP：2026年起非金融月薪门槛5600新元，金融6200新元。
+
+                德国（2026指南）：
+                高考约需达总分70%（750分制约525分）。中国学生必须APS。
+                德语授课需TestDaF 4个TDN4或同等；英语授课雅思约6.0-7.0。
+                多数州公立免学费，学期费约150-400欧元。签证冻结账户每年11904欧元。
+          context:
+            enabled: false
+            variable_selector: []
+          memory:
+            enabled: true
+            window:
+              enabled: true
+              size: 6
+            query_prompt_template: '{{#sys.query#}}'
+            role_prefix:
+              user: ''
+              assistant: ''
+          vision:
+            enabled: false
+          selected: false
+        sourcePosition: right
+        targetPosition: left
+      - id: llm_faq
+        type: custom
+        position:
+          x: 720
+          y: 400
+        data:
+          type: llm
+          title: 常见问题
+          desc: 收费、退费、汇款、入学测试
+          model:
+            provider: langgenius/tongyi/tongyi
+            name: qwen3.5-flash
+            mode: chat
+            completion_params:
+              temperature: 0.1
+              max_tokens: 260
+              enable_thinking: false
+          prompt_template:
+            - id: faq-system
+              role: system
+              text: |
+                你是粤小蜜。只用下面FAQ用中文回答。3到6句，答完立刻停止。禁止英文，禁止编退费比例。
+
+                咨询免费。正式服务费签约时确认。资料没有退费比例，不能报数字，只能说按合同条款申请。
+                新加坡国际班汇款：户名广东省教育服务有限公司，账号9550889900011455492，广发银行广州华夏路支行，备注「新加坡国际班+学生姓名」。
+                入学测试：笔试40%（英语+心理测评），面试60%（口语沟通合作态度）。
+                报名流程：提交材料→核查→笔试面试→缴第一年费用→Offer。
+          context:
+            enabled: false
+            variable_selector: []
+          memory:
+            enabled: true
+            window:
+              enabled: true
+              size: 4
             query_prompt_template: '{{#sys.query#}}'
             role_prefix:
               user: ''
@@ -461,7 +593,7 @@ workflow:
         type: custom
         position:
           x: 720
-          y: 360
+          y: 560
         data:
           type: llm
           title: 课程推荐
@@ -471,111 +603,27 @@ workflow:
             name: qwen3.5-flash
             mode: chat
             completion_params:
-              temperature: 0.2
-              max_tokens: 700
+              temperature: 0.1
+              max_tokens: 320
+              enable_thinking: false
           prompt_template:
             - id: course-system
               role: system
               text: |
-                你是粤小蜜，做课程推荐。不要输出思考过程。
-                必填槽位：学历、意向国家（只认新加坡、德国）。预算可选。
-                缺学历就只问学历。有学历缺国家就只问新加坡还是德国。齐了再推荐，每次1-2个项目，必须来自下面清单，不准发明项目名。
-                访客说英国美国等：说明对外主推新加坡国际本硕和中德精英计划，其他国家课程表没有。
+                你是粤小蜜，做课程推荐。只用中文。不要思考过程。答完立刻停止。
+                必填：学历、意向国家（只认新加坡、德国）。预算可选。
+                缺学历只问学历。有学历缺国家只问新加坡还是德国。齐了才推荐，每次1到2个，名称必须来自清单。
+                英国美国等：说明只主推新加坡国际本硕和中德精英计划。
                 匹配：
-                - 初中 + 新加坡 → 2+2新加坡定向培养本科班（四年约30-31万），可顺带提 2+2+1
-                - 初中 + 德国 → 中德要求高中及以上，说明原因，可引导新加坡2+2
-                - 高中/中职/职高 + 新加坡 → 0.5/1+2（约25-26万）；职高可加 6+6酒店或9+6航空
-                - 高中/中职 + 德国 → 中德精英人才共建计划（18-35岁，免学费）
-                - 大专 + 新加坡 → 一年制专升本
-                - 本科 + 新加坡 → 一年制本升硕
-                - 大专或本科 + 德国 → 中德（年龄符合时）
-                - 硕士/博士 → 资料没有在办博士项目，承认没有
-                推荐后问要不要听对应说明会。纯文字，不要卡片。
-          context:
-            enabled: false
-            variable_selector: []
-          memory:
-            enabled: true
-            window:
-              enabled: true
-              size: 12
-            query_prompt_template: '{{#sys.query#}}'
-            role_prefix:
-              user: ''
-              assistant: ''
-          vision:
-            enabled: false
-          selected: false
-        sourcePosition: right
-        targetPosition: left
-      - id: llm_event
-        type: custom
-        position:
-          x: 720
-          y: 560
-        data:
-          type: llm
-          title: 活动报名
-          desc: 活动、姓名、联系方式未齐先追问
-          model:
-            provider: langgenius/tongyi/tongyi
-            name: qwen3.5-flash
-            mode: chat
-            completion_params:
-              temperature: 0.2
-              max_tokens: 500
-          prompt_template:
-            - id: event-system
-              role: system
-              text: |
-                你是粤小蜜，协助讲座报名。不要输出思考过程。不要假装已经写入数据库。
-                当前可介绍的场次：
-                1. 新加坡国际本硕升学分享会（线上，本周六 19:00）
-                2. 中德精英人才共建计划说明会（线下广州，下周三 14:30）
-                没有英国讲座。
-                槽位：哪一场、姓名、手机或邮箱。缺什么问什么，一次只问一项。
-                访客回1或2就对应上面两场。
-                三槽都齐后回复：已记下姓名、联系方式和场次，正式报名以后会写入后台，现在还没有落库。
-          context:
-            enabled: false
-            variable_selector: []
-          memory:
-            enabled: true
-            window:
-              enabled: true
-              size: 12
-            query_prompt_template: '{{#sys.query#}}'
-            role_prefix:
-              user: ''
-              assistant: ''
-          vision:
-            enabled: false
-          selected: false
-        sourcePosition: right
-        targetPosition: left
-      - id: llm_casual
-        type: custom
-        position:
-          x: 720
-          y: 760
-        data:
-          type: llm
-          title: 闲聊
-          desc: 轻量陪聊，不编政策
-          model:
-            provider: langgenius/tongyi/tongyi
-            name: qwen3.5-flash
-            mode: chat
-            completion_params:
-              temperature: 0.7
-              max_tokens: 300
-          prompt_template:
-            - id: casual-system
-              role: system
-              text: |
-                你是粤小蜜，粤教服务在线顾问。用1到3句自然中文。不要编政策、学费、名额。不要输出思考过程。
-                天气、打招呼等轻松闲聊：先诚实说查不到，再轻轻问新加坡/德国项目或讲座。
-                若访客流露出压力、疲惫、焦虑：先接住情绪（一两句关心即可），不要做心理咨询，不要冷冰冰地推菜单。然后邀请补充学历、语言基础和目标方向，方便给更贴合的项目建议。需要专门心理支持时，再提左侧学生助手。
+                - 初中+新加坡 → 2+2新加坡定向培养本科班（四年约30-31万），可提2+2+1
+                - 初中+德国 → 中德要求高中及以上，说明原因，可引导新加坡2+2
+                - 高中/中职+新加坡 → 0.5/1+2（约25-26万）；职高可加6+6酒店或9+6航空
+                - 高中/中职+德国 → 中德精英人才共建计划（18-35岁，免学费）
+                - 大专+新加坡 → 一年制专升本
+                - 本科+新加坡 → 一年制本升硕
+                - 大专或本科+德国 → 中德（年龄符合时）
+                - 硕士/博士 → 没有在办博士项目，承认没有
+                推荐后问要不要听说明会。纯文字。
           context:
             enabled: false
             variable_selector: []
@@ -593,16 +641,142 @@ workflow:
           selected: false
         sourcePosition: right
         targetPosition: left
-      - id: answer_rag
+      - id: llm_event
+        type: custom
+        position:
+          x: 720
+          y: 720
+        data:
+          type: llm
+          title: 活动报名
+          desc: 活动、姓名、联系方式未齐先追问
+          model:
+            provider: langgenius/tongyi/tongyi
+            name: qwen3.5-flash
+            mode: chat
+            completion_params:
+              temperature: 0.1
+              max_tokens: 220
+              enable_thinking: false
+          prompt_template:
+            - id: event-system
+              role: system
+              text: |
+                你是粤小蜜，协助讲座报名。只用中文。不要思考过程。不要假装已写入数据库。答完立刻停止。
+                场次只有两场：
+                1. 新加坡国际本硕升学分享会（线上，本周六 19:00）
+                2. 中德精英人才共建计划说明会（线下广州，下周三 14:30）
+                没有英国讲座。缺场次、姓名、手机或邮箱时一次只问一项。回1或2就对应上面两场。
+                三槽都齐：已记下姓名、联系方式和场次，正式报名以后会写入后台，现在还没有落库。
+          context:
+            enabled: false
+            variable_selector: []
+          memory:
+            enabled: true
+            window:
+              enabled: true
+              size: 8
+            query_prompt_template: '{{#sys.query#}}'
+            role_prefix:
+              user: ''
+              assistant: ''
+          vision:
+            enabled: false
+          selected: false
+        sourcePosition: right
+        targetPosition: left
+      - id: llm_casual
+        type: custom
+        position:
+          x: 720
+          y: 880
+        data:
+          type: llm
+          title: 闲聊
+          desc: 轻量陪聊，不编政策
+          model:
+            provider: langgenius/tongyi/tongyi
+            name: qwen3.5-flash
+            mode: chat
+            completion_params:
+              temperature: 0.4
+              max_tokens: 120
+              enable_thinking: false
+          prompt_template:
+            - id: casual-system
+              role: system
+              text: |
+                你是粤小蜜。1到3句中文。不要编政策学费。不要思考过程。不要重复符号。
+                天气打招呼：先说查不到实时天气，再问要不要了解新加坡或德国项目。
+          context:
+            enabled: false
+            variable_selector: []
+          memory:
+            enabled: true
+            window:
+              enabled: true
+              size: 4
+            query_prompt_template: '{{#sys.query#}}'
+            role_prefix:
+              user: ''
+              assistant: ''
+          vision:
+            enabled: false
+          selected: false
+        sourcePosition: right
+        targetPosition: left
+      - id: answer_company
         type: custom
         position:
           x: 1080
-          y: 40
+          y: -80
         data:
           type: answer
-          title: 回复知识问答
+          title: 回复公司信息
           desc: ''
-          answer: '{{#llm_rag.text#}}'
+          answer: '{{#llm_company.text#}}'
+          variables: []
+          selected: false
+        sourcePosition: right
+        targetPosition: left
+      - id: answer_business
+        type: custom
+        position:
+          x: 1080
+          y: 80
+        data:
+          type: answer
+          title: 回复公司业务
+          desc: ''
+          answer: '{{#llm_business.text#}}'
+          variables: []
+          selected: false
+        sourcePosition: right
+        targetPosition: left
+      - id: answer_policy
+        type: custom
+        position:
+          x: 1080
+          y: 240
+        data:
+          type: answer
+          title: 回复留学政策
+          desc: ''
+          answer: '{{#llm_policy.text#}}'
+          variables: []
+          selected: false
+        sourcePosition: right
+        targetPosition: left
+      - id: answer_faq
+        type: custom
+        position:
+          x: 1080
+          y: 400
+        data:
+          type: answer
+          title: 回复常见问题
+          desc: ''
+          answer: '{{#llm_faq.text#}}'
           variables: []
           selected: false
         sourcePosition: right
@@ -611,7 +785,7 @@ workflow:
         type: custom
         position:
           x: 1080
-          y: 360
+          y: 560
         data:
           type: answer
           title: 回复荐课
@@ -625,7 +799,7 @@ workflow:
         type: custom
         position:
           x: 1080
-          y: 560
+          y: 720
         data:
           type: answer
           title: 回复报名
@@ -639,7 +813,7 @@ workflow:
         type: custom
         position:
           x: 1080
-          y: 760
+          y: 880
         data:
           type: answer
           title: 回复闲聊
@@ -653,7 +827,7 @@ workflow:
         type: custom
         position:
           x: 720
-          y: 860
+          y: 1040
         data:
           type: answer
           title: 情绪安抚
@@ -667,7 +841,7 @@ workflow:
         type: custom
         position:
           x: 720
-          y: 960
+          y: 1180
         data:
           type: answer
           title: 导流学生助手
@@ -681,7 +855,7 @@ workflow:
         type: custom
         position:
           x: 720
-          y: 1120
+          y: 1320
         data:
           type: answer
           title: 导流企业助手
@@ -695,7 +869,7 @@ workflow:
         type: custom
         position:
           x: 720
-          y: 1280
+          y: 1460
         data:
           type: answer
           title: 导流客户研判
@@ -709,7 +883,7 @@ workflow:
         type: custom
         position:
           x: 720
-          y: 1440
+          y: 1600
         data:
           type: answer
           title: 导流智能报告
@@ -723,7 +897,7 @@ workflow:
         type: custom
         position:
           x: 720
-          y: 1600
+          y: 1740
         data:
           type: answer
           title: 澄清意图
