@@ -11,6 +11,7 @@ import type { LucideIcon } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { CommandPalette, type CommandEntry } from '@/ui/CommandPalette'
 import { ConfirmProvider } from '@/ui/ConfirmProvider'
+import { CsFloatWidget } from '@/components/cs/CsFloatWidget'
 
 interface NavItem {
   to: string
@@ -255,6 +256,7 @@ export function AdminLayout() {
       </div>
 
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} entries={commandEntries} />
+      <CsFloatWidget />
     </div>
   )
 }

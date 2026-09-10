@@ -1,0 +1,213 @@
+/* 粤小蜜悬浮球:布局尺寸对齐 Vue 版 CsFloatWidget.vue,配色改用项目 tokens(EP 主色 → --brand) */
+
+.cs-widget {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 2000;
+}
+
+.cs-ball {
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(13, 148, 136, 0.35);
+  transition: background 0.15s ease;
+}
+
+.cs-ball:hover {
+  background: var(--brand-strong);
+}
+
+.cs-panel {
+  position: absolute;
+  right: 0;
+  bottom: 68px;
+  width: 360px;
+  height: 520px;
+  background: var(--surface);
+  border: 1px solid var(--border, #e4e7ed);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 21, 41, 0.16);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cs-panel-head {
+  height: 52px;
+  padding: 0 8px 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--brand);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.cs-panel-head strong {
+  font-size: 15px;
+  margin-right: 8px;
+}
+
+.cs-panel-head span {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.cs-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.cs-text-btn {
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 13px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.cs-text-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.cs-messages {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+  background: var(--surface-2);
+}
+
+.cs-row {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.cs-row.is-user {
+  justify-content: flex-end;
+}
+
+.cs-bubble {
+  max-width: 82%;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.is-assistant .cs-bubble {
+  background: var(--surface);
+  border: 1px solid var(--border, #ebeef5);
+  color: var(--text-1, #303133);
+  min-height: 1em;
+}
+
+.is-user .cs-bubble {
+  background: var(--brand);
+  color: #fff;
+}
+
+.cs-typing {
+  font-size: 12px;
+  color: var(--text-4, #909399);
+  padding: 4px 8px;
+}
+
+.cs-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.cs-quick-btn {
+  border: 1px dashed var(--border-strong, #d3d4d6);
+  background: var(--surface);
+  color: var(--text-2, #606266);
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.cs-quick-btn:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.cs-composer {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  padding: 10px;
+  border-top: 1px solid var(--border, #e4e7ed);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.cs-composer textarea {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--border, #dcdfe6);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  line-height: 1.5;
+  color: var(--text-1, #303133);
+  background: var(--surface);
+}
+
+.cs-composer textarea:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+.cs-send {
+  border: 0;
+  border-radius: 8px;
+  background: var(--brand);
+  color: #fff;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.cs-send:hover:not(:disabled) {
+  background: var(--brand-strong);
+}
+
+.cs-send:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 400px) {
+  .cs-widget {
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .cs-panel {
+    width: min(360px, calc(100vw - 24px));
+    height: min(520px, calc(100vh - 88px));
+  }
+}
