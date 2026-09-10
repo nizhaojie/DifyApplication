@@ -1,7 +1,7 @@
 // 等价移植自 antd 版 DailySummaryPage(源自 Vue daily-summary.vue):
 // 粒度单选(本周/今日)切换重置日期与 kind(weekly_summary/daily_summary),
 // watch([kind, periodStart]) 自动 loadCurrent;历史合并周/日两类并按 id 倒序。
-// antd Radio.Group → gqk Segmented;DatePicker → .period-control 假壳 + 原生 date input。
+// antd Radio.Group → gqk Segmented;DatePicker → .period-control 假壳 + 原生 date input(禁选未来日期)。
 import { useEffect, useRef, useState } from 'react'
 import { AlertCircle, CalendarDays, FileBarChart, LoaderCircle, Sparkles, X } from 'lucide-react'
 import {
@@ -25,6 +25,7 @@ import {
 import './report.css'
 
 type PeriodGrain = 'week' | 'day'
+
 
 export function DailySummaryPage() {
   const [periodGrain, setPeriodGrain] = useState<PeriodGrain>('week')
@@ -152,6 +153,7 @@ export function DailySummaryPage() {
                 <input
                   className="period-picker"
                   type="date"
+                  max={shanghaiIsoDate()}
                   value={shanghaiIsoDate(selectedDate)}
                   onChange={onPickDate}
                   aria-label="选择周期"
@@ -166,6 +168,7 @@ export function DailySummaryPage() {
                 <input
                   className="period-picker"
                   type="date"
+                  max={shanghaiIsoDate()}
                   value={shanghaiIsoDate(selectedDate)}
                   onChange={onPickDate}
                   aria-label="选择日期"

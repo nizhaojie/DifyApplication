@@ -1,6 +1,6 @@
 // 等价移植自 antd 版 CustomerOpsPage(源自 Vue customer-ops.vue):
 // 章节(总览/意向/成交/流失/建议动作)、numbers 与 insight 键、文案逐字照搬。
-// antd DatePicker picker="week" → 周期假壳(.period-control)+原生 date input,选任意日期
+// antd DatePicker picker="week" → 周期假壳(.period-control)+原生 date input(禁选未来日期)
 // 后经 resolveWeekPeriod 解析为所在周(周一为首);数据层 API 与 src/api/report.ts 一致。
 import { useEffect, useState } from 'react'
 import { AlertCircle, CalendarDays, FileBarChart, LoaderCircle, Sparkles, X } from 'lucide-react'
@@ -26,6 +26,7 @@ const STATUS_LABEL: Record<string, string> = {
   signed: '已成交',
   lost: '已流失',
 }
+
 
 export function CustomerOpsPage() {
   const [weekDate, setWeekDate] = useState<Date>(() => shanghaiDate())
@@ -150,6 +151,7 @@ export function CustomerOpsPage() {
               <input
                 className="period-picker"
                 type="date"
+                max={shanghaiIsoDate()}
                 value={shanghaiIsoDate(weekDate)}
                 onChange={onPickWeek}
                 aria-label="选择周期"

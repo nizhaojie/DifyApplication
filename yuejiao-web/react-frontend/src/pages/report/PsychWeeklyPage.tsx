@@ -29,6 +29,7 @@ const RISK_TABLE_COLUMNS = [
   { key: 'emotion_tag', label: '情绪标签' },
 ]
 
+
 export function PsychWeeklyPage() {
   const [weekDate, setWeekDate] = useState<Date>(() => shanghaiDate())
   const [isGenerating, setIsGenerating] = useState(false)
@@ -136,6 +137,7 @@ export function PsychWeeklyPage() {
               <input
                 className="period-picker"
                 type="date"
+                max={shanghaiIsoDate()}
                 value={shanghaiIsoDate(weekDate)}
                 onChange={onPickWeek}
                 aria-label="选择周期"

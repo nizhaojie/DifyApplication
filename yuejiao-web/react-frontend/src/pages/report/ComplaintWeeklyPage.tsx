@@ -17,6 +17,7 @@ import './report.css'
 
 const KIND = 'complaint_weekly' as const
 
+
 export function ComplaintWeeklyPage() {
   const [weekDate, setWeekDate] = useState<Date>(() => shanghaiDate())
   const [generating, setGenerating] = useState(false)
@@ -113,6 +114,7 @@ export function ComplaintWeeklyPage() {
               <input
                 className="period-picker"
                 type="date"
+                max={shanghaiIsoDate()}
                 value={shanghaiIsoDate(weekDate)}
                 onChange={onPickWeek}
                 aria-label="选择周期"
