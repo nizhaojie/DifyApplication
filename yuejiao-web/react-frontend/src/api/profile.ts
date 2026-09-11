@@ -31,6 +31,79 @@ export interface ProfileRecord {
   create_time: string | null
 }
 
+// ---------- 设置页 · 研判规则（产品线）管理 ----------
+
+export interface RuleCondition {
+  field: string
+  op: string
+  value?: unknown
+  weight?: number
+  label?: string | null
+}
+
+export interface RuleThresholds {
+  matched?: number
+  partial?: number
+}
+
+export interface RuleProgramMapEntry {
+  match: Record<string, unknown>
+  programs: string[]
+  category?: string | null
+  rationale?: string | null
+}
+
+export interface RuleContent {
+  conditions: RuleCondition[]
+  thresholds?: RuleThresholds
+  program_map?: RuleProgramMapEntry[]
+}
+
+export interface ProfileRule {
+  id: number
+  product_line: string
+  rule_name: string
+  rule_content: RuleContent
+  match_prompt: string | null
+  priority: number
+  status: number
+  create_time: string | null
+  update_time: string | null
+}
+
+export type ProfileRulePayload = {
+  product_line: string
+  rule_name: string
+  rule_content: RuleContent
+  match_prompt: string | null
+  priority: number
+  status: number
+}
+
+export async function fetchRules(params?: { status?: number; product_line?: string }) {
+  const { data } = await http.get<Envelope<ProfileRule[]>>(`${BASE}/rules`, { params })
+  return data.data || []
+}
+
+export async function createRule(payload: ProfileRulePayload) {
+  const { data } = await http.post<Envelope<ProfileRule>>(`${BASE}/rules`, payload)
+  return data.data
+}
+
+export async function updateRule(id: number, payload: Partial<ProfileRulePayload>) {
+  const { data } = await http.put<Envelope<ProfileRule>>(`${BASE}/rules/${id}`, payload)
+  return data.data
+}
+
+export async function setRuleStatus(id: number, status: 0 | 1) {
+  const { data } = await http.patch<Envelope<ProfileRule>>(`${BASE}/rules/${id}/status`, { status })
+  return data.data
+}
+
+export async function deleteRule(id: number) {
+  await http.delete<Envelope<{ id: number; deleted: boolean }>>(`${BASE}/rules/${id}`)
+}
+
 const BASE = '/api/v1/profile'
 
 export async function assessByText(text: string) {

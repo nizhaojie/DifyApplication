@@ -5,6 +5,7 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -80,6 +81,17 @@ app.add_middleware(
 @app.exception_handler(BizError)
 async def biz_error_handler(_: Request, exc: BizError) -> JSONResponse:
     return JSONResponse(fail(exc.message, code=exc.code))
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
+    """422 也走统一 Envelope，前端 toast 才能读到可读文案（取第一条错误）。"""
+    errors = exc.errors()
+    first = errors[0] if errors else None
+    msg = (first.get("msg") or "参数校验失败") if first else "参数校验失败"
+    msg = msg.removeprefix("Value error, ")
+    loc = ".".join(str(p) for p in first.get("loc", [])[1:]) if first else ""
+    return JSONResponse(fail(f"{loc}：{msg}" if loc else msg, code=422), status_code=422)
 
 
 @app.get("/health", summary="Health Check")

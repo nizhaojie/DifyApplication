@@ -3,6 +3,14 @@
 POST /profile/assess        研判（三路输入任选其一：text / file / profile）
 GET  /profile/profiles      研判记录列表（分页 + 过滤）
 GET  /profile/profiles/{id} 研判记录详情（重新跑规则引擎填充 assessments）
+
+设置页 · 研判规则（产品线）管理：
+GET    /profile/rules                规则列表（可按 status / product_line 过滤）
+POST   /profile/rules                新增规则
+GET    /profile/rules/{rule_id}      规则详情
+PUT    /profile/rules/{rule_id}      更新规则（部分更新）
+PATCH  /profile/rules/{rule_id}/status 启用 / 禁用
+DELETE /profile/rules/{rule_id}      删除规则
 """
 
 import json
@@ -14,12 +22,28 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user, get_db
 from app.core.response import fail, ok
 from app.modules.profile.schemas.assess import AssessResponse, ProfileOut
+from app.modules.profile.schemas.rule import RuleIn, RuleOut, RuleStatusIn, RuleUpdate
 from app.modules.profile.services.assess_service import AssessService
+from app.modules.profile.services.rule_admin import RuleAdminService
 from app.modules.profile.services.rule_engine import RuleEngine
 from app.modules.profile.services.normalize import normalize_from_raw
 from app.modules.system.models.user import SysUser
 
 router = APIRouter(prefix="/profile", tags=["客户研判"])
+
+
+def _rule_out(rule) -> dict:
+    return RuleOut(
+        id=rule.id,
+        product_line=rule.product_line,
+        rule_name=rule.rule_name,
+        rule_content=rule.rule_content or {},
+        match_prompt=rule.match_prompt,
+        priority=rule.priority,
+        status=rule.status,
+        create_time=str(rule.create_time) if rule.create_time else None,
+        update_time=str(rule.update_time) if rule.update_time else None,
+    ).model_dump(mode="json")
 
 
 @router.post("/assess", summary="客户研判（文本 / PDF 简历 / Excel / 结构化 profile）")
@@ -126,3 +150,79 @@ async def get_profile(
         assessments=assessments,
     )
     return ok(res.model_dump(mode="json"))
+
+
+# ---------- 设置页 · 研判规则（产品线）管理 ----------
+
+
+@router.get("/rules", summary="研判规则列表（设置页）")
+async def list_rules(
+    status: int | None = None,
+    product_line: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    user: SysUser = Depends(get_current_user),
+):
+    svc = RuleAdminService(db)
+    rules = await svc.list_rules(status=status, product_line=product_line)
+    items = [_rule_out(r) for r in rules]
+    return ok(items, total=len(items))
+
+
+@router.post("/rules", summary="新增研判规则（产品线）")
+async def create_rule(
+    data: RuleIn,
+    db: AsyncSession = Depends(get_db),
+    user: SysUser = Depends(get_current_user),
+):
+    rule = await RuleAdminService(db).create_rule(data)
+    return ok(_rule_out(rule))
+
+
+@router.get("/rules/{rule_id}", summary="研判规则详情")
+async def get_rule(
+    rule_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: SysUser = Depends(get_current_user),
+):
+    rule = await RuleAdminService(db).get_rule(rule_id)
+    if not rule:
+        return fail("未找到该研判规则", code=404)
+    return ok(_rule_out(rule))
+
+
+@router.put("/rules/{rule_id}", summary="更新研判规则")
+async def update_rule(
+    rule_id: int,
+    data: RuleUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: SysUser = Depends(get_current_user),
+):
+    rule = await RuleAdminService(db).update_rule(rule_id, data)
+    if not rule:
+        return fail("未找到该研判规则", code=404)
+    return ok(_rule_out(rule))
+
+
+@router.patch("/rules/{rule_id}/status", summary="启用 / 禁用研判规则")
+async def set_rule_status(
+    rule_id: int,
+    data: RuleStatusIn,
+    db: AsyncSession = Depends(get_db),
+    user: SysUser = Depends(get_current_user),
+):
+    rule = await RuleAdminService(db).set_status(rule_id, data.status)
+    if not rule:
+        return fail("未找到该研判规则", code=404)
+    return ok(_rule_out(rule))
+
+
+@router.delete("/rules/{rule_id}", summary="删除研判规则")
+async def delete_rule(
+    rule_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: SysUser = Depends(get_current_user),
+):
+    removed = await RuleAdminService(db).delete_rule(rule_id)
+    if not removed:
+        return fail("未找到该研判规则", code=404)
+    return ok({"id": rule_id, "deleted": True})

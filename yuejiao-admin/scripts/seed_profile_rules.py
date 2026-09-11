@@ -2,7 +2,7 @@
 
 运行（先跑 scripts/init_db.py 建表）：
     PYTHONPATH=. .venv/bin/python scripts/seed_profile_rules.py
-幂等：按 product_line 先删后插。
+幂等：按 product_line 存在即跳过，不覆盖设置页里的手工修改。
 """
 
 import os
@@ -130,8 +130,13 @@ def seed():
     engine = create_engine(settings.sync_database_url, pool_pre_ping=True)
     db = sessionmaker(bind=engine, autocommit=False, autoflush=False)()
     try:
+        # 存在即跳过：设置页上线后规则可能被手工修改，重跑 seed 不得覆盖
+        created, skipped = [], []
         for r in RULES:
-            db.query(ProfileRule).filter(ProfileRule.product_line == r["product_line"]).delete()
+            exists = db.query(ProfileRule).filter(ProfileRule.product_line == r["product_line"]).first()
+            if exists:
+                skipped.append(r["product_line"])
+                continue
             db.add(ProfileRule(
                 product_line=r["product_line"],
                 rule_name=r["rule_name"],
@@ -140,10 +145,13 @@ def seed():
                 priority=r.get("priority", 0),
                 status=1,
             ))
+            created.append(r)
         db.commit()
-        print(f"✅ 已 seed {len(RULES)} 条研判规则：")
-        for r in RULES:
-            print(f"   - {r['product_line']}  (条件 {len(r['rule_content']['conditions'])} 条 / 专业映射 {len(r['rule_content']['program_map'])} 组)")
+        for r in created:
+            print(f"   + {r['product_line']}  (条件 {len(r['rule_content']['conditions'])} 条 / 专业映射 {len(r['rule_content']['program_map'])} 组)")
+        for name in skipped:
+            print(f"   = {name}  已存在，跳过（如需重置请先在设置页调整或手工删除）")
+        print(f"✅ seed 完成：新增 {len(created)} 条 / 跳过 {len(skipped)} 条")
     finally:
         db.close()
 

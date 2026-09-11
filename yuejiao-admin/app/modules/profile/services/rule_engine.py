@@ -18,6 +18,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.profile.models.pf import ProfileRule
 from app.modules.profile.schemas.profile import CustomerProfile
 
+# 规则管理（设置页）与校验共用的算子清单
+ALLOWED_OPS = ("between", "in", "not_in", "gte", "lte", "contains_any", "not_contains_any", "truthy", "eq")
+
 
 @dataclass
 class ProductAssessment:

@@ -1,0 +1,143 @@
+/* ---------- Settings · 研判规则（产品线）管理 ---------------------- */
+
+/* 编辑抽屉页脚：右对齐按钮组 */
+.rule-editor-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* 基本信息 / 阈值：两列表单栅格 */
+.rule-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 14px;
+}
+
+/* 评分条件行：字段 / 算子 / 取值 / 权重 / 标签 / 删除 */
+.rule-cond-grid {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.1fr) minmax(132px, 1fr) minmax(170px, 1.5fr) 72px minmax(140px, 1.2fr) 32px;
+  gap: 8px;
+  align-items: center;
+}
+
+.rule-cond-head {
+  padding-bottom: 2px;
+  font-size: 11px;
+  color: var(--text-4);
+}
+
+.rule-cond-head span:last-child {
+  text-align: center;
+}
+
+.rule-cond-row {
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.rule-cond-row:last-of-type {
+  border-bottom: 0;
+}
+
+.rule-between {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rule-between em {
+  font-style: normal;
+  color: var(--text-4);
+}
+
+.rule-cond-hint {
+  font-size: 12px;
+  color: var(--text-4);
+}
+
+/* 细分专业映射卡片 */
+.rule-pmap-card {
+  padding: 12px 14px 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.rule-pmap-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.rule-pmap-head strong {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-2);
+}
+
+.rule-pmap-match {
+  display: grid;
+  grid-template-columns: minmax(170px, 1fr) 1fr 32px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.rule-pmap-grid {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+/* 规则列表 */
+.rule-config-cell {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.rule-disabled td {
+  opacity: 0.55;
+}
+
+.rule-actions-cell {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.rule-actions-cell .row-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rule-link--danger {
+  color: var(--danger);
+}
+
+.rule-link--danger:hover {
+  color: var(--danger);
+}
+
+@media (max-width: 900px) {
+  .rule-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rule-cond-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .rule-cond-head {
+    display: none;
+  }
+
+  .rule-pmap-match {
+    grid-template-columns: 1fr;
+  }
+}
