@@ -1,0 +1,14 @@
+# Dify 知识库清单：声明知识库 → 文件 → 绑定的工作流。
+# knowledge_setup.py 按此清单创建/复用知识库、上传文件、
+# 并把绑定工作流 DSL 里的 knowledge-retrieval 节点 dataset_ids 重写为真实 ID。
+version: 1
+datasets:
+  - name: 粤教产品与服务知识库
+    indexing_technique: economy   # 关键词索引，不依赖嵌入模型
+    files:
+      - cs_kb/公司简介.md
+      - cs_kb/产品线-新加坡国际本硕升学计划.md
+      - cs_kb/产品线-中德精英人才共建计划.md
+      - cs_kb/常见问题FAQ.md
+    bind:
+      - workflow: 粤教智能客服      # 应用名 = DSL 文件名去 .yml
