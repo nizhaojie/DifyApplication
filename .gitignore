@@ -29,3 +29,4 @@ yuejiao-web/frontend-startup.log
 .claude/
 .playwright-mcp/
 yuejiao-admin/logs/
+.tmp/

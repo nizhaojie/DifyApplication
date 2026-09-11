@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from app.core.config import settings
 
-OUT = Path(settings.dify_yml_dir) / "enterprise" / "企业智能助手.yml"
+OUT = Path(settings.dify_yml_dir) / "企业智能助手.yml"
 API = "http://host.docker.internal:8002/api/v1/enterprise"
 
 

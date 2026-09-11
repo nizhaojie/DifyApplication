@@ -6,7 +6,7 @@ Private code repo for team Group_QuKewei
 
 - `yuejiao-admin/` —— 粤教管理后台（FastAPI）：客服Agent / 企业助手 / **客户研判(profile)** / 智能报告
 - `yuejiao-web/` —— 粤教前端（React 19 + Vite + TS + Radix UI）
-- `dify/` —— Dify 工作流 DSL 与工具（含 `dsl/pf_extract_workflow.yml`、`dsl/pf_narrate_workflow.yml`）
+- `dify/` —— Dify 工作流 DSL 与工具（全部 DSL 统一放在 `dify/` 根目录，含 `pf_extract_workflow.yml`、`pf_narrate_workflow.yml`）
 - `公用/` —— 公共资料（SQL 表设计、需求原文）
 
 ## 客户研判（PF）模块

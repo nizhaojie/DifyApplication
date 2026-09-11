@@ -3,7 +3,7 @@ app:
     粤教企业智能助手（员工端）。业务走 FastAPI；知识库必须建两个：
     1) 企业信息+公司新人指南；2) 常见问答对。
     导入后为分类器和全部 LLM 选择已配置模型；两个知识检索节点分别绑定上述两个库。
-    HTTP 默认 http://host.docker.internal:8001 （Docker 里不要用 127.0.0.1）。
+    HTTP 默认 http://host.docker.internal:8002 （Docker 里不要用 127.0.0.1）。
   icon: 💼
   icon_background: '#FDECEC'
   icon_type: emoji
@@ -445,7 +445,7 @@ workflow:
           selected: false
           desc: POST /tools/lead-from-text
           method: post
-          url: http://host.docker.internal:8001/api/v1/enterprise/tools/lead-from-text
+          url: http://host.docker.internal:8002/api/v1/enterprise/tools/lead-from-text
           authorization: {type: no-auth, config: null}
           headers: "Content-Type:application/json\nX-Employee-Id:{{#start.employee_id#}}"
           params: ''
@@ -472,7 +472,7 @@ workflow:
           selected: false
           desc: POST /tools/lead-query
           method: post
-          url: http://host.docker.internal:8001/api/v1/enterprise/tools/lead-query
+          url: http://host.docker.internal:8002/api/v1/enterprise/tools/lead-query
           authorization: {type: no-auth, config: null}
           headers: "Content-Type:application/json\nX-Employee-Id:{{#start.employee_id#}}"
           params: ''
@@ -499,7 +499,7 @@ workflow:
           selected: false
           desc: POST /tools/lead-update
           method: post
-          url: http://host.docker.internal:8001/api/v1/enterprise/tools/lead-update
+          url: http://host.docker.internal:8002/api/v1/enterprise/tools/lead-update
           authorization: {type: no-auth, config: null}
           headers: "Content-Type:application/json\nX-Employee-Id:{{#start.employee_id#}}"
           params: ''
@@ -526,7 +526,7 @@ workflow:
           selected: false
           desc: POST /tools/daily-from-text
           method: post
-          url: http://host.docker.internal:8001/api/v1/enterprise/tools/daily-from-text
+          url: http://host.docker.internal:8002/api/v1/enterprise/tools/daily-from-text
           authorization: {type: no-auth, config: null}
           headers: "Content-Type:application/json\nX-Employee-Id:{{#start.employee_id#}}"
           params: ''
@@ -553,7 +553,7 @@ workflow:
           selected: false
           desc: POST /tools/nl2sql
           method: post
-          url: http://host.docker.internal:8001/api/v1/enterprise/tools/nl2sql
+          url: http://host.docker.internal:8002/api/v1/enterprise/tools/nl2sql
           authorization: {type: no-auth, config: null}
           headers: "Content-Type:application/json\nX-Employee-Id:{{#start.employee_id#}}"
           params: ''
@@ -580,7 +580,7 @@ workflow:
           selected: false
           desc: POST /tools/command
           method: post
-          url: http://host.docker.internal:8001/api/v1/enterprise/tools/command
+          url: http://host.docker.internal:8002/api/v1/enterprise/tools/command
           authorization: {type: no-auth, config: null}
           headers: "Content-Type:application/json\nX-Employee-Id:{{#start.employee_id#}}"
           params: ''
@@ -607,7 +607,7 @@ workflow:
           selected: false
           desc: GET /brief
           method: get
-          url: http://host.docker.internal:8001/api/v1/enterprise/brief
+          url: http://host.docker.internal:8002/api/v1/enterprise/brief
           authorization: {type: no-auth, config: null}
           headers: "X-Employee-Id:{{#start.employee_id#}}"
           params: ''
@@ -632,7 +632,7 @@ workflow:
           selected: false
           desc: GET /orgs
           method: get
-          url: http://host.docker.internal:8001/api/v1/enterprise/orgs
+          url: http://host.docker.internal:8002/api/v1/enterprise/orgs
           authorization: {type: no-auth, config: null}
           headers: "X-Employee-Id:{{#start.employee_id#}}"
           params: ''
@@ -657,7 +657,7 @@ workflow:
           selected: false
           desc: GET /dailies
           method: get
-          url: http://host.docker.internal:8001/api/v1/enterprise/dailies
+          url: http://host.docker.internal:8002/api/v1/enterprise/dailies
           authorization: {type: no-auth, config: null}
           headers: "X-Employee-Id:{{#start.employee_id#}}"
           params: ''
@@ -682,7 +682,7 @@ workflow:
           selected: false
           desc: POST /tools/ticket-from-text
           method: post
-          url: http://host.docker.internal:8001/api/v1/enterprise/tools/ticket-from-text
+          url: http://host.docker.internal:8002/api/v1/enterprise/tools/ticket-from-text
           authorization: {type: no-auth, config: null}
           headers: "Content-Type:application/json\nX-Employee-Id:{{#start.employee_id#}}"
           params: ''

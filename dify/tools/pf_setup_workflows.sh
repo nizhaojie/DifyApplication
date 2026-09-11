@@ -8,13 +8,13 @@ set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CTR="${DIFY_API_CONTAINER:-docker-api-1}"
 
-for f in "$DIR/../dsl/pf_extract_workflow.yml" "$DIR/../dsl/pf_narrate_workflow.yml" "$DIR/pf_setup_workflows.py"; do
+for f in "$DIR/../pf_extract_workflow.yml" "$DIR/../pf_narrate_workflow.yml" "$DIR/pf_setup_workflows.py"; do
   [ -f "$f" ] || { echo "missing $f" >&2; exit 1; }
 done
 
 echo ">> copying DSL + setup script into $CTR:/tmp/"
-docker cp "$DIR/../dsl/pf_extract_workflow.yml" "$CTR:/tmp/pf-extract-workflow.yml"
-docker cp "$DIR/../dsl/pf_narrate_workflow.yml" "$CTR:/tmp/pf-narrate-workflow.yml"
+docker cp "$DIR/../pf_extract_workflow.yml" "$CTR:/tmp/pf-extract-workflow.yml"
+docker cp "$DIR/../pf_narrate_workflow.yml" "$CTR:/tmp/pf-narrate-workflow.yml"
 docker cp "$DIR/pf_setup_workflows.py"  "$CTR:/tmp/setup_workflows.py"
 
 echo ">> importing workflows + minting keys (in-container, real AppDslService)"

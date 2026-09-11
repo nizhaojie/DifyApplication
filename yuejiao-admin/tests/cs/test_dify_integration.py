@@ -58,7 +58,7 @@ def test_dify_openapi_tool_validity():
 
 def test_dify_dsl_structure_validity():
     """Verify Dify Chatflow DSL contains the 7-class classifier, RAG, and anti-hallucination rules."""
-    dsl_path = Path(get_app_settings().dify_yml_dir) / "dsl" / "cs_agent_workflow.yml"
+    dsl_path = Path(get_app_settings().dify_yml_dir) / "cs_agent_workflow.yml"
     dsl_text = dsl_path.read_text(encoding="utf-8")
     assert dsl_text, "Dify DSL workflow content must not be empty"
 

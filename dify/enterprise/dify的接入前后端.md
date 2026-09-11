@@ -45,7 +45,7 @@ App ID：`2c44aa34-c2e3-4eaf-b154-0d77f325d2d4`
    - **API 密钥**：新建一把，复制 `app-` 开头的值。
 4. 不要把这个 Key 贴到前端、文档、聊天记录。
 
-导入 DSL 时用 `dify/enterprise/企业智能助手.yml`，知识库绑定见同目录 `README.md`。
+导入 DSL 时用 `dify/企业智能助手.yml`（所有 DSL 已统一在 `dify/` 根目录），知识库绑定见 `dify/enterprise/README.md`。
 
 ### 2. 后端 `.env`
 
@@ -219,5 +219,5 @@ Squid 默认读超时约 **5 秒**。工具接口应很快；NL2SQL 或库慢时
 | `yuejiao-admin/app/modules/enterprise/services/knowledge.py` | 公司简称等知识问句的本地秒回检索 |
 | `yuejiao-web/react-frontend/src/api/enterprise.ts` | 前端聊天（120s 超时） |
 | `yuejiao-web/react-frontend/src/pages/EnterprisePage.tsx` | 企业助手页 |
-| `dify/enterprise/企业智能助手.yml` | 可再导入的 DSL |
+| `dify/企业智能助手.yml` | 可再导入的 DSL |
 | `scripts/smoke_dify_chat.py` | 本机 Dify 冒烟 |
