@@ -5,7 +5,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import type { ReportChart } from './charts'
 
-const INK = ['var(--brand)', 'var(--ink-deep)', 'var(--violet)', 'var(--info)']
+const INK = ['var(--viz-1)', 'var(--viz-2)', 'var(--viz-3)', 'var(--viz-4)']
 const CX = 80
 const CY = 80
 const OUTER = 68
