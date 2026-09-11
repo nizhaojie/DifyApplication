@@ -5,7 +5,7 @@ import {
   BarChart3, Bell, BriefcaseBusiness, Building2, ChevronDown, X,
   FileBarChart, Gauge, Headphones, LogOut, Menu, NotebookTabs,
   PanelLeftClose, PanelLeftOpen, Search,
-  Settings, ShieldCheck, Sparkles, UserRound,
+  Settings, ShieldCheck, Sparkles, UserCog, UserRound, UsersRound,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
@@ -19,6 +19,8 @@ interface NavItem {
   label: string
   icon: LucideIcon
   keywords?: string
+  /** 仅 admin 角色可见（服务端 require_role 兜底） */
+  adminOnly?: boolean
 }
 
 const workspaceNav: NavItem[] = [
@@ -38,7 +40,9 @@ const enterpriseNav: NavItem[] = [
 const systemNav: NavItem[] = [
   { to: '/student', label: '学生助手', icon: UserRound, keywords: 'student' },
   { to: '/report', label: '智能报告', icon: FileBarChart, keywords: 'report' },
-  { to: '/settings', label: '设置', icon: Settings, keywords: 'settings' },
+  { to: '/settings', label: '设置', icon: Settings, keywords: 'settings account password' },
+  { to: '/settings/users', label: '用户管理', icon: UsersRound, keywords: 'users account admin', adminOnly: true },
+  { to: '/settings/roles', label: '角色配置', icon: UserCog, keywords: 'roles permission admin', adminOnly: true },
 ]
 
 const pageTitleMap: Record<string, string> = {
@@ -80,9 +84,12 @@ export function AdminLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const isStudent = user?.user_type === 'student' || user?.role_code === 'student'
+  const isAdmin = user?.user_type === 'admin' || user?.role_code === 'admin'
   const visibleWorkspaceNav = isStudent ? [] : workspaceNav
   const visibleEnterpriseNav = isStudent ? [] : enterpriseNav
-  const visibleSystemNav = isStudent ? systemNav.filter((item) => item.to === '/student') : systemNav
+  const visibleSystemNav = isStudent
+    ? systemNav.filter((item) => item.to === '/student')
+    : systemNav.filter((item) => !item.adminOnly || isAdmin)
 
   // route change closes the mobile drawer
   useEffect(() => { setMobileOpen(false) }, [location.pathname])

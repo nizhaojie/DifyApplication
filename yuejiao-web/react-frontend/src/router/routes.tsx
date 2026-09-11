@@ -37,7 +37,9 @@ export const LAYOUT_ROUTE_META: Record<string, RouteMeta> = {
   '/report/daily-summary': { title: '员工日报智能汇总' },
   '/report/psych-weekly': { title: '学生心理健康周报' },
   '/report/complaint-weekly': { title: '投诉处理周报' },
-  '/settings': { title: '设置', hint: '空白槽。以后接账号、角色、组织。' },
+  '/settings': { title: '设置', hint: '管理研判规则（产品线）、账号与环境。' },
+  '/settings/users': { title: '用户管理', hint: '仅管理员可见：账号创建、角色分配与停用。' },
+  '/settings/roles': { title: '角色配置', hint: '仅管理员可见：角色字典与分配情况。' },
 }
 
 export const LOGIN_META: RouteMeta = { title: '登录', public: true }

@@ -16,6 +16,8 @@ const EnterpriseMemoryPage = lazy(() => import('@/pages/EnterpriseMemoryPage').t
 const StudentPage = lazy(() => import('@/pages/StudentPage').then((m) => ({ default: m.StudentPage })))
 const StudentChatPage = lazy(() => import('@/pages/StudentChatPage').then((m) => ({ default: m.StudentChatPage })))
 const SettingsPage = lazy(() => import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
+const SystemUsersPage = lazy(() => import('@/pages/SystemUsersPage').then((m) => ({ default: m.SystemUsersPage })))
+const SystemRolesPage = lazy(() => import('@/pages/SystemRolesPage').then((m) => ({ default: m.SystemRolesPage })))
 const ReportHubPage = lazy(() => import('@/pages/ReportHubPage').then((m) => ({ default: m.ReportHubPage })))
 const CustomerOpsPage = lazy(() => import('@/pages/report/CustomerOpsPage').then((m) => ({ default: m.CustomerOpsPage })))
 const DailySummaryPage = lazy(() => import('@/pages/report/DailySummaryPage').then((m) => ({ default: m.DailySummaryPage })))
@@ -34,6 +36,18 @@ function ProtectedRoute() {
   const token = useAuthStore((state) => state.token)
   const location = useLocation()
   if (!token) return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />
+  return (
+    <Suspense fallback={<PageFallback />}>
+      <Outlet />
+    </Suspense>
+  )
+}
+
+/** 管理端路由守卫：非 admin 角色一律回工作台（服务端另有 require_role 兜底） */
+function AdminRoute() {
+  const user = useAuthStore((state) => state.user)
+  const isAdmin = user?.user_type === 'admin' || user?.role_code === 'admin'
+  if (!isAdmin) return <Navigate to="/dashboard" replace />
   return (
     <Suspense fallback={<PageFallback />}>
       <Outlet />
@@ -85,6 +99,10 @@ export default function App() {
             <Route path="report/psych-weekly" element={<PsychWeeklyPage />} />
             <Route path="report/complaint-weekly" element={<ComplaintWeeklyPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route element={<AdminRoute />}>
+              <Route path="settings/users" element={<SystemUsersPage />} />
+              <Route path="settings/roles" element={<SystemRolesPage />} />
+            </Route>
           </Route>
         </Route>
       </Route>

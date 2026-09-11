@@ -1,6 +1,13 @@
 -- 企业助手演示数据。先跑 公用/表/db_init.sql，再跑本文件。
 -- 演示账号密码都是 123456（哈希只用于本机演示，不要当生产口令）。
+-- admin01 为系统管理员演示账号，密码 admin123（用户管理 / 角色配置面板入口）。
 SET NAMES utf8mb4;
+
+INSERT INTO `sys_user` (`username`, `password_hash`, `real_name`, `user_type`, `role_id`, `department`, `contact_info`, `status`)
+SELECT 'admin01', '$2b$12$grbb/cehafP06b1Lemd1l.gPOYMRu8CllgmcIZdPJ3Z3HHl7fs226', '系统管理员', 'admin', r.id, '信息中心', NULL, 'normal'
+FROM `sys_role` r WHERE r.role_code = 'admin'
+AND NOT EXISTS (SELECT 1 FROM `sys_user` u WHERE u.username = 'admin01')
+LIMIT 1;
 
 INSERT INTO `sys_user` (`username`, `password_hash`, `real_name`, `user_type`, `role_id`, `department`, `contact_info`, `status`)
 SELECT 'emp01', '$2b$12$ICJ3KSTO6ClVVP8NBaS62eijoJCyy.HzREa7pjCGwXdJsqn4xcQqa', '李顾问', 'employee', r.id, '招生部', '13800001001', 'normal'

@@ -22,7 +22,7 @@ from app.modules.report.application import (
     ReportApplication,
 )
 from app.modules.report.clock import ShanghaiClock
-from app.modules.system.models.user import SysUser
+from app.modules.system.models.user import SysRole, SysUser
 
 bearer = HTTPBearer(auto_error=False)
 
@@ -46,6 +46,25 @@ async def get_current_user(
     except (InvalidTokenError, KeyError, ValueError):
         raise BizError("登录已过期，请重新登录", code=401)
     return await load_user(db, user_id)
+
+
+def require_role(*role_codes: str):
+    """Dependency factory: 登录用户必须挂有指定角色之一（角色需启用）才放行。
+
+    用法：``Depends(require_role("admin"))`` 或挂在整个 router 的
+    ``dependencies=[...]`` 上，用于系统管理等敏感接口。
+    """
+
+    async def dependency(
+        user: SysUser = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db),
+    ) -> SysUser:
+        role = await db.get(SysRole, user.role_id) if user.role_id else None
+        if role is None or role.status != 1 or role.role_code not in role_codes:
+            raise BizError("没有权限执行此操作", code=403)
+        return user
+
+    return dependency
 
 
 async def get_actor(
