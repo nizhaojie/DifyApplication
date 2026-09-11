@@ -1835,126 +1835,302 @@
 }
 
 /* ---------- Login ---------------------------------------------------- */
-.login-shell {
-  display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(400px, 0.95fr);
-  min-height: 100svh;
-  background: var(--bg);
-}
-
-.login-brand {
+/* ---------- 登录舞台:深色开场 + 纸卡(私有服务气质,Original) ----------- */
+.login-stage {
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: 44px clamp(32px, 7vw, 110px) 40px;
-  background-image: var(--noise), radial-gradient(120% 110% at 85% 10%, #262b34 0%, var(--ink-deep) 58%);
-  background-size: 180px 180px, auto;
-  color: #d5dde4;
+  min-height: 100svh;
   overflow: hidden;
+  background-image:
+    radial-gradient(72% 46% at 50% -8%, rgba(201, 168, 106, 0.14) 0%, rgba(201, 168, 106, 0) 60%),
+    radial-gradient(130% 90% at 50% 118%, #1b2029 0%, var(--stage-bg) 62%);
+  color: var(--stage-text);
 }
 
-.login-brand::after {
+.login-decor::after {
   content: '';
   position: absolute;
-  right: -160px;
-  bottom: -200px;
-  width: 520px;
-  height: 520px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 50%;
+  inset: 0;
+  background: var(--noise);
+  background-size: 180px 180px;
+  opacity: 0.05;
   pointer-events: none;
 }
 
-.login-brand .brand-text strong {
-  color: #fff;
+/* 雕塑感几何装饰:细环 / 拱门 / 球体 / 流线,全部 CSS 原创绘制 */
+.login-decor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
-.login-brand .brand-text span {
-  color: #8b929e;
+.login-decor span {
+  position: absolute;
+  display: block;
 }
 
-.login-intro {
+.decor-ring {
+  border-radius: 50%;
+  border: 1px solid var(--brass-dim);
+}
+
+.decor-ring-lg {
+  width: 560px;
+  height: 560px;
+  right: -180px;
+  top: -160px;
+  animation: stage-float 14s var(--ease-io) infinite alternate;
+}
+
+.decor-ring-sm {
+  width: 260px;
+  height: 260px;
+  left: 6%;
+  bottom: -110px;
+  border-color: rgba(255, 255, 255, 0.07);
+  animation: stage-float 18s var(--ease-io) infinite alternate-reverse;
+}
+
+.decor-arch {
+  width: 190px;
+  height: 300px;
+  left: 4%;
+  top: 16%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: none;
+  border-radius: 190px 190px 0 0;
+}
+
+.decor-sphere {
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 34%),
+    radial-gradient(circle at 50% 55%, var(--brass-bright) 0%, var(--brass) 46%, #6f5b36 100%);
+  box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.65);
+}
+
+.decor-sphere-a {
+  width: 108px;
+  height: 108px;
+  right: 15%;
+  top: 24%;
+  opacity: 0.9;
+  animation: stage-float 11s var(--ease-io) infinite alternate;
+}
+
+.decor-sphere-b {
+  width: 54px;
+  height: 54px;
+  left: 13%;
+  bottom: 22%;
+  opacity: 0.75;
+  animation: stage-float 9s var(--ease-io) infinite alternate-reverse;
+}
+
+.decor-flow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12%;
+  width: 100%;
+  height: 220px;
+  opacity: 0.65;
+}
+
+@keyframes stage-float {
+  from { transform: translateY(-10px); }
+  to { transform: translateY(12px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .decor-ring, .decor-sphere { animation: none; }
+}
+
+.login-topbar {
   position: relative;
-  max-width: 480px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 26px clamp(28px, 5vw, 64px);
 }
 
-.login-intro .page-header-eyebrow {
-  color: #868d99;
+.login-brandlock {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.login-intro h1 {
-  margin-top: 18px;
-  font-size: clamp(34px, 4.2vw, 52px);
-  font-weight: 650;
-  line-height: 1.18;
-  letter-spacing: -0.03em;
+.login-brandlock .brand-text strong {
+  display: block;
   color: #fff;
+  font-size: 14.5px;
 }
 
-.login-intro h1 em {
-  font-style: normal;
-  color: #e9ebee;
+.login-brandlock .brand-text span {
+  display: block;
+  color: var(--stage-text-dim);
+  font-size: 11.5px;
 }
 
-.login-intro > p:last-of-type {
-  max-width: 400px;
-  margin-top: 22px;
-  font-size: 14px;
-  line-height: 1.85;
-  color: #9aa2ad;
+.login-env {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--r-full);
+  background: rgba(255, 255, 255, 0.05);
+  color: #a3aab6;
+  font-size: 11.5px;
 }
 
-.login-footnote {
+.login-env i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.25);
+}
+
+.login-main {
   position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(30px, 4.5vh, 52px);
+  padding: 28px 24px 44px;
+}
+
+.login-hero {
+  text-align: center;
+}
+
+.login-eyebrow {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.08em;
-  color: #6d7480;
+  letter-spacing: 0.34em;
+  color: var(--brass);
 }
 
-.login-footnote span {
-  margin: 0 8px;
-  color: #4b525d;
+.login-display {
+  margin-top: 18px;
+  font-family: var(--font-serif);
+  font-size: clamp(38px, 5.2vw, 62px);
+  font-weight: 900;
+  line-height: 1.22;
+  letter-spacing: 0.06em;
+  color: var(--stage-title);
+  text-shadow: 0 2px 40px rgba(0, 0, 0, 0.45);
 }
 
-.login-form-side {
-  display: grid;
-  place-items: center;
-  padding: 40px 28px;
+.login-sub {
+  margin-top: 20px;
+  font-size: 13.5px;
+  line-height: 2;
+  color: var(--stage-text-dim);
+  letter-spacing: 0.04em;
 }
 
 .login-card {
-  width: min(400px, 100%);
+  position: relative;
+  width: min(420px, 100%);
+  padding: 32px 34px 24px;
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-xl);
   animation: fade-rise var(--dur-4) var(--ease) both;
+  overflow: hidden;
+}
+
+.login-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--brass) 50%, transparent);
+  opacity: 0.85;
 }
 
 .login-card h2 {
-  margin-top: 14px;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 650;
-  letter-spacing: -0.022em;
+  letter-spacing: 0.01em;
   color: var(--text-1);
 }
 
-.login-card > p {
-  margin-top: 7px;
-  font-size: 13.5px;
+.login-card-sub {
+  margin-top: 6px;
+  font-size: 13px;
   color: var(--text-3);
 }
 
 .login-card .field {
-  margin-top: 20px;
+  margin-top: 18px;
+}
+
+.login-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  cursor: pointer;
+  user-select: none;
+}
+
+.login-remember input {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--ink-btn);
+  cursor: pointer;
 }
 
 .login-error {
-  margin-top: 16px;
+  margin-top: 14px;
 }
 
 .login-submit {
   width: 100%;
-  height: 42px;
-  margin-top: 26px;
+  height: 44px;
+  margin-top: 20px;
+}
+
+.login-security {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  color: var(--text-4);
+  font-size: 11.5px;
+  text-align: center;
+}
+
+.login-security svg {
+  flex: none;
+  color: var(--success);
+}
+
+.login-foot {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px clamp(28px, 5vw, 64px) 22px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: #767e8a;
 }
 
 /* ---------- Loading overlay (page corner) ---------------------------- */
@@ -2071,22 +2247,31 @@
     align-self: stretch;
   }
 
-  .login-shell {
-    grid-template-columns: 1fr;
+  .login-stage {
+    min-height: 100svh;
   }
 
-  .login-brand {
-    min-height: 300px;
-    padding: 30px 26px;
+  .login-topbar {
+    padding: 20px 22px;
   }
 
-  .login-intro {
-    margin: 48px 0 30px;
+  .login-decor .decor-arch,
+  .login-decor .decor-flow {
+    display: none;
   }
 
-  .login-form-side {
-    align-items: start;
-    padding: 34px 18px 56px;
+  .login-main {
+    padding: 20px 18px 32px;
+  }
+
+  .login-card {
+    padding: 26px 22px 20px;
+  }
+
+  .login-foot {
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
   }
 }
 

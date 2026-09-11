@@ -112,6 +112,16 @@
   --z-modal: 70;
   --z-cmdk: 80;
   --z-toast: 90;
+
+  /* -- 登录舞台(深色开场页专用,不影响工作台单色体系)---------------- */
+  --stage-bg: #0c0e12;
+  --stage-text: #b9c0cb;
+  --stage-text-dim: #79818d;
+  --stage-title: #f2ede2;
+  --brass: #c9a86a;
+  --brass-bright: #e7d3a2;
+  --brass-dim: rgba(201, 168, 106, 0.32);
+  --font-serif: 'Noto Serif SC', 'Songti SC', 'STSong', 'SimSun', serif;
 }
 
 /* ============================================================
