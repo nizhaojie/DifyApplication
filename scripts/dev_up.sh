@@ -1,11 +1,40 @@
 #!/usr/bin/env bash
 # 一键启动：Dify 就绪 → 导入全部工作流 → 初始化知识库并绑定 → 启动后端/前端
 #
-# 用法：  bash scripts/dev_up.sh
-# 前提：  Docker 在跑；Dify compose 目录默认 /home/Theodore/docker/dify/docker（可用 DIFY_COMPOSE_DIR 覆盖）。
+# 用法：  bash scripts/dev_up.sh        （WSL/Linux 直接执行）
+#         sh scripts/dev_up.sh          （Windows Git Bash 下运行会自动换算路径并委托 WSL，全流程等效；
+#                                        脚本自身位置即项目根，放到任何目录都能用，无写死路径）
+# 前提：  Docker 在跑；Dify compose 目录默认 ~/docker/dify/docker（可用 DIFY_COMPOSE_DIR 覆盖）。
 # 可逆：  工作流/知识库均按名复用，重复执行只刷新草稿与补缺文档。
 set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+ROOT="$(cd "$(dirname "$SELF")/.." && pwd)"
+
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*)
+    # Windows Git Bash：后端 venv / node / docker CLI 都在 WSL 内，
+    # 从本脚本自身位置换算出 WSL 视角路径后委托 WSL 重新执行，不写死任何机器路径。
+    command -v wsl.exe >/dev/null 2>&1 || { echo "ERROR: 未找到 wsl.exe；本项目运行环境（Python venv/Node/Docker CLI）在 WSL 内，请先安装 WSL" >&2; exit 1; }
+    cd "$HOME" || true   # 离开 UNC 目录，避免 wsl.exe 每次打印“UNC 路径不受支持”警告
+    case "$SELF" in
+      //wsl*)
+        # 项目在 WSL 文件系统（//wsl.localhost/<发行版>/…）：剥掉前缀即得 WSL 内路径
+        p="${SELF#//wsl.localhost/}"
+        [ "$p" = "$SELF" ] && p="${SELF#//wsl$/}"
+        SELF_WSL="/${p#*/}" ;;
+      *)
+        # 项目在 Windows 盘（/c/…）：交给 WSL 内的 wslpath 换算成 /mnt/c/…
+        SELF_WSL="$(wsl.exe -e wslpath -u "$(cygpath -w "$SELF")" 2>/dev/null | tr -d '\r')"
+        [ -n "$SELF_WSL" ] || { echo "ERROR: 无法换算 WSL 路径：$SELF" >&2; exit 1; } ;;
+    esac
+    pass_env=()
+    for v in DIFY_API_CONTAINER DIFY_COMPOSE_DIR; do
+      if [ -n "${!v:-}" ]; then pass_env+=("$v=${!v}"); fi
+    done
+    # 禁用 MSYS 参数转换：否则 /home/... 会被改写成 C:\Program Files\Git\home\... 再传给 wsl.exe
+    MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' exec wsl.exe -e env ${pass_env[@]+"${pass_env[@]}"} bash "$SELF_WSL"
+    ;;
+esac
 CTR="${DIFY_API_CONTAINER:-docker-api-1}"
 COMPOSE_DIR="${DIFY_COMPOSE_DIR:-$HOME/docker/dify/docker}"
 
